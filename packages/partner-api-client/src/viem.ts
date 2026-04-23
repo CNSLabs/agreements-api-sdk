@@ -1,0 +1,217 @@
+/**
+ * EIP-712 permit signing helpers using `@cns-labs/agreements-protocol-evm` + `viem`,
+ * matching `apps/partner-api-playground` deploy and input flows.
+ */
+
+import {
+  AgreementEngine,
+  AgreementFactory,
+  getFactoryConfigByChainId,
+  type AgreementJson,
+  type CreateAgreementOptions,
+  type InitValue,
+} from '@cns-labs/agreements-protocol-evm';
+import type { Address, Hex, PublicClient, WalletClient } from 'viem';
+
+import type { PartnerApiClient } from './client.js';
+import type {
+  AgreementInputRecord,
+  AgreementRecord,
+  DirectDeployAgreementWithPermitRequest,
+  PartnerDirectParticipantRecord,
+  ProcessInputRequest,
+} from './types.js';
+
+export type SignDeployPermitParams = {
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  agreement: AgreementJson;
+  /** Unix seconds (e.g. `Math.floor(Date.now() / 1000) + 3600`). */
+  deadline: number;
+  /** Passed through to `AgreementFactory.createPermitSignature` (docUri, initValues). */
+  permitOptions?: CreateAgreementOptions;
+};
+
+export type SignDeployPermitResult = {
+  signature: DirectDeployAgreementWithPermitRequest['signature'];
+  signerAddress: Hex;
+  deadline: number;
+};
+
+export type SignInputPermitParams = {
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  agreementContractAddress: Hex;
+  agreement: AgreementJson;
+  inputId: string;
+  values: Record<string, unknown>;
+  deadline: number;
+};
+
+export type SignInputPermitResult = {
+  signature: ProcessInputRequest['signature'];
+  signerAddress: Hex;
+  deadline: number;
+};
+
+/** Default permit lifetime used in the partner playground (1 hour). */
+export const DEFAULT_PERMIT_DEADLINE_SECONDS = 3600;
+
+export function computeDefaultDeadlineSeconds(offsetSeconds: number = DEFAULT_PERMIT_DEADLINE_SECONDS): number {
+  return Math.floor(Date.now() / 1000) + offsetSeconds;
+}
+
+/**
+ * Sign the factory `deploy-with-permit` EIP-712 payload for inline BYOT agreement JSON.
+ */
+export async function signDeployWithPermit(params: SignDeployPermitParams): Promise<SignDeployPermitResult> {
+  const chainId = await params.publicClient.getChainId();
+  const factoryConfig = getFactoryConfigByChainId(chainId);
+  if (!factoryConfig) {
+    throw new Error(`No AgreementFactory deployment registered for chain ${chainId}.`);
+  }
+
+  const factory = new AgreementFactory(factoryConfig, {
+    publicClient: params.publicClient as never,
+    walletClient: params.walletClient as never,
+  });
+
+  const { signature, signerAddress } = await factory.createPermitSignature(
+    params.walletClient as never,
+    params.agreement,
+    params.deadline,
+    params.permitOptions,
+  );
+
+  return {
+    signature,
+    signerAddress,
+    deadline: params.deadline,
+  };
+}
+
+/**
+ * Sign the engine `PermitInput` EIP-712 payload for a single DFSM input.
+ */
+export async function signAgreementInputPermit(params: SignInputPermitParams): Promise<SignInputPermitResult> {
+  const engine = new AgreementEngine(
+    params.agreementContractAddress,
+    params.publicClient as never,
+    params.walletClient as never,
+  );
+
+  const { signature, signerAddress } = await engine.createPermitSignature(
+    params.walletClient as never,
+    params.agreement,
+    params.inputId,
+    params.values,
+    params.deadline,
+  );
+
+  return {
+    signature,
+    signerAddress,
+    deadline: params.deadline,
+  };
+}
+
+export type DeployWithPermitCallParams = {
+  client: PartnerApiClient;
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  agreement: AgreementJson;
+  displayName: string;
+  initValues?: Record<string, InitValue>;
+  participants?: PartnerDirectParticipantRecord[];
+  observers?: string[];
+  docUri?: string;
+  deadline?: number;
+  /**
+   * Extra options passed to `AgreementFactory.createPermitSignature`.
+   * Top-level `docUri` / `initValues` win over the same keys here; the merged values are signed and sent in the POST body.
+   */
+  permitOptions?: CreateAgreementOptions;
+};
+
+/**
+ * Sign then `POST /agreements/deploy-with-permit` (same order as the playground).
+ */
+export async function deployAgreementWithPermit(
+  params: DeployWithPermitCallParams,
+): Promise<AgreementRecord> {
+  const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
+
+  const docUriRaw = params.docUri ?? params.permitOptions?.docUri;
+  const docUri = docUriRaw !== undefined && docUriRaw !== '' ? docUriRaw : undefined;
+  const initValues = params.initValues ?? params.permitOptions?.initValues;
+
+  const permitOptionsForSign: CreateAgreementOptions | undefined =
+    params.permitOptions === undefined && docUri === undefined && initValues === undefined
+      ? undefined
+      : {
+          ...params.permitOptions,
+          ...(docUri !== undefined ? { docUri } : {}),
+          ...(initValues !== undefined ? { initValues } : {}),
+        };
+
+  const { signature, signerAddress } = await signDeployWithPermit({
+    walletClient: params.walletClient,
+    publicClient: params.publicClient,
+    agreement: params.agreement,
+    deadline,
+    permitOptions: permitOptionsForSign,
+  });
+
+  const body: DirectDeployAgreementWithPermitRequest = {
+    agreement: params.agreement as unknown as Record<string, unknown>,
+    displayName: params.displayName,
+    participants: params.participants,
+    observers: params.observers,
+    signer: signerAddress,
+    deadline,
+    signature,
+    ...(initValues !== undefined ? { initValues } : {}),
+    ...(docUri !== undefined ? { docUri } : {}),
+  };
+
+  return params.client.deployWithPermit(body);
+}
+
+export type SubmitInputCallParams = {
+  client: PartnerApiClient;
+  agreementId: string;
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  agreementContractAddress: Address;
+  agreement: AgreementJson;
+  inputId: string;
+  values: Record<string, unknown>;
+  deadline?: number;
+};
+
+/**
+ * Sign then `POST /agreements/:id/input` (same order as the playground).
+ */
+export async function submitAgreementInputWithPermit(
+  params: SubmitInputCallParams,
+): Promise<AgreementInputRecord> {
+  const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
+
+  const { signature, signerAddress } = await signAgreementInputPermit({
+    walletClient: params.walletClient,
+    publicClient: params.publicClient,
+    agreementContractAddress: params.agreementContractAddress,
+    agreement: params.agreement,
+    inputId: params.inputId,
+    values: params.values,
+    deadline,
+  });
+
+  return params.client.submitAgreementInput(params.agreementId, {
+    inputId: params.inputId,
+    values: params.values,
+    signer: signerAddress,
+    deadline,
+    signature,
+  });
+}

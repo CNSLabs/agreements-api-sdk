@@ -1,0 +1,42 @@
+{
+  "name": "@cns-labs/agreements-api-client",
+  "version": "0.0.1",
+  "description": "TypeScript client for the CNS Partner API with built-in permit-signing helpers",
+  "author": "CNS Labs",
+  "license": "Apache-2.0",
+  "keywords": [
+    "cns-labs",
+    "agreements-protocol",
+    "api",
+    "client",
+    "typescript"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cns-labs/agreements-protocol-evm": "^0.0.1",
+    "viem": "^2.43.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "~5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

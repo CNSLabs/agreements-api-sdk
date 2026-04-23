@@ -1,0 +1,14 @@
+{
+  "name": "agreements-api-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Open-source partner API client and playground for CNS Labs agreements integrations.",
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:client": "pnpm --filter @cns-labs/agreements-api-client build",
+    "build:playground": "pnpm --filter partner-api-playground build",
+    "dev:playground": "pnpm --filter partner-api-playground dev",
+    "lint": "pnpm -r lint"
+  }
+}
