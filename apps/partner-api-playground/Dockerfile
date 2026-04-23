@@ -29,8 +29,16 @@ ENV VITE_PARTNER_API_BASE_URL=$VITE_PARTNER_API_BASE_URL
 ENV VITE_DEVELOPER_DOCS_BASE_PATH=$VITE_DEVELOPER_DOCS_BASE_PATH
 ENV VITE_PARTNER_DOCS_BASE_PATH=$VITE_PARTNER_DOCS_BASE_PATH
 
-COPY packages ./packages
-COPY apps ./apps
+COPY packages/partner-api-client/tsconfig.json ./packages/partner-api-client/
+COPY packages/partner-api-client/src ./packages/partner-api-client/src
+COPY apps/partner-api-playground/src ./apps/partner-api-playground/src
+COPY apps/partner-api-playground/index.html ./apps/partner-api-playground/
+COPY apps/partner-api-playground/nginx.conf ./apps/partner-api-playground/
+COPY apps/partner-api-playground/vite.config.ts ./apps/partner-api-playground/
+COPY apps/partner-api-playground/eslint.config.js ./apps/partner-api-playground/
+COPY apps/partner-api-playground/tsconfig.json ./apps/partner-api-playground/
+COPY apps/partner-api-playground/tsconfig.app.json ./apps/partner-api-playground/
+COPY apps/partner-api-playground/tsconfig.node.json ./apps/partner-api-playground/
 
 RUN pnpm --filter @cns-labs/agreements-api-client build
 RUN pnpm --filter partner-api-playground build
