@@ -1,4 +1,10 @@
-export { PARTNER_API_BASE_PATH, PARTNER_API_MAJOR_VERSION } from './constants.js';
+export {
+  DEFAULT_PARTNER_API_ENVIRONMENT,
+  PARTNER_API_BASE_PATH,
+  PARTNER_API_ENVIRONMENT_BASE_URLS,
+  PARTNER_API_MAJOR_VERSION,
+  resolvePartnerApiBaseUrl,
+} from './constants.js';
 export { PartnerApiClient } from './client.js';
 export { PartnerApiError, extractPartnerApiErrorMessage } from './errors.js';
 export type {
@@ -10,6 +16,7 @@ export type {
   HealthResponse,
   ParticipantRecord,
   PartnerApiClientConfig,
+  PartnerApiEnvironment,
   PartnerDirectParticipantRecord,
   PermitSignature,
   ProcessInputRequest,

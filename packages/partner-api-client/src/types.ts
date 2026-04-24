@@ -126,9 +126,9 @@ export type ProcessInputRequest = {
   signature: PermitSignature;
 };
 
-export type PartnerApiClientConfig = {
-  /** Base URL of the auth-api host (no trailing slash), e.g. `https://api.example.com`. */
-  baseUrl: string;
+export type PartnerApiEnvironment = 'testnet' | 'production';
+
+type PartnerApiClientSharedConfig = {
   /** `X-API-Key` value for the partner principal. */
   apiKey?: string;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
@@ -136,3 +136,22 @@ export type PartnerApiClientConfig = {
   /** Override `fetch` (defaults to global `fetch`). */
   fetch?: typeof fetch;
 };
+
+export type PartnerApiClientConfig =
+  | (PartnerApiClientSharedConfig & {
+      /** Named Shodai environment used to resolve the gateway host automatically. */
+      environment: PartnerApiEnvironment;
+      /**
+       * Optional gateway origin override (no trailing slash), e.g. `https://internal-gateway.example.com`.
+       * When provided, this wins over the environment host mapping.
+       */
+      baseUrl?: string;
+    })
+  | (PartnerApiClientSharedConfig & {
+      /**
+       * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
+       * Prefer `environment` for standard Shodai hosts.
+       */
+      baseUrl: string;
+      environment?: PartnerApiEnvironment;
+    });

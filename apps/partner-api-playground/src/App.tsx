@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  DEFAULT_PARTNER_API_ENVIRONMENT,
   PartnerApiClient,
   PARTNER_API_BASE_PATH,
   computeDefaultDeadlineSeconds,
@@ -7,8 +8,10 @@ import {
   extractPartnerApiErrorMessage,
   getExecutionInputIds,
   joinUrl,
+  resolvePartnerApiBaseUrl,
   submitAgreementInputWithPermit,
   type AgreementRecord,
+  type PartnerApiEnvironment,
   type PartnerDirectParticipantRecord,
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
@@ -44,10 +47,12 @@ type DeployChainConfig = {
   chainId: number;
   chain: typeof linea | typeof lineaSepolia;
   chainName: string;
+  networkSlug: string;
   rpcUrl: string;
 };
 
-const DEFAULT_BASE_URL = resolveDefaultBaseUrl();
+const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
+const DEFAULT_BASE_URL_OVERRIDE = resolveDefaultBaseUrlOverride();
 const DEFAULT_OWNER = '0x67fD5A5ec681b1208308813a2B3A0DD431Be7278';
 const DEFAULT_COUNTERPARTY = '0xbe32388c134a952cdbcc5673e93d46ffd8b85065';
 
@@ -113,7 +118,8 @@ function App() {
   const composerPathInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeView, setActiveView] = useState<AppView>('overview');
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
+  const [environment, setEnvironment] = useState<PartnerApiEnvironment>(DEFAULT_ENVIRONMENT);
+  const [baseUrlOverride, setBaseUrlOverride] = useState(DEFAULT_BASE_URL_OVERRIDE);
   const [apiKey, setApiKey] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [path, setPath] = useState(`${PARTNER_API_BASE_PATH}/health`);
@@ -149,20 +155,25 @@ function App() {
   const [selectedInputId, setSelectedInputId] = useState('approve');
   const [inputValuesText, setInputValuesText] = useState('{\n  "approved": true\n}');
   const [loadedAgreement, setLoadedAgreement] = useState<AgreementRecord | null>(null);
+  const resolvedBaseUrl = useMemo(
+    () => resolveEffectiveBaseUrl(environment, baseUrlOverride),
+    [environment, baseUrlOverride],
+  );
 
   const partnerClient = useMemo(
     () =>
       new PartnerApiClient({
-        baseUrl,
+        environment,
+        ...(baseUrlOverride.trim() ? { baseUrl: baseUrlOverride.trim() } : {}),
         apiKey: apiKey.trim() || undefined,
         headers: () => createBrowserTelemetryHeaders(),
       }),
-    [baseUrl, apiKey],
+    [apiKey, baseUrlOverride, environment],
   );
 
-  const deployChain = useMemo(resolveDeployChainConfig, []);
-  const docsUrl = joinUrl(resolveDeveloperDocsBaseUrl(baseUrl), resolveDeveloperDocsBasePath());
-  const openApiUrl = joinUrl(resolveCurlBaseUrl(baseUrl), `${PARTNER_API_BASE_PATH}/openapi.json`);
+  const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
+  const docsUrl = joinUrl(resolveDeveloperDocsBaseUrl(resolvedBaseUrl, baseUrlOverride), resolveDeveloperDocsBasePath());
+  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${PARTNER_API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
     const asRecord =
@@ -174,7 +185,7 @@ function App() {
     return getExecutionInputs(agreement)[selectedInputId] || null;
   }, [loadedAgreement?.json, selectedInputId]);
   const curlPreview = useMemo(() => {
-    const parts = [`curl -i "${joinUrl(resolveCurlBaseUrl(baseUrl), path)}"`];
+    const parts = [`curl -i "${joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), path)}"`];
     if (apiKey.trim()) parts.push(`-H "X-API-Key: ${apiKey.trim()}"`);
     if (method !== 'GET') parts.push(`-X ${method}`);
     if (body.trim()) {
@@ -182,7 +193,7 @@ function App() {
       parts.push(`--data '${body.replace(/'/g, "'\\''")}'`);
     }
     return parts.join(' \\\n  ');
-  }, [apiKey, baseUrl, body, method, path]);
+  }, [apiKey, body, method, path, resolvedBaseUrl]);
 
   useEffect(() => {
     const provider = getInjectedProvider();
@@ -591,7 +602,7 @@ function App() {
         <div className="status-card">
           <div>
             <span className="status-label">Target</span>
-            <strong>{describeBaseUrl(baseUrl)}</strong>
+            <strong>{describeTarget(environment, baseUrlOverride, resolvedBaseUrl)}</strong>
           </div>
           <div>
             <span className="status-label">Auth</span>
@@ -608,8 +619,14 @@ function App() {
         <section className="panel workspace-toolbar">
           <div className="toolbar-grid">
             <label className="field toolbar-field">
-              <span>Base URL</span>
-              <input value={baseUrl} onChange={event => setBaseUrl(event.target.value)} placeholder="http://localhost:8080" />
+              <span>Environment</span>
+              <select
+                value={environment}
+                onChange={event => setEnvironment(event.target.value as PartnerApiEnvironment)}
+              >
+                <option value="testnet">testnet</option>
+                <option value="production">production</option>
+              </select>
             </label>
             <label className="field toolbar-field">
               <span>API Key</span>
@@ -689,8 +706,15 @@ function App() {
               <section className="panel">
                 <h2>Current Session</h2>
                 <div className="stack">
-                  <div className="info-card"><span className="status-label">Target</span><strong>{describeBaseUrl(baseUrl)}</strong></div>
+                  <div className="info-card"><span className="status-label">Target</span><strong>{describeTarget(environment, baseUrlOverride, resolvedBaseUrl)}</strong></div>
+                  <div className="info-card"><span className="status-label">Environment</span><strong>{environment}</strong></div>
                   <div className="info-card"><span className="status-label">Auth</span><strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong></div>
+                  {baseUrlOverride.trim() ? (
+                    <div className="info-card">
+                      <span className="status-label">Gateway Override</span>
+                      <strong>{baseUrlOverride.trim()}</strong>
+                    </div>
+                  ) : null}
                   <div className="info-card"><span className="status-label">Loaded Agreement</span><strong>{loadedAgreement?.id || 'None loaded yet'}</strong></div>
                 </div>
               </section>
@@ -881,6 +905,14 @@ function App() {
               <section className="panel">
                 <h2>Composer</h2>
                 <div className="composer">
+                  <label className="field">
+                    <span>Gateway Override (advanced)</span>
+                    <input
+                      value={baseUrlOverride}
+                      onChange={event => setBaseUrlOverride(event.target.value)}
+                      placeholder="Optional: http://localhost:8080"
+                    />
+                  </label>
                   <div className="row">
                     <label className="field field-compact">
                       <span>Method</span>
@@ -952,20 +984,30 @@ function buildQuickActions(params: {
   ];
 }
 
-function resolveDeployChainConfig() {
-  const chainId = Number(import.meta.env.VITE_AGREEMENTS_CHAIN_ID || lineaSepolia.id);
-  const chain = chainId === linea.id ? linea : chainId === lineaSepolia.id ? lineaSepolia : null;
-  if (!chain) return { ok: false as const, message: `Unsupported VITE_AGREEMENTS_CHAIN_ID ${chainId}.` };
+function resolveDeployChainConfig(environment: PartnerApiEnvironment) {
+  const chain = environment === 'production' ? linea : lineaSepolia;
+  const chainId = chain.id;
+  const networkSlug = environment === 'production' ? 'linea-mainnet' : 'linea-sepolia';
   let rpcUrl = import.meta.env.VITE_AGREEMENTS_RPC_URL;
-  const infuraProjectId = import.meta.env.VITE_INFURA_PROJECT_ID;
-  if (!rpcUrl && infuraProjectId) {
-    rpcUrl = chainId === linea.id
-      ? `https://linea-mainnet.infura.io/v3/${infuraProjectId}`
-      : `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
+  const rpcUrlTemplate = (import.meta.env.VITE_AGREEMENTS_RPC_URL_TEMPLATE || '').trim();
+  if (!rpcUrl && rpcUrlTemplate) {
+    rpcUrl = applyRpcUrlTemplate(rpcUrlTemplate, {
+      chainId,
+      chainName: chain.name,
+      networkSlug,
+    });
   }
   if (!rpcUrl) rpcUrl = chain.rpcUrls.default.http[0];
-  if (!rpcUrl) return { ok: false as const, message: 'Set VITE_AGREEMENTS_RPC_URL or VITE_INFURA_PROJECT_ID.' };
-  return { ok: true as const, value: { chainId: chain.id, chain, chainName: chain.name, rpcUrl } as DeployChainConfig };
+  if (!rpcUrl) {
+    return {
+      ok: false as const,
+      message: 'Set VITE_AGREEMENTS_RPC_URL or VITE_AGREEMENTS_RPC_URL_TEMPLATE.',
+    };
+  }
+  return {
+    ok: true as const,
+    value: { chainId: chain.id, chain, chainName: chain.name, networkSlug, rpcUrl } as DeployChainConfig,
+  };
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
@@ -1045,18 +1087,17 @@ function parseChainId(value: string) {
   return Number.parseInt(value, 16);
 }
 
-function describeBaseUrl(baseUrl: string) {
-  return baseUrl.trim() || 'same-origin via Vite proxy';
+function describeTarget(environment: PartnerApiEnvironment, baseUrlOverride: string, resolvedBaseUrl: string) {
+  if (baseUrlOverride.trim()) return `custom (${resolvedBaseUrl})`;
+  return `${environment} (${resolvedBaseUrl})`;
 }
 
-function resolveCurlBaseUrl(baseUrl: string) {
-  if (baseUrl.trim()) return baseUrl;
-  if (typeof window === 'undefined') return 'http://localhost:5176';
-  return window.location.origin;
+function resolveCurlBaseUrl(resolvedBaseUrl: string) {
+  return resolvedBaseUrl;
 }
 
-function resolveDeveloperDocsBaseUrl(baseUrl: string) {
-  if (baseUrl.trim()) return baseUrl;
+function resolveDeveloperDocsBaseUrl(resolvedBaseUrl: string, baseUrlOverride: string) {
+  if (baseUrlOverride.trim()) return resolvedBaseUrl;
   if (typeof window === 'undefined') return 'http://localhost:5177';
 
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -1067,11 +1108,7 @@ function resolveDeveloperDocsBaseUrl(baseUrl: string) {
 }
 
 function resolveDeveloperDocsBasePath() {
-  const configuredBasePath = (
-    import.meta.env.VITE_DEVELOPER_DOCS_BASE_PATH ||
-    import.meta.env.VITE_PARTNER_DOCS_BASE_PATH ||
-    '/developers/'
-  ).trim();
+  const configuredBasePath = (import.meta.env.VITE_DEVELOPER_DOCS_BASE_PATH || '/developers/').trim();
 
   if (!configuredBasePath) {
     return '/developers/';
@@ -1088,13 +1125,32 @@ function resolveDeveloperDocsBasePath() {
   return `${normalizedBasePath.replace(/\/+$/, '')}/`;
 }
 
-function resolveDefaultBaseUrl() {
+function resolveDefaultEnvironment(): PartnerApiEnvironment {
+  const configuredEnvironment = (import.meta.env.VITE_PARTNER_API_ENVIRONMENT || '').trim();
+  return configuredEnvironment === 'production' ? 'production' : DEFAULT_PARTNER_API_ENVIRONMENT;
+}
+
+function resolveDefaultBaseUrlOverride() {
   const configuredBaseUrl = (import.meta.env.VITE_PARTNER_API_BASE_URL || '').trim();
   if (configuredBaseUrl) return configuredBaseUrl;
   if (typeof window === 'undefined') return '';
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? ''
-    : window.location.origin;
+    ? window.location.origin
+    : '';
+}
+
+function resolveEffectiveBaseUrl(environment: PartnerApiEnvironment, baseUrlOverride: string) {
+  return baseUrlOverride.trim() || resolvePartnerApiBaseUrl(environment);
+}
+
+function applyRpcUrlTemplate(
+  template: string,
+  context: { chainId: number; chainName: string; networkSlug: string },
+) {
+  return template
+    .split('{chainId}').join(String(context.chainId))
+    .split('{chainName}').join(context.chainName)
+    .split('{networkSlug}').join(context.networkSlug);
 }
 
 function formatOutput(value: unknown) {

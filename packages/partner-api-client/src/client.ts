@@ -11,6 +11,7 @@ import type {
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
 } from './types.js';
+import { resolvePartnerApiBaseUrl } from './constants.js';
 import { joinUrl, partnerApiPaths } from './utils.js';
 
 type HttpMethod = 'GET' | 'POST';
@@ -22,7 +23,7 @@ export class PartnerApiClient {
   private readonly fetchImpl: typeof fetch;
 
   constructor(config: PartnerApiClientConfig) {
-    this.baseUrl = config.baseUrl.trim();
+    this.baseUrl = resolveConfiguredBaseUrl(config);
     this.apiKey = config.apiKey?.trim() || undefined;
     this.extraHeaders = config.headers;
     // Default `fetch` must be bound; assigning `fetch` unbound breaks with "Illegal invocation" in browsers.
@@ -159,4 +160,17 @@ export class PartnerApiClient {
 
     return (parsedBody as T) ?? (bodyText as unknown as T);
   }
+}
+
+function resolveConfiguredBaseUrl(config: PartnerApiClientConfig): string {
+  const explicitBaseUrl = config.baseUrl?.trim();
+  if (explicitBaseUrl) {
+    return explicitBaseUrl;
+  }
+
+  if (config.environment) {
+    return resolvePartnerApiBaseUrl(config.environment);
+  }
+
+  throw new Error('PartnerApiClient requires either `environment` or `baseUrl`.');
 }
