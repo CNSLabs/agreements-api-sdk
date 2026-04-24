@@ -83,7 +83,7 @@ button {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: end;
   margin-bottom: 28px;
@@ -124,20 +124,12 @@ button {
   line-height: 1.6;
 }
 
-.status-card,
 .panel,
 .curl-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(10, 15, 18, 0.58);
   backdrop-filter: blur(18px);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.24);
-}
-
-.status-card {
-  display: grid;
-  gap: 18px;
-  padding: 20px;
-  border-radius: 24px;
 }
 
 .status-label {

@@ -592,17 +592,17 @@ function App() {
               Open Raw OpenAPI
             </a>
           </div>
-          <h1>Exercise only the partner endpoints that still exist.</h1>
+          <h1>Test agreement lifecycle flows against the Partner API.</h1>
           <p className="lede">
-            This playground validates inline agreement JSON, deploys with a signed permit, loads
-            agreement state, fetches input history, and submits signed inputs.
+            Validate inline agreement JSON, deploy with a signed permit, inspect agreement state,
+            review input history, and submit signed inputs from one workspace.
           </p>
         </div>
 
         <div className="status-card">
           <div>
             <span className="status-label">Target</span>
-            <strong>{describeTarget(environment, baseUrlOverride, resolvedBaseUrl)}</strong>
+            <strong>{describeBaseUrl(resolvedBaseUrl)}</strong>
           </div>
           <div>
             <span className="status-label">Auth</span>
@@ -706,15 +706,8 @@ function App() {
               <section className="panel">
                 <h2>Current Session</h2>
                 <div className="stack">
-                  <div className="info-card"><span className="status-label">Target</span><strong>{describeTarget(environment, baseUrlOverride, resolvedBaseUrl)}</strong></div>
-                  <div className="info-card"><span className="status-label">Environment</span><strong>{environment}</strong></div>
+                  <div className="info-card"><span className="status-label">Target</span><strong>{describeBaseUrl(resolvedBaseUrl)}</strong></div>
                   <div className="info-card"><span className="status-label">Auth</span><strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong></div>
-                  {baseUrlOverride.trim() ? (
-                    <div className="info-card">
-                      <span className="status-label">Gateway Override</span>
-                      <strong>{baseUrlOverride.trim()}</strong>
-                    </div>
-                  ) : null}
                   <div className="info-card"><span className="status-label">Loaded Agreement</span><strong>{loadedAgreement?.id || 'None loaded yet'}</strong></div>
                 </div>
               </section>
@@ -1010,6 +1003,16 @@ function resolveDeployChainConfig(environment: PartnerApiEnvironment) {
   };
 }
 
+function applyRpcUrlTemplate(
+  template: string,
+  values: { chainId: number; chainName: string; networkSlug: string },
+) {
+  return template
+    .split('{chainId}').join(String(values.chainId))
+    .split('{chainName}').join(encodeURIComponent(values.chainName))
+    .split('{networkSlug}').join(encodeURIComponent(values.networkSlug));
+}
+
 function getInjectedProvider(): Eip1193Provider | null {
   if (typeof window === 'undefined') return null;
   return ((window as typeof window & { ethereum?: Eip1193Provider }).ethereum) || null;
@@ -1087,13 +1090,19 @@ function parseChainId(value: string) {
   return Number.parseInt(value, 16);
 }
 
-function describeTarget(environment: PartnerApiEnvironment, baseUrlOverride: string, resolvedBaseUrl: string) {
-  if (baseUrlOverride.trim()) return `custom (${resolvedBaseUrl})`;
-  return `${environment} (${resolvedBaseUrl})`;
+function describeBaseUrl(baseUrl: string) {
+  return baseUrl.trim() || 'same-origin via Vite proxy';
 }
 
-function resolveCurlBaseUrl(resolvedBaseUrl: string) {
-  return resolvedBaseUrl;
+function resolveEffectiveBaseUrl(environment: PartnerApiEnvironment, baseUrlOverride: string) {
+  const explicitBaseUrl = baseUrlOverride.trim();
+  return explicitBaseUrl || resolvePartnerApiBaseUrl(environment);
+}
+
+function resolveCurlBaseUrl(baseUrl: string) {
+  if (baseUrl.trim()) return baseUrl;
+  if (typeof window === 'undefined') return 'http://localhost:5176';
+  return window.location.origin;
 }
 
 function resolveDeveloperDocsBaseUrl(resolvedBaseUrl: string, baseUrlOverride: string) {
@@ -1135,22 +1144,8 @@ function resolveDefaultBaseUrlOverride() {
   if (configuredBaseUrl) return configuredBaseUrl;
   if (typeof window === 'undefined') return '';
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? window.location.origin
-    : '';
-}
-
-function resolveEffectiveBaseUrl(environment: PartnerApiEnvironment, baseUrlOverride: string) {
-  return baseUrlOverride.trim() || resolvePartnerApiBaseUrl(environment);
-}
-
-function applyRpcUrlTemplate(
-  template: string,
-  context: { chainId: number; chainName: string; networkSlug: string },
-) {
-  return template
-    .split('{chainId}').join(String(context.chainId))
-    .split('{chainName}').join(context.chainName)
-    .split('{networkSlug}').join(context.networkSlug);
+    ? ''
+    : window.location.origin;
 }
 
 function formatOutput(value: unknown) {
