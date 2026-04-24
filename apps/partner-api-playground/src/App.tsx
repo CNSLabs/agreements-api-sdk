@@ -53,8 +53,8 @@ type DeployChainConfig = {
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
 const DEFAULT_BASE_URL_OVERRIDE = resolveDefaultBaseUrlOverride();
-const DEFAULT_OWNER = '0x67fD5A5ec681b1208308813a2B3A0DD431Be7278';
-const DEFAULT_COUNTERPARTY = '0xbe32388c134a952cdbcc5673e93d46ffd8b85065';
+const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
+const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
 
 const SAMPLE_AGREEMENT = {
   metadata: {
@@ -94,13 +94,27 @@ const SAMPLE_AGREEMENT = {
         description: 'Agreement approved.',
       },
     },
+    initialize: {
+      name: 'Initialize',
+      description: 'Set the initial agreement participants.',
+      initialState: 'PENDING_APPROVAL',
+      data: {
+        partyAAddress: '${variables.partyAAddress}',
+        partyBAddress: '${variables.partyBAddress}',
+      },
+    },
     inputs: {
       approve: {
         type: 'VerifiedCredentialEIP712',
         schema: 'verified-credential-eip712.schema.json',
         displayName: 'Approve',
         description: 'Approves the agreement.',
-        data: { approved: true },
+        data: {
+          approved: {
+            type: 'bool',
+            validation: { required: true },
+          },
+        },
         issuer: '${variables.partyAAddress}',
       },
     },
