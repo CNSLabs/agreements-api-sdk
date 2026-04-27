@@ -62,12 +62,8 @@ If that port is already in use, start the playground on another port:
 pnpm --filter agreements-api-playground exec vite --host 127.0.0.1 --port 4176
 ```
 
-For local browser development, the playground expects a reachable backend target:
-
-- The playground is environment-first and defaults to `testnet`.
-- On localhost, the optional gateway override defaults to the Vite dev server origin so `/partner-api/*` requests can use the local proxy.
-- The Vite proxy forwards `/partner-api` and related routes to `http://localhost:8080`.
-- Set `VITE_AGREEMENTS_API_BASE_URL` to target an explicit local proxy or internal gateway instead.
+For local browser development, the playground is environment-first and defaults to `testnet`.
+Use the in-app environment selector to switch between hosted `testnet` and `production` API targets.
 
 See [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playground/README.md) for the full environment configuration.
 

@@ -47,14 +47,12 @@ type DeployChainConfig = {
   chainId: number;
   chain: typeof linea | typeof lineaSepolia;
   chainName: string;
-  networkSlug: string;
-  rpcUrl: string;
 };
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
-const DEFAULT_BASE_URL_OVERRIDE = resolveDefaultBaseUrlOverride();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
+const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
 
 const SAMPLE_AGREEMENT = {
   metadata: {
@@ -133,7 +131,6 @@ function App() {
 
   const [activeView, setActiveView] = useState<AppView>('overview');
   const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
-  const [baseUrlOverride, setBaseUrlOverride] = useState(DEFAULT_BASE_URL_OVERRIDE);
   const [apiKey, setApiKey] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [path, setPath] = useState(`${AGREEMENTS_API_BASE_PATH}/health`);
@@ -169,24 +166,20 @@ function App() {
   const [selectedInputId, setSelectedInputId] = useState('approve');
   const [inputValuesText, setInputValuesText] = useState('{\n  "approved": true\n}');
   const [loadedAgreement, setLoadedAgreement] = useState<AgreementRecord | null>(null);
-  const resolvedBaseUrl = useMemo(
-    () => resolveEffectiveBaseUrl(environment, baseUrlOverride),
-    [environment, baseUrlOverride],
-  );
+  const resolvedBaseUrl = useMemo(() => resolveAgreementsApiBaseUrl(environment), [environment]);
 
   const agreementsClient = useMemo(
     () =>
       new AgreementsApiClient({
         environment,
-        ...(baseUrlOverride.trim() ? { baseUrl: baseUrlOverride.trim() } : {}),
         apiKey: apiKey.trim() || undefined,
         headers: () => createBrowserTelemetryHeaders(),
       }),
-    [apiKey, baseUrlOverride, environment],
+    [apiKey, environment],
   );
 
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
-  const docsUrl = joinUrl(resolveDeveloperDocsBaseUrl(resolvedBaseUrl, baseUrlOverride), resolveDeveloperDocsBasePath());
+  const docsUrl = DEVELOPER_DOCS_URL;
   const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${AGREEMENTS_API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
@@ -280,10 +273,9 @@ function App() {
     try {
       const provider = getInjectedProvider();
       if (!provider) throw new Error('No injected wallet found.');
-      if (!deployChain.ok) throw new Error(deployChain.message);
       const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];
       if (!accounts.length) throw new Error('Wallet did not return any accounts.');
-      await ensureWalletChain(provider, deployChain.value);
+      await ensureWalletChain(provider, deployChain);
       const chainHex = (await provider.request({ method: 'eth_chainId' })) as string;
       setWalletAddress(normalizeAddress(accounts[0]));
       setConnectedChainId(parseChainId(chainHex));
@@ -388,20 +380,18 @@ function App() {
       const provider = getInjectedProvider();
       if (!provider) throw new Error('No injected wallet found.');
       if (!walletAddress) throw new Error('Connect the signer wallet first.');
-      if (!deployChain.ok) throw new Error(deployChain.message);
-
       const agreement = parseJsonObject(agreementJsonText, 'Agreement JSON') as unknown as AgreementJson;
       const initValues = parseJsonObject(initValuesText, 'Init values') as Record<string, InitValue>;
 
-      await ensureWalletChain(provider, deployChain.value);
+      await ensureWalletChain(provider, deployChain);
 
       const publicClient = createPublicClient({
-        chain: deployChain.value.chain,
-        transport: http(deployChain.value.rpcUrl),
+        chain: deployChain.chain,
+        transport: http(),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
-        chain: deployChain.value.chain,
+        chain: deployChain.chain,
         transport: custom(provider),
       });
 
@@ -489,19 +479,18 @@ function App() {
       const provider = getInjectedProvider();
       if (!provider) throw new Error('No injected wallet found.');
       if (!walletAddress) throw new Error('Connect the signer wallet first.');
-      if (!deployChain.ok) throw new Error(deployChain.message);
 
       const agreement = tryAgreementJson(loadedAgreement?.json);
       if (!agreement || !loadedAgreement?.address) throw new Error('Load a deployed agreement first.');
 
-      await ensureWalletChain(provider, deployChain.value);
+      await ensureWalletChain(provider, deployChain);
       const publicClient = createPublicClient({
-        chain: deployChain.value.chain,
-        transport: http(deployChain.value.rpcUrl),
+        chain: deployChain.chain,
+        transport: http(),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
-        chain: deployChain.value.chain,
+        chain: deployChain.chain,
         transport: custom(provider),
       });
       const values = parseJsonObject(inputValuesText, 'Input values');
@@ -651,9 +640,9 @@ function App() {
               <div className="toolbar-wallet-row">
                 <div className="toolbar-wallet-copy">
                   <strong>{walletStatus}</strong>
-                  <small>{deployChain.ok ? `${deployChain.value.chainName} (${deployChain.value.chainId})` : deployChain.message}</small>
+                  <small>{deployChain.chainName} ({deployChain.chainId})</small>
                 </div>
-                <button type="button" className="primary" disabled={walletBusy || !deployChain.ok} onClick={() => void connectWallet()}>
+                <button type="button" className="primary" disabled={walletBusy} onClick={() => void connectWallet()}>
                   {walletBusy ? 'Connecting...' : walletAddress ? 'Refresh Wallet' : 'Connect Wallet'}
                 </button>
               </div>
@@ -776,7 +765,7 @@ function App() {
                     <button
                       type="button"
                       className="primary"
-                      disabled={busy || !walletAddress || !deployChain.ok}
+                      disabled={busy || !walletAddress}
                       onClick={() => void deployWithPermit()}
                     >
                       {busy ? 'Signing / Deploying...' : 'Sign + Deploy'}
@@ -785,7 +774,6 @@ function App() {
                       Go To Input Submission
                     </button>
                     {!walletAddress ? <div className="error-banner compact">Connect the wallet that should sign the deploy permit first.</div> : null}
-                    {!deployChain.ok ? <div className="error-banner compact">{deployChain.message}</div> : null}
                     {error ? <div className="error-banner compact">{error}</div> : null}
                     {notice ? <div className="success-banner compact">{notice}</div> : null}
                   </div>
@@ -879,7 +867,7 @@ function App() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={busy || !walletAddress || !deployChain.ok}
+                  disabled={busy || !walletAddress}
                   onClick={() => void submitInput()}
                 >
                   {busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}
@@ -912,14 +900,6 @@ function App() {
               <section className="panel">
                 <h2>Composer</h2>
                 <div className="composer">
-                  <label className="field">
-                    <span>Gateway Override (advanced)</span>
-                    <input
-                      value={baseUrlOverride}
-                      onChange={event => setBaseUrlOverride(event.target.value)}
-                      placeholder="Optional: http://localhost:8080"
-                    />
-                  </label>
                   <div className="row">
                     <label className="field field-compact">
                       <span>Method</span>
@@ -993,38 +973,7 @@ function buildQuickActions(params: {
 
 function resolveDeployChainConfig(environment: AgreementsApiEnvironment) {
   const chain = environment === 'production' ? linea : lineaSepolia;
-  const chainId = chain.id;
-  const networkSlug = environment === 'production' ? 'linea-mainnet' : 'linea-sepolia';
-  let rpcUrl = import.meta.env.VITE_AGREEMENTS_RPC_URL;
-  const rpcUrlTemplate = (import.meta.env.VITE_AGREEMENTS_RPC_URL_TEMPLATE || '').trim();
-  if (!rpcUrl && rpcUrlTemplate) {
-    rpcUrl = applyRpcUrlTemplate(rpcUrlTemplate, {
-      chainId,
-      chainName: chain.name,
-      networkSlug,
-    });
-  }
-  if (!rpcUrl) rpcUrl = chain.rpcUrls.default.http[0];
-  if (!rpcUrl) {
-    return {
-      ok: false as const,
-      message: 'Set VITE_AGREEMENTS_RPC_URL or VITE_AGREEMENTS_RPC_URL_TEMPLATE.',
-    };
-  }
-  return {
-    ok: true as const,
-    value: { chainId: chain.id, chain, chainName: chain.name, networkSlug, rpcUrl } as DeployChainConfig,
-  };
-}
-
-function applyRpcUrlTemplate(
-  template: string,
-  values: { chainId: number; chainName: string; networkSlug: string },
-) {
-  return template
-    .split('{chainId}').join(String(values.chainId))
-    .split('{chainName}').join(encodeURIComponent(values.chainName))
-    .split('{networkSlug}').join(encodeURIComponent(values.networkSlug));
+  return { chainId: chain.id, chain, chainName: chain.name } as DeployChainConfig;
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
@@ -1105,12 +1054,7 @@ function parseChainId(value: string) {
 }
 
 function describeBaseUrl(baseUrl: string) {
-  return baseUrl.trim() || 'same-origin via Vite proxy';
-}
-
-function resolveEffectiveBaseUrl(environment: AgreementsApiEnvironment, baseUrlOverride: string) {
-  const explicitBaseUrl = baseUrlOverride.trim();
-  return explicitBaseUrl || resolveAgreementsApiBaseUrl(environment);
+  return baseUrl.trim();
 }
 
 function resolveCurlBaseUrl(baseUrl: string) {
@@ -1119,47 +1063,9 @@ function resolveCurlBaseUrl(baseUrl: string) {
   return window.location.origin;
 }
 
-function resolveDeveloperDocsBaseUrl(resolvedBaseUrl: string, baseUrlOverride: string) {
-  if (baseUrlOverride.trim()) return resolvedBaseUrl;
-  if (typeof window === 'undefined') return 'http://localhost:5177';
-
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:5177`;
-  }
-
-  return window.location.origin;
-}
-
-function resolveDeveloperDocsBasePath() {
-  const configuredBasePath = (import.meta.env.VITE_DEVELOPER_DOCS_BASE_PATH || '/developers/').trim();
-
-  if (!configuredBasePath) {
-    return '/developers/';
-  }
-
-  const normalizedBasePath = configuredBasePath.startsWith('/')
-    ? configuredBasePath
-    : `/${configuredBasePath}`;
-
-  if (normalizedBasePath === '/') {
-    return '/';
-  }
-
-  return `${normalizedBasePath.replace(/\/+$/, '')}/`;
-}
-
 function resolveDefaultEnvironment(): AgreementsApiEnvironment {
   const configuredEnvironment = (import.meta.env.VITE_AGREEMENTS_API_ENVIRONMENT || '').trim();
   return configuredEnvironment === 'production' ? 'production' : DEFAULT_AGREEMENTS_API_ENVIRONMENT;
-}
-
-function resolveDefaultBaseUrlOverride() {
-  const configuredBaseUrl = (import.meta.env.VITE_AGREEMENTS_API_BASE_URL || '').trim();
-  if (configuredBaseUrl) return configuredBaseUrl;
-  if (typeof window === 'undefined') return '';
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? ''
-    : window.location.origin;
 }
 
 function formatOutput(value: unknown) {
