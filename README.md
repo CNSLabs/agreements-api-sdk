@@ -1,6 +1,6 @@
 # Agreements API SDK
 
-Open-source home for the CNS Labs TypeScript client for the Agreements API and the reference playground app built on top of it.
+Open-source home for the TypeScript client for the Agreements API and the reference playground app built on top of it.
 
 ## Install the SDK
 
@@ -34,7 +34,7 @@ The SDK now prefers a named environment instead of a raw host:
 ```ts
 const client = new AgreementsApiClient({
   environment: 'testnet',
-  apiKey: process.env.CNS_AGREEMENTS_API_KEY,
+  apiKey: process.env.AGREEMENTS_API_KEY,
 });
 ```
 

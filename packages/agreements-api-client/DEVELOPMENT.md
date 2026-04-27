@@ -4,7 +4,7 @@ Maintainer notes for `@cns-labs/agreements-api-client`.
 
 ## Role in the Repository
 
-This package is the typed client for the CNS Agreements API. It is also used by `apps/agreements-api-playground`.
+This package is the typed client for the Agreements API. It is also used by `apps/agreements-api-playground`.
 
 When Agreements API routes, payloads, status codes, or path prefixes change, update this package in the same change set so the playground and external consumers stay aligned.
 

@@ -2,7 +2,7 @@
   "name": "agreements-api-sdk",
   "version": "0.0.1",
   "private": true,
-  "description": "Open-source Agreements API client and playground for CNS Labs agreements integrations.",
+  "description": "Open-source Agreements API client and playground for agreements integrations.",
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "build": "pnpm -r build",

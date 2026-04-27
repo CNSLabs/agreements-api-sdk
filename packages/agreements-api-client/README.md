@@ -1,6 +1,6 @@
 # @cns-labs/agreements-api-client
 
-TypeScript client for the CNS Agreements API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
+TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
 
 The package bundles:
 
@@ -32,7 +32,7 @@ import { AgreementsApiClient } from '@cns-labs/agreements-api-client';
 
 const client = new AgreementsApiClient({
   environment: 'testnet',
-  apiKey: process.env.CNS_AGREEMENTS_API_KEY,
+  apiKey: process.env.AGREEMENTS_API_KEY,
 });
 
 const health = await client.getHealth();
@@ -56,7 +56,7 @@ Use `baseUrl` only when you need to bypass the standard Shodai environment mappi
 const client = new AgreementsApiClient({
   environment: 'testnet',
   baseUrl: 'http://localhost:8080',
-  apiKey: process.env.CNS_AGREEMENTS_API_KEY,
+  apiKey: process.env.AGREEMENTS_API_KEY,
 });
 ```
 
@@ -65,7 +65,7 @@ When `baseUrl` is provided, it wins over the environment host mapping.
 ### Authentication and custom headers
 
 - `apiKey` is sent as `X-API-Key`
-- use the API key issued for your API principal by CNS Labs or your deployment operator
+- use the API key issued for your API principal by your deployment operator
 - `headers` lets you attach correlation IDs, telemetry headers, or other request metadata
 - `fetch` can be overridden if your runtime does not provide a compatible global `fetch`
 

@@ -1,8 +1,8 @@
 {
   "name": "@cns-labs/agreements-api-client",
   "version": "0.0.1",
-  "description": "TypeScript client for the CNS Agreements API with built-in permit-signing helpers",
-  "author": "CNS Labs",
+  "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
+  "author": "Agreements API Maintainers",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -14,7 +14,6 @@
     "url": "https://github.com/CNSLabs/agreements-api-sdk/issues"
   },
   "keywords": [
-    "cns-labs",
     "agreements-protocol",
     "api",
     "client",
