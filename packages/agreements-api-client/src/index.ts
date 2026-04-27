@@ -1,12 +1,12 @@
 export {
-  DEFAULT_PARTNER_API_ENVIRONMENT,
-  PARTNER_API_BASE_PATH,
-  PARTNER_API_ENVIRONMENT_BASE_URLS,
-  PARTNER_API_MAJOR_VERSION,
-  resolvePartnerApiBaseUrl,
+  AGREEMENTS_API_BASE_PATH,
+  AGREEMENTS_API_ENVIRONMENT_BASE_URLS,
+  AGREEMENTS_API_MAJOR_VERSION,
+  DEFAULT_AGREEMENTS_API_ENVIRONMENT,
+  resolveAgreementsApiBaseUrl,
 } from './constants.js';
-export { PartnerApiClient } from './client.js';
-export { PartnerApiError, extractPartnerApiErrorMessage } from './errors.js';
+export { AgreementsApiClient } from './client.js';
+export { AgreementsApiError, extractAgreementsApiErrorMessage } from './errors.js';
 export type {
   AgreementInputRecord,
   AgreementRecord,
@@ -15,16 +15,16 @@ export type {
   ErrorResponse,
   HealthResponse,
   ParticipantRecord,
-  PartnerApiClientConfig,
-  PartnerApiEnvironment,
-  PartnerDirectParticipantRecord,
+  AgreementsApiClientConfig,
+  AgreementsApiEnvironment,
+  DirectParticipantRecord,
   PermitSignature,
   ProcessInputRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
 } from './types.js';
-export { getExecutionInputIds, joinUrl, partnerApiPaths } from './utils.js';
+export { agreementsApiPaths, getExecutionInputIds, joinUrl } from './utils.js';
 export {
   computeDefaultDeadlineSeconds,
   DEFAULT_PERMIT_DEADLINE_SECONDS,

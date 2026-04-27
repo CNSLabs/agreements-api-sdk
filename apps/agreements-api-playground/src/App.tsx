@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  DEFAULT_PARTNER_API_ENVIRONMENT,
-  PartnerApiClient,
-  PARTNER_API_BASE_PATH,
+  AGREEMENTS_API_BASE_PATH,
+  AgreementsApiClient,
   computeDefaultDeadlineSeconds,
+  DEFAULT_AGREEMENTS_API_ENVIRONMENT,
   deployAgreementWithPermit,
-  extractPartnerApiErrorMessage,
+  extractAgreementsApiErrorMessage,
   getExecutionInputIds,
   joinUrl,
-  resolvePartnerApiBaseUrl,
+  resolveAgreementsApiBaseUrl,
   submitAgreementInputWithPermit,
   type AgreementRecord,
-  type PartnerApiEnvironment,
-  type PartnerDirectParticipantRecord,
+  type AgreementsApiEnvironment,
+  type DirectParticipantRecord,
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
 import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
@@ -58,13 +58,13 @@ const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
 
 const SAMPLE_AGREEMENT = {
   metadata: {
-    id: 'did:example:partner-playground-v1',
-    templateId: 'did:template:partner-playground-v1',
+    id: 'did:example:agreements-playground-v1',
+    templateId: 'did:template:agreements-playground-v1',
     version: '1.0.0',
     createdAt: '2026-04-13T00:00:00Z',
-    name: 'Partner Playground Agreement',
+    name: 'Agreements Playground Agreement',
     author: 'CNS Labs',
-    description: 'Sample inline agreement JSON for partner API validation and deployment testing.',
+    description: 'Sample inline agreement JSON for Agreements API validation and deployment testing.',
   },
   variables: {
     partyAAddress: {
@@ -80,7 +80,7 @@ const SAMPLE_AGREEMENT = {
   },
   content: {
     type: 'md',
-    data: '# Partner Playground Agreement\n\nThis is a sample inline agreement payload.',
+    data: '# Agreements Playground Agreement\n\nThis is a sample inline agreement payload.',
   },
   execution: {
     states: {
@@ -132,11 +132,11 @@ function App() {
   const composerPathInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeView, setActiveView] = useState<AppView>('overview');
-  const [environment, setEnvironment] = useState<PartnerApiEnvironment>(DEFAULT_ENVIRONMENT);
+  const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
   const [baseUrlOverride, setBaseUrlOverride] = useState(DEFAULT_BASE_URL_OVERRIDE);
   const [apiKey, setApiKey] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
-  const [path, setPath] = useState(`${PARTNER_API_BASE_PATH}/health`);
+  const [path, setPath] = useState(`${AGREEMENTS_API_BASE_PATH}/health`);
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -149,7 +149,7 @@ function App() {
   const [walletError, setWalletError] = useState('');
 
   const [agreementId, setAgreementId] = useState('');
-  const [displayName, setDisplayName] = useState('Partner Playground Agreement');
+  const [displayName, setDisplayName] = useState('Agreements Playground Agreement');
   const [docUri, setDocUri] = useState('');
   const [agreementJsonText, setAgreementJsonText] = useState(JSON.stringify(SAMPLE_AGREEMENT, null, 2));
   const [initValuesText, setInitValuesText] = useState(
@@ -174,9 +174,9 @@ function App() {
     [environment, baseUrlOverride],
   );
 
-  const partnerClient = useMemo(
+  const agreementsClient = useMemo(
     () =>
-      new PartnerApiClient({
+      new AgreementsApiClient({
         environment,
         ...(baseUrlOverride.trim() ? { baseUrl: baseUrlOverride.trim() } : {}),
         apiKey: apiKey.trim() || undefined,
@@ -187,7 +187,7 @@ function App() {
 
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
   const docsUrl = joinUrl(resolveDeveloperDocsBaseUrl(resolvedBaseUrl, baseUrlOverride), resolveDeveloperDocsBasePath());
-  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${PARTNER_API_BASE_PATH}/openapi.json`);
+  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${AGREEMENTS_API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
     const asRecord =
@@ -234,7 +234,7 @@ function App() {
     }
   }, [availableInputIds, selectedInputId]);
 
-  async function runPartnerRequest<T>(config: {
+  async function runAgreementsRequest<T>(config: {
     method: HttpMethod;
     path: string;
     body?: unknown;
@@ -242,7 +242,7 @@ function App() {
   }): Promise<T> {
     const startedAt = new Date();
     const startedMs = performance.now();
-    const meta = await partnerClient.exchangeJson(config.method, config.path, config.body);
+    const meta = await agreementsClient.exchangeJson(config.method, config.path, config.body);
 
     if (config.captureResponse !== false) {
       setResponse({
@@ -257,7 +257,7 @@ function App() {
     }
 
     if (!meta.ok) {
-      throw new Error(extractPartnerApiErrorMessage(meta.parsedBody, meta.bodyText, meta.status));
+      throw new Error(extractAgreementsApiErrorMessage(meta.parsedBody, meta.bodyText, meta.status));
     }
     return (meta.parsedBody as T) ?? ((meta.bodyText as unknown) as T);
   }
@@ -300,13 +300,13 @@ function App() {
     setNotice('');
     try {
       const trimmedPath = path.trim();
-      if (method === 'POST' && trimmedPath === `${PARTNER_API_BASE_PATH}/agreements/deploy-with-permit`) {
+      if (method === 'POST' && trimmedPath === `${AGREEMENTS_API_BASE_PATH}/agreements/deploy-with-permit`) {
         throw new Error('Use "Sign + Deploy" so the connected wallet signs the deploy-with-permit request.');
       }
       if (method === 'POST' && /\/agreements\/[^/]+\/input$/.test(trimmedPath)) {
         throw new Error('Use "Sign + Submit Input" so the connected wallet signs the input submission.');
       }
-      await runPartnerRequest({
+      await runAgreementsRequest({
         method,
         path,
         body: body.trim() ? JSON.parse(body) : undefined,
@@ -327,9 +327,9 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      const record = await runPartnerRequest<AgreementRecord>({
+      const record = await runAgreementsRequest<AgreementRecord>({
         method: 'GET',
-        path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId.trim()}`,
+        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}`,
       });
       setLoadedAgreement(record);
       setDisplayName(record.displayName || displayName);
@@ -350,9 +350,9 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runPartnerRequest({
+      await runAgreementsRequest({
         method: 'POST',
-        path: `${PARTNER_API_BASE_PATH}/agreements/validate-template`,
+        path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate-template`,
         body: parseJsonObject(agreementJsonText, 'Agreement JSON'),
       });
       setNotice('Template validation completed.');
@@ -367,9 +367,9 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runPartnerRequest({
+      await runAgreementsRequest({
         method: 'POST',
-        path: `${PARTNER_API_BASE_PATH}/agreements/validate`,
+        path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate`,
         body: buildValidatePayload(),
       });
       setNotice('Deployment payload validated.');
@@ -409,13 +409,13 @@ function App() {
       const deployStartedAt = new Date();
       const deployStartedMs = performance.now();
       const deployed = await deployAgreementWithPermit({
-        client: partnerClient,
+        client: agreementsClient,
         walletClient: walletClient as never,
         publicClient: publicClient as never,
         agreement,
-        displayName: displayName.trim() || 'Partner Playground Agreement',
+        displayName: displayName.trim() || 'Agreements Playground Agreement',
         initValues,
-        participants: parseJsonArray(participantsText, 'Participants') as PartnerDirectParticipantRecord[],
+        participants: parseJsonArray(participantsText, 'Participants') as DirectParticipantRecord[],
         observers: parseJsonArray(observersText, 'Observers') as string[],
         docUri: docUri.trim() || undefined,
         deadline: computeDefaultDeadlineSeconds(),
@@ -447,9 +447,9 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runPartnerRequest({
+      await runAgreementsRequest({
         method: 'GET',
-        path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId.trim()}/state`,
+        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}/state`,
       });
       setNotice('Agreement state loaded.');
     } catch (stateError) {
@@ -467,9 +467,9 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runPartnerRequest({
+      await runAgreementsRequest({
         method: 'GET',
-        path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId.trim()}/inputs`,
+        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}/inputs`,
       });
       setNotice('Input history loaded.');
     } catch (inputsError) {
@@ -510,7 +510,7 @@ function App() {
       const inputStartedAt = new Date();
       const inputStartedMs = performance.now();
       const inputRecord = await submitAgreementInputWithPermit({
-        client: partnerClient,
+        client: agreementsClient,
         agreementId: agreementId.trim(),
         walletClient: walletClient as never,
         publicClient: publicClient as never,
@@ -564,7 +564,7 @@ function App() {
     { id: 'deploy', label: 'Deploy', description: 'Validate and deploy agreements' },
     { id: 'inspect', label: 'Inspect', description: 'Load records, state, and inputs' },
     { id: 'input', label: 'Input', description: 'Sign and submit agreement inputs' },
-    { id: 'composer', label: 'Composer', description: 'Send raw partner API requests' },
+    { id: 'composer', label: 'Composer', description: 'Send raw Agreements API requests' },
   ];
 
   function renderResponsePanel(title = 'Latest Response') {
@@ -584,7 +584,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="empty-state">Responses from partner API requests will appear here.</div>
+          <div className="empty-state">Responses from Agreements API requests will appear here.</div>
         )}
       </section>
     );
@@ -597,7 +597,7 @@ function App() {
 
       <header className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Partner API Playground</p>
+          <p className="eyebrow">Agreements API Playground</p>
           <div className="hero-actions">
             <a className="link-chip" href={docsUrl} target="_blank" rel="noreferrer">
               Open Developer Docs
@@ -606,7 +606,7 @@ function App() {
               Open Raw OpenAPI
             </a>
           </div>
-          <h1>Test agreement lifecycle flows against the Partner API.</h1>
+          <h1>Test agreement lifecycle flows against the Agreements API.</h1>
           <p className="lede">
             Validate inline agreement JSON, deploy with a signed permit, inspect agreement state,
             review input history, and submit signed inputs from one workspace.
@@ -636,7 +636,7 @@ function App() {
               <span>Environment</span>
               <select
                 value={environment}
-                onChange={event => setEnvironment(event.target.value as PartnerApiEnvironment)}
+                onChange={event => setEnvironment(event.target.value as AgreementsApiEnvironment)}
               >
                 <option value="testnet">testnet</option>
                 <option value="production">production</option>
@@ -708,7 +708,7 @@ function App() {
                   </button>
                   <button type="button" className="workspace-card workspace-link" onClick={() => setActiveView('composer')}>
                     <h3>Raw API Composer</h3>
-                    <p>Use curated shortcuts and a raw request editor for the remaining partner API endpoints in one focused workspace.</p>
+                    <p>Use curated shortcuts and a raw request editor for the remaining Agreements API endpoints in one focused workspace.</p>
                     <div className="inline-actions">
                       <span className="method-chip method-chip-get">GET</span>
                       <span className="method-chip method-chip-post">POST</span>
@@ -741,7 +741,7 @@ function App() {
                   <div className="deploy-main">
                     <label className="field">
                       <span>Display Name</span>
-                      <input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Partner Playground Agreement" />
+                      <input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Agreements Playground Agreement" />
                     </label>
                     <label className="field">
                       <span>Doc URI</span>
@@ -973,7 +973,7 @@ function buildQuickActions(params: {
   const agreement = parseJsonObjectLoose(params.agreementJsonText, SAMPLE_AGREEMENT);
   const validateBody = {
     agreement,
-    displayName: params.displayName.trim() || 'Partner Playground Agreement',
+    displayName: params.displayName.trim() || 'Agreements Playground Agreement',
     initValues: parseJsonObjectLoose(params.initValuesText, {}),
     participants: parseJsonArrayLoose(params.participantsText, []),
     observers: parseJsonArrayLoose(params.observersText, []),
@@ -981,17 +981,17 @@ function buildQuickActions(params: {
   };
 
   return [
-    { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${PARTNER_API_BASE_PATH}/health`, note: 'Check gateway availability.' },
-    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${PARTNER_API_BASE_PATH}/agreements`, note: 'List agreements visible to this partner principal.' },
-    { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${PARTNER_API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
-    { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${PARTNER_API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
-    { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
-    { id: 'state', label: 'Get State', method: 'GET' as const, path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
-    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${PARTNER_API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
+    { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/health`, note: 'Check gateway availability.' },
+    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements`, note: 'List agreements visible to this API principal.' },
+    { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
+    { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
+    { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
+    { id: 'state', label: 'Get State', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
+    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
   ];
 }
 
-function resolveDeployChainConfig(environment: PartnerApiEnvironment) {
+function resolveDeployChainConfig(environment: AgreementsApiEnvironment) {
   const chain = environment === 'production' ? linea : lineaSepolia;
   const chainId = chain.id;
   const networkSlug = environment === 'production' ? 'linea-mainnet' : 'linea-sepolia';
@@ -1108,9 +1108,9 @@ function describeBaseUrl(baseUrl: string) {
   return baseUrl.trim() || 'same-origin via Vite proxy';
 }
 
-function resolveEffectiveBaseUrl(environment: PartnerApiEnvironment, baseUrlOverride: string) {
+function resolveEffectiveBaseUrl(environment: AgreementsApiEnvironment, baseUrlOverride: string) {
   const explicitBaseUrl = baseUrlOverride.trim();
-  return explicitBaseUrl || resolvePartnerApiBaseUrl(environment);
+  return explicitBaseUrl || resolveAgreementsApiBaseUrl(environment);
 }
 
 function resolveCurlBaseUrl(baseUrl: string) {
@@ -1148,13 +1148,13 @@ function resolveDeveloperDocsBasePath() {
   return `${normalizedBasePath.replace(/\/+$/, '')}/`;
 }
 
-function resolveDefaultEnvironment(): PartnerApiEnvironment {
-  const configuredEnvironment = (import.meta.env.VITE_PARTNER_API_ENVIRONMENT || '').trim();
-  return configuredEnvironment === 'production' ? 'production' : DEFAULT_PARTNER_API_ENVIRONMENT;
+function resolveDefaultEnvironment(): AgreementsApiEnvironment {
+  const configuredEnvironment = (import.meta.env.VITE_AGREEMENTS_API_ENVIRONMENT || '').trim();
+  return configuredEnvironment === 'production' ? 'production' : DEFAULT_AGREEMENTS_API_ENVIRONMENT;
 }
 
 function resolveDefaultBaseUrlOverride() {
-  const configuredBaseUrl = (import.meta.env.VITE_PARTNER_API_BASE_URL || '').trim();
+  const configuredBaseUrl = (import.meta.env.VITE_AGREEMENTS_API_BASE_URL || '').trim();
   if (configuredBaseUrl) return configuredBaseUrl;
   if (typeof window === 'undefined') return '';
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'

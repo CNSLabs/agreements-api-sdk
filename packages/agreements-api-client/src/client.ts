@@ -1,28 +1,28 @@
-import { extractPartnerApiErrorMessage, PartnerApiError } from './errors.js';
+import { extractAgreementsApiErrorMessage, AgreementsApiError } from './errors.js';
 import type {
   AgreementInputRecord,
   AgreementRecord,
   AgreementStateResponse,
   DirectDeployAgreementWithPermitRequest,
   HealthResponse,
-  PartnerApiClientConfig,
+  AgreementsApiClientConfig,
   ProcessInputRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
 } from './types.js';
-import { resolvePartnerApiBaseUrl } from './constants.js';
-import { joinUrl, partnerApiPaths } from './utils.js';
+import { resolveAgreementsApiBaseUrl } from './constants.js';
+import { agreementsApiPaths, joinUrl } from './utils.js';
 
 type HttpMethod = 'GET' | 'POST';
 
-export class PartnerApiClient {
+export class AgreementsApiClient {
   private readonly baseUrl: string;
   private readonly apiKey?: string;
-  private readonly extraHeaders?: PartnerApiClientConfig['headers'];
+  private readonly extraHeaders?: AgreementsApiClientConfig['headers'];
   private readonly fetchImpl: typeof fetch;
 
-  constructor(config: PartnerApiClientConfig) {
+  constructor(config: AgreementsApiClientConfig) {
     this.baseUrl = resolveConfiguredBaseUrl(config);
     this.apiKey = config.apiKey?.trim() || undefined;
     this.extraHeaders = config.headers;
@@ -31,50 +31,50 @@ export class PartnerApiClient {
   }
 
   async getOpenApiDocument(): Promise<unknown> {
-    return this.request<unknown>('GET', partnerApiPaths.openapiJson());
+    return this.request<unknown>('GET', agreementsApiPaths.openapiJson());
   }
 
   async getHealth(): Promise<HealthResponse> {
-    return this.request<HealthResponse>('GET', partnerApiPaths.health());
+    return this.request<HealthResponse>('GET', agreementsApiPaths.health());
   }
 
   async listAgreements(params?: { status?: 'Draft' | 'Deployed' }): Promise<AgreementRecord[]> {
     const q = params?.status ? `?status=${encodeURIComponent(params.status)}` : '';
-    return this.request<AgreementRecord[]>('GET', `${partnerApiPaths.agreements()}${q}`);
+    return this.request<AgreementRecord[]>('GET', `${agreementsApiPaths.agreements()}${q}`);
   }
 
   async getAgreement(agreementId: string): Promise<AgreementRecord> {
-    return this.request<AgreementRecord>('GET', partnerApiPaths.agreement(agreementId));
+    return this.request<AgreementRecord>('GET', agreementsApiPaths.agreement(agreementId));
   }
 
   async validateTemplate(agreement: Record<string, unknown>): Promise<ValidateDirectAgreementTemplateResponse> {
     return this.request<ValidateDirectAgreementTemplateResponse>(
       'POST',
-      partnerApiPaths.agreementsValidateTemplate(),
+      agreementsApiPaths.agreementsValidateTemplate(),
       agreement,
       201,
     );
   }
 
   async validateDeployment(body: ValidateDirectAgreementRequest): Promise<ValidateDirectAgreementResponse> {
-    return this.request<ValidateDirectAgreementResponse>('POST', partnerApiPaths.agreementsValidate(), body, 201);
+    return this.request<ValidateDirectAgreementResponse>('POST', agreementsApiPaths.agreementsValidate(), body, 201);
   }
 
   async deployWithPermit(body: DirectDeployAgreementWithPermitRequest): Promise<AgreementRecord> {
-    return this.request<AgreementRecord>('POST', partnerApiPaths.agreementsDeployWithPermit(), body, 201);
+    return this.request<AgreementRecord>('POST', agreementsApiPaths.agreementsDeployWithPermit(), body, 201);
   }
 
   async getAgreementState(agreementId: string): Promise<AgreementStateResponse> {
-    return this.request<AgreementStateResponse>('GET', partnerApiPaths.agreementState(agreementId));
+    return this.request<AgreementStateResponse>('GET', agreementsApiPaths.agreementState(agreementId));
   }
 
   async listAgreementInputs(agreementId: string, params?: { userId?: string }): Promise<AgreementInputRecord[]> {
     const q = params?.userId ? `?userId=${encodeURIComponent(params.userId)}` : '';
-    return this.request<AgreementInputRecord[]>('GET', `${partnerApiPaths.agreementInputs(agreementId)}${q}`);
+    return this.request<AgreementInputRecord[]>('GET', `${agreementsApiPaths.agreementInputs(agreementId)}${q}`);
   }
 
   async submitAgreementInput(agreementId: string, body: ProcessInputRequest): Promise<AgreementInputRecord> {
-    return this.request<AgreementInputRecord>('POST', partnerApiPaths.agreementInput(agreementId), body, 201);
+    return this.request<AgreementInputRecord>('POST', agreementsApiPaths.agreementInput(agreementId), body, 201);
   }
 
   /**
@@ -154,23 +154,23 @@ export class PartnerApiClient {
 
     const success = res.status === okStatus || (okStatus === 200 && res.status >= 200 && res.status < 300);
     if (!success) {
-      const message = extractPartnerApiErrorMessage(parsedBody, bodyText, res.status);
-      throw new PartnerApiError(message, res.status, bodyText, parsedBody);
+      const message = extractAgreementsApiErrorMessage(parsedBody, bodyText, res.status);
+      throw new AgreementsApiError(message, res.status, bodyText, parsedBody);
     }
 
     return (parsedBody as T) ?? (bodyText as unknown as T);
   }
 }
 
-function resolveConfiguredBaseUrl(config: PartnerApiClientConfig): string {
+function resolveConfiguredBaseUrl(config: AgreementsApiClientConfig): string {
   const explicitBaseUrl = config.baseUrl?.trim();
   if (explicitBaseUrl) {
     return explicitBaseUrl;
   }
 
   if (config.environment) {
-    return resolvePartnerApiBaseUrl(config.environment);
+    return resolveAgreementsApiBaseUrl(config.environment);
   }
 
-  throw new Error('PartnerApiClient requires either `environment` or `baseUrl`.');
+  throw new Error('AgreementsApiClient requires either `environment` or `baseUrl`.');
 }

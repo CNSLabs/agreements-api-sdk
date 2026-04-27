@@ -1,5 +1,5 @@
 /**
- * Types aligned with the public partner API OpenAPI contract.
+ * Types aligned with the public Agreements API OpenAPI contract.
  * Agreement JSON follows `@cns-labs/agreements-protocol-evm` `AgreementJson` at runtime.
  */
 
@@ -9,7 +9,7 @@ export type PermitSignature = {
   s: string;
 };
 
-export type PartnerDirectParticipantRecord = {
+export type DirectParticipantRecord = {
   variableKey: string;
   walletAddress: string;
   email?: string;
@@ -64,14 +64,14 @@ export type ErrorResponse = {
 export type ValidateDirectAgreementRequest = {
   agreement: Record<string, unknown>;
   initValues?: Record<string, unknown>;
-  participants?: PartnerDirectParticipantRecord[];
+  participants?: DirectParticipantRecord[];
   observers?: string[];
 };
 
 export type ValidateDirectAgreementResponse = {
   templateId: string | null;
   participantVariableKeys: string[];
-  participants: PartnerDirectParticipantRecord[];
+  participants: DirectParticipantRecord[];
   observers: string[];
   variables: Record<string, unknown>;
   contributors: string[];
@@ -91,7 +91,7 @@ export type DirectDeployAgreementWithPermitRequest = {
   displayName: string;
   docUri?: string;
   initValues?: Record<string, unknown>;
-  participants?: PartnerDirectParticipantRecord[];
+  participants?: DirectParticipantRecord[];
   observers?: string[];
   signer: string;
   deadline: number;
@@ -126,10 +126,10 @@ export type ProcessInputRequest = {
   signature: PermitSignature;
 };
 
-export type PartnerApiEnvironment = 'testnet' | 'production';
+export type AgreementsApiEnvironment = 'testnet' | 'production';
 
-type PartnerApiClientSharedConfig = {
-  /** `X-API-Key` value for the partner principal. */
+type AgreementsApiClientSharedConfig = {
+  /** `X-API-Key` value for the API principal. */
   apiKey?: string;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
   headers?: Record<string, string> | (() => Record<string, string> | undefined);
@@ -137,21 +137,21 @@ type PartnerApiClientSharedConfig = {
   fetch?: typeof fetch;
 };
 
-export type PartnerApiClientConfig =
-  | (PartnerApiClientSharedConfig & {
+export type AgreementsApiClientConfig =
+  | (AgreementsApiClientSharedConfig & {
       /** Named Shodai environment used to resolve the gateway host automatically. */
-      environment: PartnerApiEnvironment;
+      environment: AgreementsApiEnvironment;
       /**
        * Optional gateway origin override (no trailing slash), e.g. `https://internal-gateway.example.com`.
        * When provided, this wins over the environment host mapping.
        */
       baseUrl?: string;
     })
-  | (PartnerApiClientSharedConfig & {
+  | (AgreementsApiClientSharedConfig & {
       /**
        * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
        * Prefer `environment` for standard Shodai hosts.
        */
       baseUrl: string;
-      environment?: PartnerApiEnvironment;
+      environment?: AgreementsApiEnvironment;
     });

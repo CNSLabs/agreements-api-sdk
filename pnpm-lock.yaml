@@ -8,11 +8,11 @@ importers:
 
   .: {}
 
-  apps/partner-api-playground:
+  apps/agreements-api-playground:
     dependencies:
       '@cns-labs/agreements-api-client':
         specifier: workspace:*
-        version: link:../../packages/partner-api-client
+        version: link:../../packages/agreements-api-client
       '@cns-labs/agreements-protocol-evm':
         specifier: ^0.0.1
         version: 0.0.1(typescript@5.6.3)
@@ -63,7 +63,7 @@ importers:
         specifier: ^5.4.10
         version: 5.4.21(@types/node@20.19.39)
 
-  packages/partner-api-client:
+  packages/agreements-api-client:
     dependencies:
       '@cns-labs/agreements-protocol-evm':
         specifier: ^0.0.1

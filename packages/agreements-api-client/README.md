@@ -1,12 +1,12 @@
 # @cns-labs/agreements-api-client
 
-TypeScript client for the CNS Partner API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
+TypeScript client for the CNS Agreements API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
 
 The package bundles:
 
-- `PartnerApiClient` for the HTTP API
+- `AgreementsApiClient` for the HTTP API
 - typed request and response models
-- helper utilities for partner API paths and execution input IDs
+- helper utilities for Agreements API paths and execution input IDs
 - `viem` helpers that compose with agreement deployment and input-signing flows
 
 Maintainer workflows such as local builds and publishing live in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
@@ -28,11 +28,11 @@ npm install @cns-labs/agreements-api-client viem
 ## Create a Client
 
 ```ts
-import { PartnerApiClient } from '@cns-labs/agreements-api-client';
+import { AgreementsApiClient } from '@cns-labs/agreements-api-client';
 
-const client = new PartnerApiClient({
+const client = new AgreementsApiClient({
   environment: 'testnet',
-  apiKey: process.env.CNS_PARTNER_API_KEY,
+  apiKey: process.env.CNS_AGREEMENTS_API_KEY,
 });
 
 const health = await client.getHealth();
@@ -53,10 +53,10 @@ Use `baseUrl` only when you need to bypass the standard Shodai environment mappi
 - custom preview or staging deployments
 
 ```ts
-const client = new PartnerApiClient({
+const client = new AgreementsApiClient({
   environment: 'testnet',
   baseUrl: 'http://localhost:8080',
-  apiKey: process.env.CNS_PARTNER_API_KEY,
+  apiKey: process.env.CNS_AGREEMENTS_API_KEY,
 });
 ```
 
@@ -65,8 +65,8 @@ When `baseUrl` is provided, it wins over the environment host mapping.
 ### Authentication and custom headers
 
 - `apiKey` is sent as `X-API-Key`
-- use the partner API key issued for your partner principal by CNS Labs or your deployment operator
-- `headers` lets you attach correlation IDs, telemetry headers, or other partner-specific request metadata
+- use the API key issued for your API principal by CNS Labs or your deployment operator
+- `headers` lets you attach correlation IDs, telemetry headers, or other request metadata
 - `fetch` can be overridden if your runtime does not provide a compatible global `fetch`
 
 ## Choose a Usage Path
@@ -248,8 +248,8 @@ In practice:
 
 For a complete browser workflow, see the playground:
 
-- [`../../apps/partner-api-playground/README.md`](../../apps/partner-api-playground/README.md)
-- [`../../apps/partner-api-playground/src/App.tsx`](../../apps/partner-api-playground/src/App.tsx)
+- [`../../apps/agreements-api-playground/README.md`](../../apps/agreements-api-playground/README.md)
+- [`../../apps/agreements-api-playground/src/App.tsx`](../../apps/agreements-api-playground/src/App.tsx)
 
 The playground demonstrates:
 

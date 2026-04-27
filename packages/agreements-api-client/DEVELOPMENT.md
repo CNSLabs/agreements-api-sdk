@@ -1,12 +1,12 @@
-# Partner API Client Development
+# Agreements API Client Development
 
 Maintainer notes for `@cns-labs/agreements-api-client`.
 
 ## Role in the Repository
 
-This package is the typed client for the CNS Partner API. It is also used by `apps/partner-api-playground`.
+This package is the typed client for the CNS Agreements API. It is also used by `apps/agreements-api-playground`.
 
-When partner API routes, payloads, status codes, or path prefixes change, update this package in the same change set so the playground and external consumers stay aligned.
+When Agreements API routes, payloads, status codes, or path prefixes change, update this package in the same change set so the playground and external consumers stay aligned.
 
 Primary files to check:
 
@@ -32,7 +32,7 @@ pnpm --filter @cns-labs/agreements-api-client run lint
 
 ## Publishing
 
-Release from `packages/partner-api-client`:
+Release from `packages/agreements-api-client`:
 
 ```bash
 npm version <new-version> --no-git-tag-version

@@ -1,6 +1,6 @@
 /**
  * EIP-712 permit signing helpers using `@cns-labs/agreements-protocol-evm` + `viem`,
- * matching `apps/partner-api-playground` deploy and input flows.
+ * matching the Agreements API playground deploy and input flows.
  */
 
 import {
@@ -13,12 +13,12 @@ import {
 } from '@cns-labs/agreements-protocol-evm';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
 
-import type { PartnerApiClient } from './client.js';
+import type { AgreementsApiClient } from './client.js';
 import type {
   AgreementInputRecord,
   AgreementRecord,
   DirectDeployAgreementWithPermitRequest,
-  PartnerDirectParticipantRecord,
+  DirectParticipantRecord,
   ProcessInputRequest,
 } from './types.js';
 
@@ -54,7 +54,7 @@ export type SignInputPermitResult = {
   deadline: number;
 };
 
-/** Default permit lifetime used in the partner playground (1 hour). */
+/** Default permit lifetime used in the Agreements API playground (1 hour). */
 export const DEFAULT_PERMIT_DEADLINE_SECONDS = 3600;
 
 export function computeDefaultDeadlineSeconds(offsetSeconds: number = DEFAULT_PERMIT_DEADLINE_SECONDS): number {
@@ -116,13 +116,13 @@ export async function signAgreementInputPermit(params: SignInputPermitParams): P
 }
 
 export type DeployWithPermitCallParams = {
-  client: PartnerApiClient;
+  client: AgreementsApiClient;
   walletClient: WalletClient;
   publicClient: PublicClient;
   agreement: AgreementJson;
   displayName: string;
   initValues?: Record<string, InitValue>;
-  participants?: PartnerDirectParticipantRecord[];
+  participants?: DirectParticipantRecord[];
   observers?: string[];
   docUri?: string;
   deadline?: number;
@@ -178,7 +178,7 @@ export async function deployAgreementWithPermit(
 }
 
 export type SubmitInputCallParams = {
-  client: PartnerApiClient;
+  client: AgreementsApiClient;
   agreementId: string;
   walletClient: WalletClient;
   publicClient: PublicClient;

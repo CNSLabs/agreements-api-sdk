@@ -1,7 +1,7 @@
 const CORRELATION_HEADER_NAME = 'x-correlation-id';
 const TRACEPARENT_HEADER_NAME = 'traceparent';
 const CLIENT_APP_HEADER_NAME = 'x-cns-client-app';
-const CLIENT_APP_NAME = 'partner-api-playground';
+const CLIENT_APP_NAME = 'agreements-api-playground';
 
 export function createBrowserTelemetryHeaders(): Record<string, string> {
   const headers: Record<string, string> = {

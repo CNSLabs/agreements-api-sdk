@@ -1,13 +1,13 @@
 import type { ErrorResponse } from './types.js';
 
-export class PartnerApiError extends Error {
+export class AgreementsApiError extends Error {
   readonly status: number;
   readonly bodyText: string;
   readonly parsedBody: unknown;
 
   constructor(message: string, status: number, bodyText: string, parsedBody: unknown) {
     super(message);
-    this.name = 'PartnerApiError';
+    this.name = 'AgreementsApiError';
     this.status = status;
     this.bodyText = bodyText;
     this.parsedBody = parsedBody;
@@ -23,7 +23,7 @@ export class PartnerApiError extends Error {
   }
 }
 
-export function extractPartnerApiErrorMessage(parsedBody: unknown, bodyText: string, status: number): string {
+export function extractAgreementsApiErrorMessage(parsedBody: unknown, bodyText: string, status: number): string {
   if (parsedBody && typeof parsedBody === 'object' && 'message' in parsedBody) {
     const message = (parsedBody as { message?: string | string[] }).message;
     if (Array.isArray(message)) return message.join('\n');
