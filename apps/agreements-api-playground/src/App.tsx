@@ -587,17 +587,16 @@ function App() {
 
       <header className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Agreements API Playground</p>
+          <p className="eyebrow">Playground</p>
+          <h1>Agreements API</h1>
+          <p className="lede">
+            Validate, deploy, inspect, and submit signed inputs from one workspace.
+          </p>
           <div className="hero-actions">
             <a className="link-chip" href={docsUrl} target="_blank" rel="noreferrer">
               Open Developer Docs
             </a>
           </div>
-          <h1>Test agreement lifecycle flows against the Agreements API.</h1>
-          <p className="lede">
-            Validate inline agreement JSON, deploy with a signed permit, inspect agreement state,
-            review input history, and submit signed inputs from one workspace.
-          </p>
         </div>
 
         <div className="status-card">

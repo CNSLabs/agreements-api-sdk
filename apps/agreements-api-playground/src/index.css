@@ -83,28 +83,24 @@ button {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
-  align-items: end;
-  margin-bottom: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
 .hero-copy h1 {
   margin: 0;
-  max-width: 10ch;
-  font-family:
-    "IBM Plex Serif",
-    Georgia,
-    serif;
-  font-size: clamp(2.6rem, 5vw, 5.4rem);
-  line-height: 0.94;
-  letter-spacing: -0.05em;
+  max-width: none;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
 }
 
 .eyebrow {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   color: #f29f78;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -113,15 +109,30 @@ button {
 .hero-actions {
   display: flex;
   gap: 12px;
-  margin: 0 0 18px;
+  margin: 14px 0 0;
 }
 
 .lede {
   max-width: 42rem;
-  margin: 18px 0 0;
+  margin: 8px 0 0;
   color: rgba(247, 240, 223, 0.8);
-  font-size: 1.03rem;
-  line-height: 1.6;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.status-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(10, 15, 18, 0.42);
+}
+
+.status-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.94rem;
 }
 
 .panel,
@@ -759,7 +770,7 @@ pre {
   }
 
   .hero-actions {
-    margin-bottom: 14px;
+    margin-top: 12px;
   }
 
   .panel-wide {
