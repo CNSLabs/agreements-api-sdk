@@ -38,7 +38,7 @@ Notes:
 - Built-in mappings are:
   - `testnet` -> `https://testnet.shodai.network` + Linea Sepolia
   - `production` -> `https://app.shodai.network` + Linea Mainnet
-- The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and `Open Raw OpenAPI`, which targets the current API host.
+- The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and the environment selector includes an OpenAPI docs link for the current API host.
 - Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected environment.
 - Browser requests include `x-correlation-id`, `traceparent`, and `x-cns-client-app: agreements-api-playground` so backend telemetry can isolate playground-originated traffic.
 

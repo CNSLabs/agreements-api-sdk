@@ -179,6 +179,7 @@ function App() {
   );
 
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
+  const environmentLabel = formatEnvironmentLabel(environment);
   const docsUrl = DEVELOPER_DOCS_URL;
   const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${AGREEMENTS_API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
@@ -591,9 +592,6 @@ function App() {
             <a className="link-chip" href={docsUrl} target="_blank" rel="noreferrer">
               Open Developer Docs
             </a>
-            <a className="link-chip" href={openApiUrl} target="_blank" rel="noreferrer">
-              Open Raw OpenAPI
-            </a>
           </div>
           <h1>Test agreement lifecycle flows against the Agreements API.</h1>
           <p className="lede">
@@ -630,6 +628,9 @@ function App() {
                 <option value="testnet">testnet</option>
                 <option value="production">production</option>
               </select>
+              <a className="field-link" href={openApiUrl} target="_blank" rel="noreferrer">
+                Open {environmentLabel} OpenAPI docs
+              </a>
             </label>
             <label className="field toolbar-field">
               <span>API Key</span>
@@ -1066,6 +1067,10 @@ function resolveCurlBaseUrl(baseUrl: string) {
 function resolveDefaultEnvironment(): AgreementsApiEnvironment {
   const configuredEnvironment = (import.meta.env.VITE_AGREEMENTS_API_ENVIRONMENT || '').trim();
   return configuredEnvironment === 'production' ? 'production' : DEFAULT_AGREEMENTS_API_ENVIRONMENT;
+}
+
+function formatEnvironmentLabel(environment: AgreementsApiEnvironment) {
+  return environment === 'production' ? 'Production' : 'Testnet';
 }
 
 function formatOutput(value: unknown) {

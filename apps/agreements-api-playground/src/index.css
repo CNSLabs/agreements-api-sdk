@@ -171,6 +171,17 @@ button {
   margin-bottom: 0;
 }
 
+.field-link {
+  color: #f29f78;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.field-link:hover {
+  text-decoration: underline;
+}
+
 .toolbar-wallet {
   display: grid;
   gap: 10px;
