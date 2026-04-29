@@ -13,7 +13,7 @@ import {
 } from '@cns-labs/agreements-protocol-evm';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
 
-import type { AgreementsApiClient } from './client.js';
+import type { ApiClient } from './client.js';
 import type {
   AgreementInputRecord,
   AgreementRecord,
@@ -116,7 +116,7 @@ export async function signAgreementInputPermit(params: SignInputPermitParams): P
 }
 
 export type DeployWithPermitCallParams = {
-  client: AgreementsApiClient;
+  client: ApiClient;
   walletClient: WalletClient;
   publicClient: PublicClient;
   agreement: AgreementJson;
@@ -178,7 +178,7 @@ export async function deployAgreementWithPermit(
 }
 
 export type SubmitInputCallParams = {
-  client: AgreementsApiClient;
+  client: ApiClient;
   agreementId: string;
   walletClient: WalletClient;
   publicClient: PublicClient;

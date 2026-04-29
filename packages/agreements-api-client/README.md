@@ -4,7 +4,7 @@ TypeScript client for the Agreements API, including built-in helpers for agreeme
 
 The package bundles:
 
-- `AgreementsApiClient` for the HTTP API
+- `ApiClient` for the HTTP API
 - typed request and response models
 - helper utilities for Agreements API paths and execution input IDs
 - `viem` helpers that compose with agreement deployment and input-signing flows
@@ -28,9 +28,9 @@ npm install @cns-labs/agreements-api-client viem
 ## Create a Client
 
 ```ts
-import { AgreementsApiClient } from '@cns-labs/agreements-api-client';
+import { ApiClient } from '@cns-labs/agreements-api-client';
 
-const client = new AgreementsApiClient({
+const client = new ApiClient({
   environment: 'testnet',
   apiKey: process.env.AGREEMENTS_API_KEY,
 });
@@ -53,7 +53,7 @@ Use `baseUrl` only when you need to bypass the standard Shodai environment mappi
 - custom preview or staging deployments
 
 ```ts
-const client = new AgreementsApiClient({
+const client = new ApiClient({
   environment: 'testnet',
   baseUrl: 'http://localhost:8080',
   apiKey: process.env.AGREEMENTS_API_KEY,

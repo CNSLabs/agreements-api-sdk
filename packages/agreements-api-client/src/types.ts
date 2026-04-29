@@ -128,7 +128,7 @@ export type ProcessInputRequest = {
 
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
-type AgreementsApiClientSharedConfig = {
+type ApiClientSharedConfig = {
   /** `X-API-Key` value for the API principal. */
   apiKey?: string;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
@@ -137,8 +137,8 @@ type AgreementsApiClientSharedConfig = {
   fetch?: typeof fetch;
 };
 
-export type AgreementsApiClientConfig =
-  | (AgreementsApiClientSharedConfig & {
+export type ApiClientConfig =
+  | (ApiClientSharedConfig & {
       /** Named Shodai environment used to resolve the gateway host automatically. */
       environment: AgreementsApiEnvironment;
       /**
@@ -147,7 +147,7 @@ export type AgreementsApiClientConfig =
        */
       baseUrl?: string;
     })
-  | (AgreementsApiClientSharedConfig & {
+  | (ApiClientSharedConfig & {
       /**
        * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
        * Prefer `environment` for standard Shodai hosts.

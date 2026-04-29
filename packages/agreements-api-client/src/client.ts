@@ -5,24 +5,24 @@ import type {
   AgreementStateResponse,
   DirectDeployAgreementWithPermitRequest,
   HealthResponse,
-  AgreementsApiClientConfig,
+  ApiClientConfig,
   ProcessInputRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
 } from './types.js';
-import { resolveAgreementsApiBaseUrl } from './constants.js';
+import { resolveApiBaseUrl } from './constants.js';
 import { agreementsApiPaths, joinUrl } from './utils.js';
 
 type HttpMethod = 'GET' | 'POST';
 
-export class AgreementsApiClient {
+export class ApiClient {
   private readonly baseUrl: string;
   private readonly apiKey?: string;
-  private readonly extraHeaders?: AgreementsApiClientConfig['headers'];
+  private readonly extraHeaders?: ApiClientConfig['headers'];
   private readonly fetchImpl: typeof fetch;
 
-  constructor(config: AgreementsApiClientConfig) {
+  constructor(config: ApiClientConfig) {
     this.baseUrl = resolveConfiguredBaseUrl(config);
     this.apiKey = config.apiKey?.trim() || undefined;
     this.extraHeaders = config.headers;
@@ -162,15 +162,15 @@ export class AgreementsApiClient {
   }
 }
 
-function resolveConfiguredBaseUrl(config: AgreementsApiClientConfig): string {
+function resolveConfiguredBaseUrl(config: ApiClientConfig): string {
   const explicitBaseUrl = config.baseUrl?.trim();
   if (explicitBaseUrl) {
     return explicitBaseUrl;
   }
 
   if (config.environment) {
-    return resolveAgreementsApiBaseUrl(config.environment);
+    return resolveApiBaseUrl(config.environment);
   }
 
-  throw new Error('AgreementsApiClient requires either `environment` or `baseUrl`.');
+  throw new Error('ApiClient requires either `environment` or `baseUrl`.');
 }

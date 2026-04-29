@@ -1,11 +1,11 @@
 export {
-  AGREEMENTS_API_BASE_PATH,
-  AGREEMENTS_API_ENVIRONMENT_BASE_URLS,
-  AGREEMENTS_API_MAJOR_VERSION,
-  DEFAULT_AGREEMENTS_API_ENVIRONMENT,
-  resolveAgreementsApiBaseUrl,
+  API_BASE_PATH,
+  API_ENVIRONMENT_BASE_URLS,
+  API_MAJOR_VERSION,
+  DEFAULT_API_ENVIRONMENT,
+  resolveApiBaseUrl,
 } from './constants.js';
-export { AgreementsApiClient } from './client.js';
+export { ApiClient } from './client.js';
 export { AgreementsApiError, extractAgreementsApiErrorMessage } from './errors.js';
 export type {
   AgreementInputRecord,
@@ -15,7 +15,7 @@ export type {
   ErrorResponse,
   HealthResponse,
   ParticipantRecord,
-  AgreementsApiClientConfig,
+  ApiClientConfig,
   AgreementsApiEnvironment,
   DirectParticipantRecord,
   PermitSignature,

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AGREEMENTS_API_BASE_PATH,
-  AgreementsApiClient,
+  API_BASE_PATH,
+  ApiClient,
   computeDefaultDeadlineSeconds,
-  DEFAULT_AGREEMENTS_API_ENVIRONMENT,
+  DEFAULT_API_ENVIRONMENT,
   deployAgreementWithPermit,
   extractAgreementsApiErrorMessage,
   getExecutionInputIds,
   joinUrl,
-  resolveAgreementsApiBaseUrl,
+  resolveApiBaseUrl,
   submitAgreementInputWithPermit,
   type AgreementRecord,
   type AgreementsApiEnvironment,
@@ -133,7 +133,7 @@ function App() {
   const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
   const [apiKey, setApiKey] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
-  const [path, setPath] = useState(`${AGREEMENTS_API_BASE_PATH}/health`);
+  const [path, setPath] = useState(`${API_BASE_PATH}/health`);
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -166,11 +166,11 @@ function App() {
   const [selectedInputId, setSelectedInputId] = useState('approve');
   const [inputValuesText, setInputValuesText] = useState('{\n  "approved": true\n}');
   const [loadedAgreement, setLoadedAgreement] = useState<AgreementRecord | null>(null);
-  const resolvedBaseUrl = useMemo(() => resolveAgreementsApiBaseUrl(environment), [environment]);
+  const resolvedBaseUrl = useMemo(() => resolveApiBaseUrl(environment), [environment]);
 
   const agreementsClient = useMemo(
     () =>
-      new AgreementsApiClient({
+      new ApiClient({
         environment,
         apiKey: apiKey.trim() || undefined,
         headers: () => createBrowserTelemetryHeaders(),
@@ -181,7 +181,7 @@ function App() {
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
   const environmentLabel = formatEnvironmentLabel(environment);
   const docsUrl = DEVELOPER_DOCS_URL;
-  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${AGREEMENTS_API_BASE_PATH}/openapi.json`);
+  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
     const asRecord =
@@ -293,7 +293,7 @@ function App() {
     setNotice('');
     try {
       const trimmedPath = path.trim();
-      if (method === 'POST' && trimmedPath === `${AGREEMENTS_API_BASE_PATH}/agreements/deploy-with-permit`) {
+      if (method === 'POST' && trimmedPath === `${API_BASE_PATH}/agreements/deploy-with-permit`) {
         throw new Error('Use "Sign + Deploy" so the connected wallet signs the deploy-with-permit request.');
       }
       if (method === 'POST' && /\/agreements\/[^/]+\/input$/.test(trimmedPath)) {
@@ -322,7 +322,7 @@ function App() {
     try {
       const record = await runAgreementsRequest<AgreementRecord>({
         method: 'GET',
-        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}`,
+        path: `${API_BASE_PATH}/agreements/${agreementId.trim()}`,
       });
       setLoadedAgreement(record);
       setDisplayName(record.displayName || displayName);
@@ -345,7 +345,7 @@ function App() {
     try {
       await runAgreementsRequest({
         method: 'POST',
-        path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate-template`,
+        path: `${API_BASE_PATH}/agreements/validate-template`,
         body: parseJsonObject(agreementJsonText, 'Agreement JSON'),
       });
       setNotice('Template validation completed.');
@@ -362,7 +362,7 @@ function App() {
     try {
       await runAgreementsRequest({
         method: 'POST',
-        path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate`,
+        path: `${API_BASE_PATH}/agreements/validate`,
         body: buildValidatePayload(),
       });
       setNotice('Deployment payload validated.');
@@ -440,7 +440,7 @@ function App() {
     try {
       await runAgreementsRequest({
         method: 'GET',
-        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}/state`,
+        path: `${API_BASE_PATH}/agreements/${agreementId.trim()}/state`,
       });
       setNotice('Agreement state loaded.');
     } catch (stateError) {
@@ -460,7 +460,7 @@ function App() {
     try {
       await runAgreementsRequest({
         method: 'GET',
-        path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId.trim()}/inputs`,
+        path: `${API_BASE_PATH}/agreements/${agreementId.trim()}/inputs`,
       });
       setNotice('Input history loaded.');
     } catch (inputsError) {
@@ -961,13 +961,13 @@ function buildQuickActions(params: {
   };
 
   return [
-    { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/health`, note: 'Check gateway availability.' },
-    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements`, note: 'List agreements visible to this API principal.' },
-    { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
-    { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
-    { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
-    { id: 'state', label: 'Get State', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
-    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${AGREEMENTS_API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
+    { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${API_BASE_PATH}/health`, note: 'Check gateway availability.' },
+    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${API_BASE_PATH}/agreements`, note: 'List agreements visible to this API principal.' },
+    { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
+    { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
+    { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
+    { id: 'state', label: 'Get State', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
+    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
   ];
 }
 
@@ -1065,7 +1065,7 @@ function resolveCurlBaseUrl(baseUrl: string) {
 
 function resolveDefaultEnvironment(): AgreementsApiEnvironment {
   const configuredEnvironment = (import.meta.env.VITE_AGREEMENTS_API_ENVIRONMENT || '').trim();
-  return configuredEnvironment === 'production' ? 'production' : DEFAULT_AGREEMENTS_API_ENVIRONMENT;
+  return configuredEnvironment === 'production' ? 'production' : DEFAULT_API_ENVIRONMENT;
 }
 
 function formatEnvironmentLabel(environment: AgreementsApiEnvironment) {

@@ -32,7 +32,7 @@ npm install @cns-labs/agreements-api-client viem
 The SDK now prefers a named environment instead of a raw host:
 
 ```ts
-const client = new AgreementsApiClient({
+const client = new ApiClient({
   environment: 'testnet',
   apiKey: process.env.AGREEMENTS_API_KEY,
 });
