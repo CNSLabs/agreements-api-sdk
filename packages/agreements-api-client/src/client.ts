@@ -128,7 +128,7 @@ export class ApiClient {
   }
 
   /**
-   * Low-level JSON request. Path may be absolute (`/partner-api/v0/...`) or relative; it is resolved against `baseUrl`.
+   * Low-level JSON request. Path may be absolute (`/api/v0/...`) or relative; it is resolved against `baseUrl`.
    */
   async request<T>(method: HttpMethod, path: string, body?: unknown, okStatus: number = 200): Promise<T> {
     const url = joinUrl(this.baseUrl, path);

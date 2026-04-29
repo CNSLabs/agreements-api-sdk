@@ -3,8 +3,8 @@ import type { AgreementsApiEnvironment } from './types.js';
 /** API major version segment (e.g. `v0`). */
 export const API_MAJOR_VERSION = 'v0';
 
-/** Path prefix for all Agreements API routes, e.g. `/partner-api/v0`. */
-export const API_BASE_PATH = `/partner-api/${API_MAJOR_VERSION}`;
+/** Path prefix for all Agreements API routes, e.g. `/api/v0`. */
+export const API_BASE_PATH = `/api/${API_MAJOR_VERSION}`;
 
 /** Named Agreements API environments exposed to external consumers. */
 export const API_ENVIRONMENT_BASE_URLS: Record<AgreementsApiEnvironment, string> = {
