@@ -32,7 +32,7 @@ import { ApiClient } from '@cns-labs/agreements-api-client';
 
 const client = new ApiClient({
   environment: 'testnet',
-  apiKey: process.env.AGREEMENTS_API_KEY,
+  apiKey: process.env.API_KEY,
 });
 
 const health = await client.getHealth();
@@ -56,7 +56,7 @@ Use `baseUrl` only when you need to bypass the standard Shodai environment mappi
 const client = new ApiClient({
   environment: 'testnet',
   baseUrl: 'http://localhost:8080',
-  apiKey: process.env.AGREEMENTS_API_KEY,
+  apiKey: process.env.API_KEY,
 });
 ```
 
@@ -250,6 +250,8 @@ For a complete browser workflow, see the playground:
 
 - [`../../apps/agreements-api-playground/README.md`](../../apps/agreements-api-playground/README.md)
 - [`../../apps/agreements-api-playground/src/App.tsx`](../../apps/agreements-api-playground/src/App.tsx)
+
+The hosted playground is available at `https://app.shodai.network/api-playground`.
 
 The playground demonstrates:
 
