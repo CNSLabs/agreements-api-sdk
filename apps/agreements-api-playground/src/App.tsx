@@ -643,7 +643,7 @@ function App() {
           </div>
           <aside className="pl-hero-aside">
             <div className="pl-status-grid">
-              <div className="pl-status-row"><span>Target</span><strong>{formatBaseUrlLabel(environment, resolvedBaseUrl)}</strong></div>
+              <div className="pl-status-row"><span>Target</span><strong>{formatBaseUrlLabel(resolvedBaseUrl)}</strong></div>
               <div className="pl-status-row"><span>Auth</span><strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong></div>
               <div className="pl-status-row"><span>Wallet</span><strong>{walletStatus}</strong></div>
               <div className="pl-status-row"><span>Loaded</span><strong>{loadedAgreement?.id || '—'}</strong></div>
@@ -1009,10 +1009,8 @@ function formatEnvironmentLabel(environment: AgreementsApiEnvironment) {
   return environment === 'production' ? 'Production' : 'Testnet';
 }
 
-function formatBaseUrlLabel(environment: AgreementsApiEnvironment, fallback: string) {
-  if (environment === 'testnet') return 'https://testnet.api.shodai.network';
-  if (environment === 'production') return 'https://api.shodai.network';
-  return fallback.trim();
+function formatBaseUrlLabel(baseUrl: string) {
+  return baseUrl.trim();
 }
 
 function formatOutput(value: unknown) {
