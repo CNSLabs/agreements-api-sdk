@@ -22,7 +22,7 @@ pnpm --filter agreements-api-playground exec vite --host 127.0.0.1 --port 4176
 Hosted path:
 
 ```text
-https://app.shodai.network/api-playground
+https://developers.shodai.network/api-playground
 ```
 
 Environment:
@@ -38,8 +38,8 @@ Notes:
 - The app stores the selected environment, API key, draft id, and deploy workspace values in browser local storage.
 - `VITE_AGREEMENTS_API_ENVIRONMENT` is the primary deployment choice. It resolves both the API host and the default agreement chain.
 - Built-in mappings are:
-  - `testnet` -> `https://testnet.shodai.network` + Linea Sepolia
-  - `production` -> `https://app.shodai.network` + Linea Mainnet
+  - `testnet` -> `https://test-api.shodai.network` + Linea Sepolia
+  - `production` -> `https://api.shodai.network` + Linea Mainnet
 - `VITE_AGREEMENTS_API_TESTNET_BASE_URL` and `VITE_AGREEMENTS_API_PRODUCTION_BASE_URL` optionally override the API host used by each environment selector option. This is useful for staging rehearsals such as mapping `testnet` to `https://dev.cnslabs.cloud` and `production` to `https://alpha.cnslabs.cloud`.
 - The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and the environment selector includes an OpenAPI docs link for the current API host.
 - Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected environment.

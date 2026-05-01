@@ -40,8 +40,8 @@ const client = new ApiClient({
 
 Built-in mappings:
 
-- `testnet` -> `https://testnet.shodai.network`
-- `production` -> `https://app.shodai.network`
+- `testnet` -> `https://test-api.shodai.network`
+- `production` -> `https://api.shodai.network`
 
 The client still supports `baseUrl` as an advanced override for local proxies, internal gateways, or non-standard deployments. It continues to add `/api/v0/*` automatically.
 

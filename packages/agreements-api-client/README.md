@@ -40,8 +40,8 @@ const health = await client.getHealth();
 
 ### Environment resolution
 
-- `testnet` resolves to `https://testnet.shodai.network`
-- `production` resolves to `https://app.shodai.network`
+- `testnet` resolves to `https://test-api.shodai.network`
+- `production` resolves to `https://api.shodai.network`
 - The client automatically prefixes requests with `/api/v0/*`
 
 ### Optional `baseUrl` override
@@ -251,7 +251,7 @@ For a complete browser workflow, see the playground:
 - [`../../apps/agreements-api-playground/README.md`](../../apps/agreements-api-playground/README.md)
 - [`../../apps/agreements-api-playground/src/App.tsx`](../../apps/agreements-api-playground/src/App.tsx)
 
-The hosted playground is available at `https://app.shodai.network/api-playground`.
+The hosted playground is available at `https://developers.shodai.network/api-playground`.
 
 The playground demonstrates:
 
