@@ -50,6 +50,7 @@ type DeployChainConfig = {
 };
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
+const API_BASE_URL_OVERRIDES = readApiBaseUrlOverrides();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
 const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
@@ -166,16 +167,17 @@ function App() {
   const [selectedInputId, setSelectedInputId] = useState('approve');
   const [inputValuesText, setInputValuesText] = useState('{\n  "approved": true\n}');
   const [loadedAgreement, setLoadedAgreement] = useState<AgreementRecord | null>(null);
-  const resolvedBaseUrl = useMemo(() => resolveApiBaseUrl(environment), [environment]);
+  const resolvedBaseUrl = useMemo(() => resolvePlaygroundApiBaseUrl(environment), [environment]);
 
   const agreementsClient = useMemo(
     () =>
       new ApiClient({
         environment,
+        baseUrl: resolvedBaseUrl,
         apiKey: apiKey.trim() || undefined,
         headers: () => createBrowserTelemetryHeaders(),
       }),
-    [apiKey, environment],
+    [apiKey, environment, resolvedBaseUrl],
   );
 
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
@@ -1066,6 +1068,27 @@ function resolveCurlBaseUrl(baseUrl: string) {
 function resolveDefaultEnvironment(): AgreementsApiEnvironment {
   const configuredEnvironment = (import.meta.env.VITE_AGREEMENTS_API_ENVIRONMENT || '').trim();
   return configuredEnvironment === 'production' ? 'production' : DEFAULT_API_ENVIRONMENT;
+}
+
+function resolvePlaygroundApiBaseUrl(environment: AgreementsApiEnvironment) {
+  return API_BASE_URL_OVERRIDES[environment] || resolveApiBaseUrl(environment);
+}
+
+function readApiBaseUrlOverrides(): Partial<Record<AgreementsApiEnvironment, string>> {
+  const legacyOverride = normalizeOptionalBaseUrl(import.meta.env.VITE_EXTERNAL_API_BASE_URL);
+  return {
+    testnet:
+      normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_TESTNET_BASE_URL) ||
+      (DEFAULT_ENVIRONMENT === 'testnet' ? legacyOverride : undefined),
+    production:
+      normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_PRODUCTION_BASE_URL) ||
+      (DEFAULT_ENVIRONMENT === 'production' ? legacyOverride : undefined),
+  };
+}
+
+function normalizeOptionalBaseUrl(value: unknown) {
+  const trimmed = typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';
+  return trimmed || undefined;
 }
 
 function formatEnvironmentLabel(environment: AgreementsApiEnvironment) {

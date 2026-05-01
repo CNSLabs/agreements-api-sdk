@@ -29,6 +29,8 @@ Environment:
 
 ```bash
 VITE_AGREEMENTS_API_ENVIRONMENT=testnet
+VITE_AGREEMENTS_API_TESTNET_BASE_URL=
+VITE_AGREEMENTS_API_PRODUCTION_BASE_URL=
 ```
 
 Notes:
@@ -38,6 +40,7 @@ Notes:
 - Built-in mappings are:
   - `testnet` -> `https://testnet.shodai.network` + Linea Sepolia
   - `production` -> `https://app.shodai.network` + Linea Mainnet
+- `VITE_AGREEMENTS_API_TESTNET_BASE_URL` and `VITE_AGREEMENTS_API_PRODUCTION_BASE_URL` optionally override the API host used by each environment selector option. This is useful for staging rehearsals such as mapping `testnet` to `https://dev.cnslabs.cloud` and `production` to `https://alpha.cnslabs.cloud`.
 - The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and the environment selector includes an OpenAPI docs link for the current API host.
 - Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected environment.
 - Browser requests include `x-correlation-id`, `traceparent`, and `x-cns-client-app: agreements-api-playground` so backend telemetry can isolate playground-originated traffic.
@@ -45,5 +48,7 @@ Notes:
 ## Env Inventory
 
 - `VITE_AGREEMENTS_API_ENVIRONMENT`: primary required selector for standard hosted deployments
+- `VITE_AGREEMENTS_API_TESTNET_BASE_URL`: optional host override for the playground `testnet` option
+- `VITE_AGREEMENTS_API_PRODUCTION_BASE_URL`: optional host override for the playground `production` option
 
-Everything else is now derived from the selected environment.
+When no host override is supplied, the app uses the SDK's standard host mapping for the selected environment.
