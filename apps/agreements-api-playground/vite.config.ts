@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/api-playground/' : '/',
+export default defineConfig({
+  base: '/api-playground/',
   plugins: [react()],
   server: {
     host: true,
@@ -13,7 +13,11 @@ export default defineConfig(({ command }) => ({
         target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
-      '/api': {
+      '^/api(?:/|$)': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+      '/v0': {
         target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
@@ -31,4 +35,4 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-}));
+});

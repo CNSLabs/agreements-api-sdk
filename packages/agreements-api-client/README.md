@@ -40,9 +40,9 @@ const health = await client.getHealth();
 
 ### Environment resolution
 
-- `testnet` resolves to `https://testnet.shodai.network`
-- `production` resolves to `https://app.shodai.network`
-- The client automatically prefixes requests with `/api/v0/*`
+- `testnet` resolves to `https://test-api.shodai.network`
+- `production` resolves to `https://api.shodai.network`
+- The client automatically prefixes requests with `/v0/*`
 
 ### Optional `baseUrl` override
 

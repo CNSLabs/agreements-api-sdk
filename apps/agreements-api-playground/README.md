@@ -1,6 +1,6 @@
 # Agreements API Playground
 
-Small standalone frontend for exercising the hosted Agreements API at `/api/v0/*`.
+Small standalone frontend for exercising the hosted Agreements API at `/v0/*`.
 
 This app is the canonical reference implementation for the SDK in this repository. If you want a full browser example for validate, deploy, inspect, and input submission flows, start with [`src/App.tsx`](./src/App.tsx).
 
@@ -38,8 +38,8 @@ Notes:
 - The app stores the selected environment, API key, draft id, and deploy workspace values in browser local storage.
 - `VITE_AGREEMENTS_API_ENVIRONMENT` is the primary deployment choice. It resolves both the API host and the default agreement chain.
 - Built-in mappings are:
-  - `testnet` -> `https://testnet.shodai.network` + Linea Sepolia
-  - `production` -> `https://app.shodai.network` + Linea Mainnet
+  - `testnet` -> `https://test-api.shodai.network` + Linea Sepolia
+  - `production` -> `https://api.shodai.network` + Linea Mainnet
 - `VITE_AGREEMENTS_API_TESTNET_BASE_URL` and `VITE_AGREEMENTS_API_PRODUCTION_BASE_URL` optionally override the API host used by each environment selector option. This is useful for staging rehearsals such as mapping `testnet` to `https://dev.cnslabs.cloud` and `production` to `https://alpha.cnslabs.cloud`.
 - The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and the environment selector includes an OpenAPI docs link for the current API host.
 - Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected environment.
