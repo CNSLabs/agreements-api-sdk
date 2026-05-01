@@ -53,7 +53,11 @@ const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
 const API_BASE_URL_OVERRIDES = readApiBaseUrlOverrides();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
-const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
+const DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
+const DEVELOPER_DOCS_URL = 'https://developers.shodai.network/docs';
+const API_REFERENCE_URL = 'https://docs.shodai.network/api-reference/system/get-the-openapi-document-for-the-agreements-api';
+const DEMO_APP_URL = 'https://app.shodai.network/agreements/';
+const GITHUB_URL = 'https://github.com/CNSLabs/';
 
 const SAMPLE_AGREEMENT = {
   metadata: {
@@ -130,6 +134,7 @@ const SAMPLE_AGREEMENT = {
 function App() {
   const composerPathInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activeView, setActiveView] = useState<AppView>('overview');
   const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
   const [apiKey, setApiKey] = useState('');
@@ -204,6 +209,13 @@ function App() {
     }
     return parts.join(' \\\n  ');
   }, [apiKey, body, method, path, resolvedBaseUrl]);
+
+  useEffect(() => {
+    document.body.classList.toggle('theme-dark', theme === 'dark');
+    return () => {
+      document.body.classList.remove('theme-dark');
+    };
+  }, [theme]);
 
   useEffect(() => {
     const provider = getInjectedProvider();
@@ -283,7 +295,7 @@ function App() {
       setWalletAddress(normalizeAddress(accounts[0]));
       setConnectedChainId(parseChainId(chainHex));
     } catch (walletFailure) {
-      setWalletError(walletFailure instanceof Error ? walletFailure.message : String(walletFailure));
+      setWalletError(formatErrorMessage(walletFailure));
     } finally {
       setWalletBusy(false);
     }
@@ -539,8 +551,8 @@ function App() {
   }
 
   const walletStatus = walletAddress
-    ? `${shortenAddress(walletAddress)}${connectedChainId ? ` on ${connectedChainId}` : ''}`
-    : 'No wallet connected';
+    ? `${shortenAddress(walletAddress)}${connectedChainId ? ` · chain ${connectedChainId}` : ''}`
+    : 'Not connected';
 
   const quickActions = buildQuickActions({
     agreementId,
@@ -553,391 +565,297 @@ function App() {
   });
   const viewItems: Array<{ id: AppView; label: string; description: string }> = [
     { id: 'overview', label: 'Overview', description: 'Choose a workflow' },
-    { id: 'deploy', label: 'Deploy', description: 'Validate and deploy agreements' },
-    { id: 'inspect', label: 'Inspect', description: 'Load records, state, and inputs' },
-    { id: 'input', label: 'Input', description: 'Sign and submit agreement inputs' },
-    { id: 'composer', label: 'Composer', description: 'Send raw Agreements API requests' },
+    { id: 'deploy', label: 'Deploy', description: 'Validate + deploy' },
+    { id: 'inspect', label: 'Inspect', description: 'Records, state, inputs' },
+    { id: 'input', label: 'Input', description: 'Sign + submit inputs' },
+    { id: 'composer', label: 'Composer', description: 'Raw API requests' },
   ];
 
   function renderResponsePanel(title = 'Latest Response') {
     return (
-      <section className="panel panel-wide">
-        <h2>{title}</h2>
-        {response ? (
-          <div className="response-layout">
-            <div className="response-meta">
-              <div className="metric"><span>Status</span><strong>{response.status}</strong></div>
-              <div className="metric"><span>Duration</span><strong>{response.durationMs} ms</strong></div>
-              <div className="metric"><span>Started</span><strong>{response.startedAt}</strong></div>
-            </div>
-            <div className="response-block">
-              <h3>Body</h3>
-              <pre>{formatOutput(response.parsedBody ?? response.bodyText)}</pre>
-            </div>
-          </div>
-        ) : (
-          <div className="empty-state">Responses from Agreements API requests will appear here.</div>
-        )}
+      <section className="pl-panel pl-response-panel">
+        <div className="pl-panel-head">
+          <h2>{title}</h2>
+          {response ? <span className="pl-mono">{response.startedAt}</span> : null}
+        </div>
+        <div className="pl-panel-body">
+          {response ? (
+            <>
+              <div className="pl-metrics">
+                <div className={`pl-metric ${response.ok ? 'm-ok' : 'm-err'}`}><span>Status</span><strong>{response.status}</strong></div>
+                <div className="pl-metric"><span>Duration</span><strong>{response.durationMs} ms</strong></div>
+                <div className="pl-metric"><span>Result</span><strong>{response.ok ? 'OK' : 'Failed'}</strong></div>
+              </div>
+              <CodeBlock title="Body" copyText={response.bodyText}>{formatOutput(response.parsedBody ?? response.bodyText)}</CodeBlock>
+            </>
+          ) : (
+            <>
+              <div className="pl-metrics">
+                <div className="pl-metric"><span>Status</span><strong>—</strong></div>
+                <div className="pl-metric"><span>Duration</span><strong>—</strong></div>
+                <div className="pl-metric"><span>Result</span><strong>Pending</strong></div>
+              </div>
+              <CodeBlock title="Body">Responses from Agreements API requests will appear here.</CodeBlock>
+            </>
+          )}
+        </div>
       </section>
     );
   }
 
   return (
-    <div className="shell">
-      <div className="ambient ambient-left" />
-      <div className="ambient ambient-right" />
-
-      <header className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Playground</p>
-          <h1>Agreements API</h1>
-          <p className="lede">
-            Validate, deploy, inspect, and submit signed inputs from one workspace.
-          </p>
-          <div className="hero-actions">
-            <a className="link-chip" href={docsUrl} target="_blank" rel="noreferrer">
-              Open Developer Docs
-            </a>
-          </div>
-        </div>
-
-        <div className="status-card">
-          <div>
-            <span className="status-label">Target</span>
-            <strong>{describeBaseUrl(resolvedBaseUrl)}</strong>
-          </div>
-          <div>
-            <span className="status-label">Auth</span>
-            <strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong>
-          </div>
-          <div>
-            <span className="status-label">Wallet</span>
-            <strong>{walletStatus}</strong>
-          </div>
+    <>
+      <header className="pl-header">
+        <a className="pl-brand" href={DEVELOPER_PORTAL_URL} target="_blank" rel="noreferrer">
+          <span className="pl-brand-mark" aria-hidden="true" />
+          <span>SHODAI</span>
+        </a>
+        <nav className="pl-nav" aria-label="Primary navigation">
+          <a href={DEVELOPER_PORTAL_URL} target="_blank" rel="noreferrer">Home</a>
+          <a href={docsUrl} target="_blank" rel="noreferrer">Docs</a>
+          <a href={API_REFERENCE_URL} target="_blank" rel="noreferrer">API Reference</a>
+          <a className="is-active" href="#main">API Playground</a>
+          <a href={DEMO_APP_URL} target="_blank" rel="noreferrer">Demo App</a>
+          <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+        </nav>
+        <div className="pl-header-right">
+          <button
+            type="button"
+            className="pl-icon-btn"
+            aria-label="Toggle theme"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
         </div>
       </header>
 
-      <main className="workspace">
-        <section className="panel workspace-toolbar">
-          <div className="toolbar-grid">
-            <label className="field toolbar-field">
+      <main id="main" className="pl-main">
+        <section className="pl-hero">
+          <div className="pl-hero-copy">
+            <h1 className="pl-h1">Agreements API</h1>
+            <p className="pl-lead">
+              Validate, deploy, inspect, and submit signed inputs against the Agreements API from one workspace. All requests run against {environment === 'production' ? 'mainnet' : 'testnet'}.
+            </p>
+            <div className="pl-hero-actions">
+              <a className="pl-btn" href={openApiUrl} target="_blank" rel="noreferrer">Open API Reference ↗</a>
+            </div>
+          </div>
+          <aside className="pl-hero-aside">
+            <div className="pl-status-grid">
+              <div className="pl-status-row"><span>Target</span><strong>{formatBaseUrlLabel(resolvedBaseUrl)}</strong></div>
+              <div className="pl-status-row"><span>Auth</span><strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong></div>
+              <div className="pl-status-row"><span>Wallet</span><strong>{walletStatus}</strong></div>
+              <div className="pl-status-row"><span>Loaded</span><strong>{loadedAgreement?.id || '—'}</strong></div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="pl-toolbar" aria-label="Session controls">
+          <div className="pl-toolbar-cell">
+            <label className="pl-field">
               <span>Environment</span>
-              <select
-                value={environment}
-                onChange={event => setEnvironment(event.target.value as AgreementsApiEnvironment)}
-              >
+              <select value={environment} onChange={event => setEnvironment(event.target.value as AgreementsApiEnvironment)}>
                 <option value="testnet">testnet</option>
                 <option value="production">production</option>
               </select>
-              <a className="field-link" href={openApiUrl} target="_blank" rel="noreferrer">
-                Open {environmentLabel} OpenAPI docs
-              </a>
             </label>
-            <label className="field toolbar-field">
+            <a className="pl-field-link" href={openApiUrl} target="_blank" rel="noreferrer">Open {environmentLabel} OpenAPI ↗</a>
+          </div>
+          <div className="pl-toolbar-cell">
+            <label className="pl-field">
               <span>API Key</span>
               <input value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="cns_pk_..." autoComplete="off" />
             </label>
-            <div className="toolbar-field toolbar-wallet">
-              <span className="status-label">Wallet</span>
-              <div className="toolbar-wallet-row">
-                <div className="toolbar-wallet-copy">
-                  <strong>{walletStatus}</strong>
-                  <small>{deployChain.chainName} ({deployChain.chainId})</small>
-                </div>
-                <button type="button" className="primary" disabled={walletBusy} onClick={() => void connectWallet()}>
-                  {walletBusy ? 'Connecting...' : walletAddress ? 'Refresh Wallet' : 'Connect Wallet'}
-                </button>
+          </div>
+          <div className="pl-toolbar-cell pl-toolbar-wallet">
+            <span className="pl-eyebrow-sm pl-eyebrow">Wallet</span>
+            <div className="pl-wallet-row">
+              <div className="pl-wallet-copy">
+                <strong>{walletStatus}</strong>
+                <small>{deployChain.chainName} ({deployChain.chainId})</small>
               </div>
-              {walletError ? <div className="error-banner compact">{walletError}</div> : null}
+              <button type="button" className="pl-btn pl-btn-primary" disabled={walletBusy} onClick={() => void connectWallet()}>
+                {walletBusy ? 'Connecting...' : walletAddress ? 'Refresh' : 'Connect'}
+              </button>
             </div>
+            {walletError ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{walletError}</div> : null}
           </div>
         </section>
 
-        <section className="workspace-nav">
-          {viewItems.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              className={`workspace-tab${activeView === item.id ? ' workspace-tab-active' : ''}`}
-              onClick={() => setActiveView(item.id)}
-            >
-              <strong>{item.label}</strong>
-              <span>{item.description}</span>
+        <nav className="pl-tabs" aria-label="Workflow">
+          {viewItems.map((item, index) => (
+            <button key={item.id} type="button" className={`pl-tab${activeView === item.id ? ' is-active' : ''}`} onClick={() => setActiveView(item.id)}>
+              <span className="pl-tab-num">Step {String(index + 1).padStart(2, '0')}</span>
+              <span className="pl-tab-title">{item.label}</span>
+              <span className="pl-tab-desc">{item.description}</span>
             </button>
           ))}
-        </section>
+        </nav>
 
-        <div className="workspace-view">
-          {activeView === 'overview' ? (
-            <div className="grid">
-              <section className="panel panel-wide">
-                <h2>Workflows</h2>
-                <div className="surface-groups">
-                  <button type="button" className="workspace-card workspace-link" onClick={() => setActiveView('deploy')}>
-                    <h3>Deploy New Agreement</h3>
-                    <p>Prepare agreement JSON, validate it, and create a signed `deploy-with-permit` request from the connected wallet.</p>
-                    <div className="inline-actions">
-                      <span className="method-chip method-chip-post">POST</span>
-                      <code>/agreements/deploy-with-permit</code>
-                    </div>
-                  </button>
-                  <button type="button" className="workspace-card workspace-link" onClick={() => setActiveView('inspect')}>
-                    <h3>Inspect Agreement</h3>
-                    <p>Load an agreement record, then check its current state and existing inputs without leaving the same screen.</p>
-                    <div className="inline-actions">
-                      <span className="method-chip method-chip-get">GET</span>
-                      <code>/agreements/:id</code>
-                    </div>
-                  </button>
-                  <button type="button" className="workspace-card workspace-link" onClick={() => setActiveView('input')}>
-                    <h3>Submit Signed Input</h3>
-                    <p>Choose one available input from a loaded agreement, sign it with the connected wallet, and submit it.</p>
-                    <div className="inline-actions">
-                      <span className="method-chip method-chip-post">POST</span>
-                      <code>/agreements/:id/input</code>
-                    </div>
-                  </button>
-                  <button type="button" className="workspace-card workspace-link" onClick={() => setActiveView('composer')}>
-                    <h3>Raw API Composer</h3>
-                    <p>Use curated shortcuts and a raw request editor for the remaining Agreements API endpoints in one focused workspace.</p>
-                    <div className="inline-actions">
-                      <span className="method-chip method-chip-get">GET</span>
-                      <span className="method-chip method-chip-post">POST</span>
-                    </div>
-                  </button>
-                </div>
-              </section>
-
-              <section className="panel">
-                <h2>Current Session</h2>
-                <div className="stack">
-                  <div className="info-card"><span className="status-label">Target</span><strong>{describeBaseUrl(resolvedBaseUrl)}</strong></div>
-                  <div className="info-card"><span className="status-label">Auth</span><strong>{apiKey.trim() ? 'API key loaded' : 'No API key'}</strong></div>
-                  <div className="info-card"><span className="status-label">Loaded Agreement</span><strong>{loadedAgreement?.id || 'None loaded yet'}</strong></div>
-                </div>
-              </section>
-
-              <section className="panel">
-                <h2>Latest Response</h2>
-                {response ? <pre>{formatOutput(response.parsedBody ?? response.bodyText)}</pre> : <div className="empty-state">No request has been sent yet.</div>}
-              </section>
-            </div>
-          ) : null}
-
-          {activeView === 'deploy' ? (
-            <div className="grid">
-              <section className="panel panel-wide">
-                <h2>Deploy Agreement</h2>
-                <div className="deploy-grid">
-                  <div className="deploy-main">
-                    <label className="field">
-                      <span>Display Name</span>
-                      <input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Agreements Playground Agreement" />
-                    </label>
-                    <label className="field">
-                      <span>Doc URI</span>
-                      <input value={docUri} onChange={event => setDocUri(event.target.value)} placeholder="ar://... or https://..." />
-                    </label>
-                    <label className="field">
-                      <span>Agreement JSON</span>
-                      <textarea value={agreementJsonText} onChange={event => setAgreementJsonText(event.target.value)} rows={14} />
-                    </label>
-                    <label className="field">
-                      <span>Init Values JSON</span>
-                      <textarea value={initValuesText} onChange={event => setInitValuesText(event.target.value)} rows={8} />
-                    </label>
-                    <label className="field">
-                      <span>Participants JSON</span>
-                      <textarea value={participantsText} onChange={event => setParticipantsText(event.target.value)} rows={6} />
-                    </label>
-                    <label className="field">
-                      <span>Observers JSON</span>
-                      <textarea value={observersText} onChange={event => setObserversText(event.target.value)} rows={4} />
-                    </label>
-                  </div>
-
-                  <div className="deploy-sidebar">
-                    <div className="info-card">
-                      <span className="status-label">Flow</span>
-                      <strong>Validate, sign, deploy</strong>
-                      <p className="hint">This screen is the only guided way to create a signed `deploy-with-permit` request.</p>
-                    </div>
-                    <button type="button" className="ghost" disabled={busy} onClick={() => void validateTemplate()}>Validate Template</button>
-                    <button type="button" className="ghost" disabled={busy} onClick={() => void validatePayload()}>Validate Payload</button>
-                    <button
-                      type="button"
-                      className="primary"
-                      disabled={busy || !walletAddress}
-                      onClick={() => void deployWithPermit()}
-                    >
-                      {busy ? 'Signing / Deploying...' : 'Sign + Deploy'}
-                    </button>
-                    <button type="button" className="ghost" disabled={busy || !loadedAgreement?.id} onClick={() => setActiveView('input')}>
-                      Go To Input Submission
-                    </button>
-                    {!walletAddress ? <div className="error-banner compact">Connect the wallet that should sign the deploy permit first.</div> : null}
-                    {error ? <div className="error-banner compact">{error}</div> : null}
-                    {notice ? <div className="success-banner compact">{notice}</div> : null}
-                  </div>
-                </div>
-              </section>
-              {renderResponsePanel('Deploy Response')}
-            </div>
-          ) : null}
-
-          {activeView === 'inspect' ? (
-            <div className="grid">
-              <section className="panel">
-                <h2>Lookup</h2>
-                <label className="field">
-                  <span>Agreement ID</span>
-                  <input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" />
-                </label>
-                <div className="actions">
-                  <button type="button" className="primary" disabled={busy} onClick={() => void loadAgreement()}>Load Agreement</button>
-                  <button type="button" className="ghost" disabled={busy || !agreementId.trim()} onClick={() => void loadState()}>Load State</button>
-                  <button type="button" className="ghost" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Inputs</button>
-                </div>
-                {error ? <div className="error-banner compact">{error}</div> : null}
-                {notice ? <div className="success-banner compact">{notice}</div> : null}
-              </section>
-
-              <section className="panel">
-                <h2>Loaded Agreement</h2>
-                {loadedAgreement ? (
-                  <div className="stack">
-                    <div className="info-card"><span className="status-label">ID</span><strong>{loadedAgreement.id}</strong></div>
-                    <div className="info-card"><span className="status-label">Status</span><strong>{loadedAgreement.status || '—'}</strong></div>
-                    <div className="info-card"><span className="status-label">Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div>
-                    <button type="button" className="ghost" onClick={() => setActiveView('input')}>Use This For Input Submission</button>
-                  </div>
-                ) : (
-                  <div className="empty-state">Load an agreement to inspect its record and discover available inputs.</div>
-                )}
-              </section>
-
-              <section className="panel panel-wide">
-                <h2>Agreement Record</h2>
-                {loadedAgreement ? <pre>{formatOutput(loadedAgreement)}</pre> : <div className="empty-state">Agreement details will appear here after loading one.</div>}
-              </section>
-              {renderResponsePanel('Inspect Response')}
-            </div>
-          ) : null}
-
-          {activeView === 'input' ? (
-            <div className="grid">
-              <section className="panel">
-                <h2>Target Agreement</h2>
-                <label className="field">
-                  <span>Agreement ID</span>
-                  <input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" />
-                </label>
-                <div className="actions">
-                  <button type="button" className="ghost" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button>
-                  <button type="button" className="ghost" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button>
-                </div>
-                {loadedAgreement ? (
-                  <div className="info-card">
-                    <span className="status-label">Selected Agreement</span>
-                    <strong>{loadedAgreement.id}</strong>
-                    <p className="hint">{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</p>
-                  </div>
-                ) : (
-                  <div className="empty-state">Load a deployed agreement before trying to sign an input.</div>
-                )}
-              </section>
-
-              <section className="panel">
-                <h2>Sign Input</h2>
-                <label className="field">
-                  <span>Input ID</span>
-                  <select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>
-                    {!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}
-                    {availableInputIds.map((inputId) => (
-                      <option key={inputId} value={inputId}>{inputId}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Input Values JSON</span>
-                  <textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} />
-                </label>
-                <div className="info-card">
-                  <span className="status-label">Input Issuer</span>
-                  <strong>{selectedInputDefinition?.issuer || '—'}</strong>
-                </div>
-                <button
-                  type="button"
-                  className="primary"
-                  disabled={busy || !walletAddress}
-                  onClick={() => void submitInput()}
-                >
-                  {busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}
+        {activeView === 'overview' ? (
+          <>
+            <section>
+              <div className="pl-cards">
+                <button type="button" className="pl-wcard" onClick={() => setActiveView('deploy')}>
+                  <h3>Deploy New Agreement</h3>
+                  <p>Prepare agreement JSON, validate it, and create a signed <code className="pl-mono">deploy-with-permit</code> request from the connected wallet.</p>
+                  <div className="pl-wcard-foot"><Method method="POST" /><code className="pl-mono">/agreements/deploy-with-permit</code></div>
                 </button>
-                {error ? <div className="error-banner compact">{error}</div> : null}
-                {notice ? <div className="success-banner compact">{notice}</div> : null}
-              </section>
-              {renderResponsePanel('Input Response')}
-            </div>
-          ) : null}
+                <button type="button" className="pl-wcard" onClick={() => setActiveView('inspect')}>
+                  <h3>Inspect Agreement</h3>
+                  <p>Load an agreement record, then check its current state and existing inputs without leaving this screen.</p>
+                  <div className="pl-wcard-foot"><Method method="GET" /><code className="pl-mono">/agreements/:id</code></div>
+                </button>
+                <button type="button" className="pl-wcard" onClick={() => setActiveView('input')}>
+                  <h3>Submit Signed Input</h3>
+                  <p>Choose one available input from a loaded agreement, sign it with the connected wallet, and submit.</p>
+                  <div className="pl-wcard-foot"><Method method="POST" /><code className="pl-mono">/agreements/:id/input</code></div>
+                </button>
+                <button type="button" className="pl-wcard" onClick={() => setActiveView('composer')}>
+                  <h3>Raw API Composer</h3>
+                  <p>Curated shortcuts and a raw request editor for the remaining Agreements API endpoints.</p>
+                  <div className="pl-wcard-foot"><Method method="GET" /><Method method="POST" /></div>
+                </button>
+              </div>
+            </section>
+            {renderResponsePanel()}
+          </>
+        ) : null}
 
-          {activeView === 'composer' ? (
-            <div className="grid">
-              <section className="panel">
-                <h2>Endpoint Shortcuts</h2>
-                <div className="preset-list">
-                  {quickActions.map((action) => (
-                    <button key={action.id} type="button" className="preset" onClick={() => populateComposer(action.method, action.path, action.body || '')}>
-                      <div className="preset-meta">
-                        <span className={`method-chip method-chip-${action.method.toLowerCase()}`}>{action.method}</span>
-                        <code>{action.path}</code>
-                      </div>
-                      <strong>{action.label}</strong>
-                      <span>{action.note}</span>
-                    </button>
-                  ))}
+        {activeView === 'deploy' ? (
+          <>
+            <section className="pl-panel">
+              <div className="pl-panel-head"><h2>Deploy Agreement</h2><span className="pl-mono">POST /agreements/deploy-with-permit</span></div>
+              <div className="pl-deploy">
+                <div className="pl-deploy-main">
+                  <label className="pl-field"><span>Display Name</span><input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Agreements Playground Agreement" /></label>
+                  <label className="pl-field"><span>Doc URI</span><input value={docUri} onChange={event => setDocUri(event.target.value)} placeholder="ar://... or https://..." /></label>
+                  <label className="pl-field"><span>Agreement JSON</span><textarea value={agreementJsonText} onChange={event => setAgreementJsonText(event.target.value)} rows={14} /></label>
+                  <label className="pl-field"><span>Init Values JSON</span><textarea value={initValuesText} onChange={event => setInitValuesText(event.target.value)} rows={8} /></label>
+                  <label className="pl-field"><span>Participants JSON</span><textarea value={participantsText} onChange={event => setParticipantsText(event.target.value)} rows={6} /></label>
+                  <label className="pl-field"><span>Observers JSON</span><textarea value={observersText} onChange={event => setObserversText(event.target.value)} rows={4} /></label>
                 </div>
-              </section>
-
-              <section className="panel">
-                <h2>Composer</h2>
-                <div className="composer">
-                  <div className="row">
-                    <label className="field field-compact">
-                      <span>Method</span>
-                      <select value={method} onChange={event => setMethod(event.target.value as HttpMethod)}>
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                      </select>
-                    </label>
-                    <label className="field field-grow">
-                      <span>Path</span>
-                      <input ref={composerPathInputRef} value={path} onChange={event => setPath(event.target.value)} />
-                    </label>
+                <aside className="pl-deploy-side">
+                  <p className="pl-eyebrow-sm pl-eyebrow">Flow</p>
+                  <strong>Validate → Sign → Deploy</strong>
+                  <p className="pl-hint">This screen is the only guided way to create a signed <code className="pl-mono">deploy-with-permit</code> request.</p>
+                  <div className="pl-stack-tight">
+                    <button type="button" className="pl-btn" disabled={busy} onClick={() => void validateTemplate()}>Validate Template</button>
+                    <button type="button" className="pl-btn" disabled={busy} onClick={() => void validatePayload()}>Validate Payload</button>
+                    <button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void deployWithPermit()}>{busy ? 'Signing / Deploying...' : 'Sign + Deploy'}</button>
+                    <button type="button" className="pl-btn" disabled={busy || !loadedAgreement?.id} onClick={() => setActiveView('input')}>Go To Input Submission</button>
                   </div>
-                  <label className="field">
-                    <span>JSON Body</span>
-                    <textarea value={body} onChange={event => setBody(event.target.value)} rows={12} placeholder="Optional for GET requests" />
-                  </label>
-                  <div className="actions">
-                    <button type="button" className="primary" disabled={busy} onClick={() => void executeComposer()}>
-                      {busy ? 'Sending...' : 'Send Request'}
-                    </button>
-                  </div>
-                  {error ? <div className="error-banner">{error}</div> : null}
-                  {notice ? <div className="success-banner">{notice}</div> : null}
-                </div>
+                  {!walletAddress ? <div className="pl-banner"><span className="pl-banner-mark">!</span>Connect the wallet that should sign the deploy permit first.</div> : null}
+                  {error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}
+                  {notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}
+                </aside>
+              </div>
+            </section>
+            {renderResponsePanel('Deploy Response')}
+          </>
+        ) : null}
 
-                <div className="curl-card">
-                  <h3>cURL Preview</h3>
-                  <pre>{curlPreview}</pre>
+        {activeView === 'inspect' ? (
+          <>
+            <div className="pl-grid">
+              <section className="pl-panel">
+                <div className="pl-panel-head"><h2>Lookup</h2></div>
+                <div className="pl-panel-body">
+                  <label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label>
+                  <div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void loadAgreement()}>Load Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadState()}>Load State</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Inputs</button></div>
+                  {error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}
+                  {notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}
                 </div>
               </section>
-              {renderResponsePanel('Composer Response')}
+              <section className="pl-panel">
+                <div className="pl-panel-head"><h2>Loaded Agreement</h2></div>
+                <div className="pl-panel-body">
+                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
+                  <button type="button" className="pl-btn" disabled={!loadedAgreement} onClick={() => setActiveView('input')}>Use This For Input Submission →</button>
+                </div>
+              </section>
+              <section className="pl-panel pl-panel-wide"><div className="pl-panel-head"><h2>Agreement Record</h2></div><div className="pl-panel-body">{loadedAgreement ? <CodeBlock title="Record" copyText={JSON.stringify(loadedAgreement, null, 2)}>{formatOutput(loadedAgreement)}</CodeBlock> : <div className="pl-empty">Agreement details will appear here after loading one.</div>}</div></section>
             </div>
-          ) : null}
-        </div>
+            {renderResponsePanel('Inspect Response')}
+          </>
+        ) : null}
+
+        {activeView === 'input' ? (
+          <>
+            <div className="pl-grid">
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Sign Input</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Input ID</span><select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>{!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}{availableInputIds.map(inputId => <option key={inputId} value={inputId}>{inputId}</option>)}</select></label><label className="pl-field"><span>Input Values JSON</span><textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} /></label><div className="pl-status-grid"><div className="pl-status-row"><span>Issuer</span><strong>{selectedInputDefinition?.issuer || '—'}</strong></div></div><button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void submitInput()}>{busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}</button>{error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}</div></section>
+            </div>
+            {renderResponsePanel('Input Response')}
+          </>
+        ) : null}
+
+        {activeView === 'composer' ? (
+          <>
+            <div className="pl-grid">
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Endpoint Shortcuts</h2></div><div className="pl-panel-body pl-panel-flush"><div className="pl-presets">{quickActions.map(action => <button key={action.id} type="button" className="pl-preset" onClick={() => populateComposer(action.method, action.path, action.body || '')}><div className="pl-preset-head"><Method method={action.method} /><code>{action.path}</code></div><strong>{action.label}</strong><span>{action.note}</span></button>)}</div></div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Composer</h2></div><div className="pl-panel-body"><div className="pl-composer-row"><label className="pl-field"><span>Method</span><select value={method} onChange={event => setMethod(event.target.value as HttpMethod)}><option value="GET">GET</option><option value="POST">POST</option></select></label><label className="pl-field"><span>Path</span><input ref={composerPathInputRef} value={path} onChange={event => setPath(event.target.value)} /></label></div><label className="pl-field"><span>JSON Body</span><textarea value={body} onChange={event => setBody(event.target.value)} rows={12} placeholder="Optional for GET requests" /></label><div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void executeComposer()}>{busy ? 'Sending...' : 'Send Request'}</button></div>{error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}<CodeBlock title="cURL Preview" copyText={curlPreview}>{curlPreview}</CodeBlock></div></section>
+            </div>
+            {renderResponsePanel('Composer Response')}
+          </>
+        ) : null}
       </main>
+
+      <footer className="pl-footer">
+        <div>© 2026 CNS Labs Inc.</div>
+        <div className="pl-footer-links"><a href="https://docs.shodai.network" target="_blank" rel="noreferrer">Docs</a><a href="https://github.com/CNSLabs" target="_blank" rel="noreferrer">GitHub</a><a href="https://x.com/CNSLabs" target="_blank" rel="noreferrer">X / Twitter</a></div>
+      </footer>
+    </>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.3" />
+      <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="square">
+        <line x1="8" y1="1" x2="8" y2="3" />
+        <line x1="8" y1="13" x2="8" y2="15" />
+        <line x1="1" y1="8" x2="3" y2="8" />
+        <line x1="13" y1="8" x2="15" y2="8" />
+        <line x1="2.8" y1="2.8" x2="4.2" y2="4.2" />
+        <line x1="11.8" y1="11.8" x2="13.2" y2="13.2" />
+        <line x1="2.8" y1="13.2" x2="4.2" y2="11.8" />
+        <line x1="11.8" y1="4.2" x2="13.2" y2="2.8" />
+      </g>
+    </svg>
+  );
+}
+
+function Method({ method }: { method: HttpMethod }) {
+  return <span className={`pl-method ${method === 'POST' ? 'm-post' : 'm-get'}`}>{method}</span>;
+}
+
+function CodeBlock({ title, children, copyText }: { title: string; children: string; copyText?: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    if (!copyText || !navigator.clipboard?.writeText) return;
+    void navigator.clipboard.writeText(copyText).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    });
+  }
+  return (
+    <div className="pl-code">
+      <div className="pl-code-head">
+        <span>{title}</span>
+        {copyText ? <button type="button" className="pl-copy-btn" onClick={copy}>{copied ? '✓ Copied' : 'Copy'}</button> : null}
+      </div>
+      <pre className="pl-code-body">{children}</pre>
     </div>
   );
 }
@@ -1055,10 +973,6 @@ function parseChainId(value: string) {
   return Number.parseInt(value, 16);
 }
 
-function describeBaseUrl(baseUrl: string) {
-  return baseUrl.trim();
-}
-
 function resolveCurlBaseUrl(baseUrl: string) {
   if (baseUrl.trim()) return baseUrl;
   if (typeof window === 'undefined') return 'http://localhost:5176';
@@ -1095,9 +1009,28 @@ function formatEnvironmentLabel(environment: AgreementsApiEnvironment) {
   return environment === 'production' ? 'Production' : 'Testnet';
 }
 
+function formatBaseUrlLabel(baseUrl: string) {
+  return baseUrl.trim();
+}
+
 function formatOutput(value: unknown) {
   if (typeof value === 'string') return value;
   return JSON.stringify(value, null, 2);
+}
+
+function formatErrorMessage(value: unknown) {
+  if (value instanceof Error) return value.message;
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const maybeMessage = (value as { message?: unknown }).message;
+    if (typeof maybeMessage === 'string' && maybeMessage.trim()) return maybeMessage;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return 'Unknown wallet error.';
+    }
+  }
+  return String(value);
 }
 
 export default App;
