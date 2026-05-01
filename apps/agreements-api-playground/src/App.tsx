@@ -53,10 +53,11 @@ const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
 const API_BASE_URL_OVERRIDES = readApiBaseUrlOverrides();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
-const DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
-const DEVELOPER_DOCS_URL = 'https://developers.shodai.network/docs';
-const API_REFERENCE_URL = 'https://docs.shodai.network/api-reference/system/get-the-openapi-document-for-the-agreements-api';
-const DEMO_APP_URL = 'https://app.shodai.network/agreements/';
+const PRODUCTION_APP_HOST = 'app.shodai.network';
+const PRODUCTION_DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
+const DEVELOPER_PORTAL_PATH = '/developer-portal/portal';
+const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
+const DEMO_APP_PATH = '/agreements/home';
 const GITHUB_URL = 'https://github.com/CNSLabs/';
 
 const SAMPLE_AGREEMENT = {
@@ -187,6 +188,8 @@ function App() {
 
   const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
   const environmentLabel = formatEnvironmentLabel(environment);
+  const developerPortalUrl = useMemo(() => resolveDeveloperPortalUrl(), []);
+  const developerPortalLinkProps = getExternalLinkProps(developerPortalUrl);
   const docsUrl = DEVELOPER_DOCS_URL;
   const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${API_BASE_PATH}/openapi.json`);
   const availableInputIds = useMemo(() => {
@@ -606,16 +609,16 @@ function App() {
   return (
     <>
       <header className="pl-header">
-        <a className="pl-brand" href={DEVELOPER_PORTAL_URL} target="_blank" rel="noreferrer">
+        <a className="pl-brand" href={developerPortalUrl} {...developerPortalLinkProps}>
           <span className="pl-brand-mark" aria-hidden="true" />
           <span>SHODAI</span>
         </a>
         <nav className="pl-nav" aria-label="Primary navigation">
-          <a href={DEVELOPER_PORTAL_URL} target="_blank" rel="noreferrer">Home</a>
+          <a href={developerPortalUrl} {...developerPortalLinkProps}>Home</a>
           <a href={docsUrl} target="_blank" rel="noreferrer">Docs</a>
-          <a href={API_REFERENCE_URL} target="_blank" rel="noreferrer">API Reference</a>
+          <a href={openApiUrl} target="_blank" rel="noreferrer">API Reference</a>
           <a className="is-active" href="#main">API Playground</a>
-          <a href={DEMO_APP_URL} target="_blank" rel="noreferrer">Demo App</a>
+          <a href={DEMO_APP_PATH}>Demo App</a>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
         </nav>
         <div className="pl-header-right">
@@ -977,6 +980,19 @@ function resolveCurlBaseUrl(baseUrl: string) {
   if (baseUrl.trim()) return baseUrl;
   if (typeof window === 'undefined') return 'http://localhost:5176';
   return window.location.origin;
+}
+
+function resolveDeveloperPortalUrl() {
+  if (typeof window !== 'undefined' && window.location.hostname === PRODUCTION_APP_HOST) {
+    return PRODUCTION_DEVELOPER_PORTAL_URL;
+  }
+  return DEVELOPER_PORTAL_PATH;
+}
+
+function getExternalLinkProps(href: string) {
+  return /^https?:\/\//.test(href)
+    ? { target: '_blank', rel: 'noreferrer' }
+    : {};
 }
 
 function resolveDefaultEnvironment(): AgreementsApiEnvironment {
