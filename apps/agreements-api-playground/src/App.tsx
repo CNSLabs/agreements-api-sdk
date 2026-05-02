@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   API_BASE_PATH,
   ApiClient,
@@ -21,6 +21,13 @@ import { createBrowserTelemetryHeaders } from './telemetry';
 
 type HttpMethod = 'GET' | 'POST';
 type AppView = 'overview' | 'deploy' | 'inspect' | 'input' | 'composer';
+
+type NavItem = {
+  label: string;
+  href: string;
+  external?: boolean;
+  active?: boolean;
+};
 
 type ResponseState = {
   startedAt: string;
@@ -132,8 +139,14 @@ const SAMPLE_AGREEMENT = {
 
 function App() {
   const composerPathInputRef = useRef<HTMLInputElement | null>(null);
+  const hamburgerRef = useRef<HTMLButtonElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const footerRef = useRef<HTMLElement | null>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeView, setActiveView] = useState<AppView>('overview');
   const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
   const [apiKey, setApiKey] = useState('');
@@ -190,6 +203,17 @@ function App() {
   const developerPortalLinkProps = getExternalLinkProps(developerPortalUrl);
   const docsUrl = DEVELOPER_DOCS_URL;
   const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${API_BASE_PATH}/openapi.json`);
+  const navItems = useMemo<NavItem[]>(
+    () => [
+      { label: 'Home', href: developerPortalUrl, external: /^https?:\/\//.test(developerPortalUrl) },
+      { label: 'Docs', href: docsUrl, external: true },
+      { label: 'API Reference', href: openApiUrl, external: true },
+      { label: 'API Playground', href: '#main', active: true },
+      { label: 'Demo App', href: DEMO_APP_PATH },
+      { label: 'GitHub', href: GITHUB_URL, external: true },
+    ],
+    [developerPortalUrl, docsUrl, openApiUrl],
+  );
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
     const asRecord =
@@ -217,6 +241,54 @@ function App() {
       document.body.classList.remove('theme-dark');
     };
   }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
+    window.setTimeout(() => {
+      hamburgerRef.current?.focus();
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+
+    drawerCloseRef.current?.focus();
+    const inertBackgroundElements = [mainRef.current, footerRef.current].filter(
+      (element): element is HTMLElement => Boolean(element),
+    );
+    inertBackgroundElements.forEach(element => {
+      element.setAttribute('inert', '');
+      element.setAttribute('aria-hidden', 'true');
+    });
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDrawer();
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        trapFocus(event, drawerRef);
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      inertBackgroundElements.forEach(element => {
+        element.removeAttribute('inert');
+        element.removeAttribute('aria-hidden');
+      });
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeDrawer, isDrawerOpen]);
 
   useEffect(() => {
     const provider = getInjectedProvider();
@@ -612,26 +684,44 @@ function App() {
           <span>SHODAI</span>
         </a>
         <nav className="pl-nav" aria-label="Primary navigation">
-          <a href={developerPortalUrl} {...developerPortalLinkProps}>Home</a>
-          <a href={docsUrl} target="_blank" rel="noreferrer">Docs</a>
-          <a href={openApiUrl} target="_blank" rel="noreferrer">API Reference</a>
-          <a className="is-active" href="#main">API Playground</a>
-          <a href={DEMO_APP_PATH}>Demo App</a>
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+          {navItems.map(item => (
+            <a
+              key={item.label}
+              className={item.active ? 'is-active' : undefined}
+              href={item.href}
+              target={item.external ? '_blank' : undefined}
+              rel={item.external ? 'noreferrer' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
         <div className="pl-header-right">
           <button
             type="button"
             className="pl-icon-btn"
             aria-label="Toggle theme"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={toggleTheme}
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
         </div>
+        <button
+          ref={hamburgerRef}
+          className="pl-mobile-menu-btn"
+          type="button"
+          aria-label="Open navigation"
+          aria-expanded={isDrawerOpen}
+          aria-controls="pl-mobile-drawer"
+          onClick={() => setIsDrawerOpen(true)}
+        >
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+        </button>
       </header>
 
-      <main id="main" className="pl-main">
+      <main ref={mainRef} id="main" className="pl-main">
         <section className="pl-hero">
           <div className="pl-hero-copy">
             <h1 className="pl-h1">Agreements API</h1>
@@ -803,10 +893,70 @@ function App() {
         ) : null}
       </main>
 
-      <footer className="pl-footer">
+      <footer ref={footerRef} className="pl-footer">
         <div>© 2026 CNS Labs Inc.</div>
         <div className="pl-footer-links"><a href="https://docs.shodai.network" target="_blank" rel="noreferrer">Docs</a><a href="https://github.com/CNSLabs" target="_blank" rel="noreferrer">GitHub</a><a href="https://x.com/CNSLabs" target="_blank" rel="noreferrer">X / Twitter</a></div>
       </footer>
+      {isDrawerOpen ? (
+        <div
+          ref={drawerRef}
+          id="pl-mobile-drawer"
+          className="pl-mobile-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
+        >
+          <div className="pl-mobile-drawer-header">
+            <a className="pl-brand" href={developerPortalUrl} {...developerPortalLinkProps} onClick={closeDrawer}>
+              <span className="pl-brand-mark" aria-hidden="true" />
+              <span>SHODAI</span>
+            </a>
+            <button
+              ref={drawerCloseRef}
+              className="pl-mobile-drawer-close"
+              type="button"
+              aria-label="Close menu"
+              onClick={closeDrawer}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          <nav className="pl-mobile-drawer-nav" aria-label="Primary navigation">
+            {navItems.map(item => (
+              <a
+                key={item.label}
+                className={item.active ? 'is-active' : undefined}
+                href={item.href}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noreferrer' : undefined}
+                aria-current={item.active ? 'page' : undefined}
+                onClick={closeDrawer}
+              >
+                <span>{item.label}</span>
+                <span aria-hidden="true">{item.active ? '•' : item.external ? '↗' : '→'}</span>
+              </a>
+            ))}
+          </nav>
+          <div className="pl-mobile-drawer-actions">
+            <div className="pl-mobile-drawer-appearance">
+              <span>Appearance</span>
+              <button
+                type="button"
+                className="pl-icon-btn"
+                aria-label="Toggle theme"
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+            </div>
+            <div className="pl-mobile-drawer-footer">
+              <a href="https://docs.shodai.network" target="_blank" rel="noreferrer">Docs</a>
+              <a href="https://x.com/CNSLabs" target="_blank" rel="noreferrer">X / Twitter</a>
+              <span>© 2026 CNS Labs</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -837,8 +987,43 @@ function SunIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 function Method({ method }: { method: HttpMethod }) {
   return <span className={`pl-method ${method === 'POST' ? 'm-post' : 'm-get'}`}>{method}</span>;
+}
+
+function trapFocus(event: KeyboardEvent, containerRef: RefObject<HTMLElement>) {
+  const container = containerRef.current;
+  if (!container) return;
+
+  const focusable = Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter(element => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true');
+
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+    return;
+  }
+
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function CodeBlock({ title, children, copyText }: { title: string; children: string; copyText?: string }) {
