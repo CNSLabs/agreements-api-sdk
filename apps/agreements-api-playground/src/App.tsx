@@ -57,6 +57,8 @@ const PRODUCTION_APP_HOST = 'app.shodai.network';
 const PRODUCTION_DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
 const DEVELOPER_PORTAL_PATH = '/developer-portal/portal';
 const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
+const PRODUCTION_API_REFERENCE_URL =
+  `${DEVELOPER_DOCS_URL}/api-reference/system/get-the-openapi-document-for-the-agreements-api`;
 const DEMO_APP_PATH = '/agreements/home';
 const GITHUB_URL = 'https://github.com/CNSLabs/';
 
@@ -191,7 +193,7 @@ function App() {
   const developerPortalUrl = useMemo(() => resolveDeveloperPortalUrl(), []);
   const developerPortalLinkProps = getExternalLinkProps(developerPortalUrl);
   const docsUrl = DEVELOPER_DOCS_URL;
-  const openApiUrl = joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), `${API_BASE_PATH}/openapi.json`);
+  const apiReferenceUrl = useMemo(() => resolveApiReferenceUrl(resolvedBaseUrl), [resolvedBaseUrl]);
   const availableInputIds = useMemo(() => {
     const raw = loadedAgreement?.json;
     const asRecord =
@@ -616,7 +618,7 @@ function App() {
         <nav className="pl-nav" aria-label="Primary navigation">
           <a href={developerPortalUrl} {...developerPortalLinkProps}>Home</a>
           <a href={docsUrl} target="_blank" rel="noreferrer">Docs</a>
-          <a href={openApiUrl} target="_blank" rel="noreferrer">API Reference</a>
+          <a href={apiReferenceUrl} target="_blank" rel="noreferrer">API Reference</a>
           <a className="is-active" href="#main">API Playground</a>
           <a href={DEMO_APP_PATH}>Demo App</a>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
@@ -641,7 +643,7 @@ function App() {
               Validate, deploy, inspect, and submit signed inputs against the Agreements API from one workspace. All requests run against {environment === 'production' ? 'mainnet' : 'testnet'}.
             </p>
             <div className="pl-hero-actions">
-              <a className="pl-btn" href={openApiUrl} target="_blank" rel="noreferrer">Open API Reference ↗</a>
+              <a className="pl-btn" href={apiReferenceUrl} target="_blank" rel="noreferrer">Open API Reference ↗</a>
             </div>
           </div>
           <aside className="pl-hero-aside">
@@ -663,7 +665,7 @@ function App() {
                 <option value="production">production</option>
               </select>
             </label>
-            <a className="pl-field-link" href={openApiUrl} target="_blank" rel="noreferrer">Open {environmentLabel} OpenAPI ↗</a>
+            <a className="pl-field-link" href={apiReferenceUrl} target="_blank" rel="noreferrer">Open {environmentLabel} OpenAPI ↗</a>
           </div>
           <div className="pl-toolbar-cell">
             <label className="pl-field">
@@ -987,6 +989,13 @@ function resolveDeveloperPortalUrl() {
     return PRODUCTION_DEVELOPER_PORTAL_URL;
   }
   return DEVELOPER_PORTAL_PATH;
+}
+
+function resolveApiReferenceUrl(resolvedApiBaseUrl: string) {
+  if (typeof window !== 'undefined' && window.location.hostname === PRODUCTION_APP_HOST) {
+    return PRODUCTION_API_REFERENCE_URL;
+  }
+  return joinUrl(resolveCurlBaseUrl(resolvedApiBaseUrl), `${API_BASE_PATH}/openapi.json`);
 }
 
 function getExternalLinkProps(href: string) {
