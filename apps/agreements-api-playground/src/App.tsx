@@ -53,7 +53,9 @@ const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
 const API_BASE_URL_OVERRIDES = readApiBaseUrlOverrides();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
-const DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/';
+const PRODUCTION_APP_HOST = 'app.shodai.network';
+const PRODUCTION_DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
+const DEVELOPER_PORTAL_PATH = '/developer-portal/portal';
 const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
 const DEMO_APP_PATH = '/agreements/home';
 const GITHUB_URL = 'https://github.com/CNSLabs/';
@@ -981,7 +983,10 @@ function resolveCurlBaseUrl(baseUrl: string) {
 }
 
 function resolveDeveloperPortalUrl() {
-  return DEVELOPER_PORTAL_URL;
+  if (typeof window !== 'undefined' && window.location.hostname === PRODUCTION_APP_HOST) {
+    return PRODUCTION_DEVELOPER_PORTAL_URL;
+  }
+  return DEVELOPER_PORTAL_PATH;
 }
 
 function getExternalLinkProps(href: string) {
