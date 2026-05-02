@@ -22,7 +22,7 @@ pnpm --filter agreements-api-playground exec vite --host 127.0.0.1 --port 4176
 Hosted path:
 
 ```text
-https://app.shodai.network/api-playground
+https://developers.shodai.network/api-playground
 ```
 
 Environment:

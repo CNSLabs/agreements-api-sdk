@@ -251,7 +251,7 @@ For a complete browser workflow, see the playground:
 - [`../../apps/agreements-api-playground/README.md`](../../apps/agreements-api-playground/README.md)
 - [`../../apps/agreements-api-playground/src/App.tsx`](../../apps/agreements-api-playground/src/App.tsx)
 
-The hosted playground is available at `https://app.shodai.network/api-playground`.
+The hosted playground is available at `https://developers.shodai.network/api-playground`.
 
 The playground demonstrates:
 
