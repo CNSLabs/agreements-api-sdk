@@ -43,7 +43,7 @@ Built-in mappings:
 - `testnet` -> `https://test-api.shodai.network`
 - `production` -> `https://api.shodai.network`
 
-The client still supports `baseUrl` as an advanced override for local proxies, internal gateways, or non-standard deployments. It continues to add `/api/v0/*` automatically.
+The client still supports `baseUrl` as an advanced override for local proxies, internal gateways, or non-standard deployments. It continues to add `/v0/*` automatically.
 
 ## Local Development
 

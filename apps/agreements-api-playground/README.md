@@ -1,6 +1,6 @@
 # Agreements API Playground
 
-Small standalone frontend for exercising the hosted Agreements API at `/api/v0/*`.
+Small standalone frontend for exercising the hosted Agreements API at `/v0/*`.
 
 This app is the canonical reference implementation for the SDK in this repository. If you want a full browser example for validate, deploy, inspect, and input submission flows, start with [`src/App.tsx`](./src/App.tsx).
 
