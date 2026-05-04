@@ -1,0 +1,59 @@
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-regular.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-regular.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-regularitalic.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-regularitalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-medium.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-medium.woff") format("woff");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-mediumitalic.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-mediumitalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-semibold.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-semibold.woff") format("woff");
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aeonik Pro";
+  src:
+    url("./assets/fonts/aeonikpro-semibolditalic.woff2") format("woff2"),
+    url("./assets/fonts/aeonikpro-semibolditalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 600 700;
+  font-display: swap;
+}
