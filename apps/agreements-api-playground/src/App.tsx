@@ -21,6 +21,7 @@ import { createBrowserTelemetryHeaders } from './telemetry';
 
 type HttpMethod = 'GET' | 'POST';
 type AppView = 'overview' | 'deploy' | 'inspect' | 'input' | 'composer';
+type Theme = 'light' | 'dark';
 
 type ResponseState = {
   startedAt: string;
@@ -42,6 +43,11 @@ type Eip1193Provider = {
   on?(event: string, listener: (...args: unknown[]) => void): void;
   removeListener?(event: string, listener: (...args: unknown[]) => void): void;
 };
+
+function getPreferredTheme(): Theme {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 type DeployChainConfig = {
   chainId: number;
@@ -135,7 +141,7 @@ const SAMPLE_AGREEMENT = {
 function App() {
   const composerPathInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<Theme>(getPreferredTheme);
   const [activeView, setActiveView] = useState<AppView>('overview');
   const [environment, setEnvironment] = useState<AgreementsApiEnvironment>(DEFAULT_ENVIRONMENT);
   const [apiKey, setApiKey] = useState('');
