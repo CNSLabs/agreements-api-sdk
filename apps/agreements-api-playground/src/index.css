@@ -795,10 +795,27 @@ select:focus-visible {
 }
 .pl-metric.m-err strong::before {
   content: "✕ ";
-  color: var(--fg-1);
+  color: #ba1a1a;
+}
+.pl-metric.m-err {
+  border-color: #ba1a1a;
+  background: #fff0ee;
+}
+.pl-metric.m-err span,
+.pl-metric.m-err strong {
+  color: #ba1a1a;
+}
+.theme-dark .pl-metric.m-err {
+  border-color: #ffb4ab;
+  background: #3f0400;
+}
+.theme-dark .pl-metric.m-err span,
+.theme-dark .pl-metric.m-err strong,
+.theme-dark .pl-metric.m-err strong::before {
+  color: #ffb4ab;
 }
 
-/* ---------- Banners (info / success / error all share bg-3) ---------- */
+/* ---------- Banners ---------- */
 .pl-banner {
   border: 1px solid var(--line-structural);
   background: var(--bg-3);
@@ -812,6 +829,16 @@ select:focus-visible {
 .pl-banner-mark {
   font-family: var(--font-mono);
   font-weight: 500;
+}
+.pl-banner-error {
+  border-color: #ba1a1a;
+  background: #fff0ee;
+  color: #ba1a1a;
+}
+.theme-dark .pl-banner-error {
+  border-color: #ffb4ab;
+  background: #3f0400;
+  color: #ffb4ab;
 }
 
 /* ---------- Empty state ---------- */
