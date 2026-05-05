@@ -657,7 +657,7 @@ function App() {
               <div className="pl-metrics">
                 <div className={`pl-metric ${response.ok ? 'm-ok' : 'm-err'}`}><span>Status</span><strong>{response.status}</strong></div>
                 <div className="pl-metric"><span>Duration</span><strong>{response.durationMs} ms</strong></div>
-                <div className="pl-metric"><span>Result</span><strong>{response.ok ? 'OK' : 'Failed'}</strong></div>
+                <div className={`pl-metric ${response.ok ? 'm-ok' : 'm-err'}`}><span>Result</span><strong>{response.ok ? 'OK' : 'Failed'}</strong></div>
               </div>
               <CodeBlock title="Body" copyText={response.bodyText}>{formatOutput(response.parsedBody ?? response.bodyText)}</CodeBlock>
             </>
@@ -763,7 +763,7 @@ function App() {
                 {walletBusy ? 'Connecting...' : walletAddress ? 'Refresh' : 'Connect'}
               </button>
             </div>
-            {walletError ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{walletError}</div> : null}
+            {walletError ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{walletError}</div> : null}
           </div>
         </section>
 
@@ -831,7 +831,7 @@ function App() {
                     <button type="button" className="pl-btn" disabled={busy || !loadedAgreement?.id} onClick={() => setActiveView('input')}>Go To Input Submission</button>
                   </div>
                   {!walletAddress ? <div className="pl-banner"><span className="pl-banner-mark">!</span>Connect the wallet that should sign the deploy permit first.</div> : null}
-                  {error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}
+                  {error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}
                   {notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}
                 </aside>
               </div>
@@ -848,7 +848,7 @@ function App() {
                 <div className="pl-panel-body">
                   <label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label>
                   <div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void loadAgreement()}>Load Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadState()}>Load State</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Inputs</button></div>
-                  {error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}
+                  {error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}
                   {notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}
                 </div>
               </section>
@@ -869,7 +869,7 @@ function App() {
           <>
             <div className="pl-grid">
               <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
-              <section className="pl-panel"><div className="pl-panel-head"><h2>Sign Input</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Input ID</span><select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>{!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}{availableInputIds.map(inputId => <option key={inputId} value={inputId}>{inputId}</option>)}</select></label><label className="pl-field"><span>Input Values JSON</span><textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} /></label><div className="pl-status-grid"><div className="pl-status-row"><span>Issuer</span><strong>{selectedInputDefinition?.issuer || '—'}</strong></div></div><button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void submitInput()}>{busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}</button>{error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}</div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Sign Input</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Input ID</span><select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>{!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}{availableInputIds.map(inputId => <option key={inputId} value={inputId}>{inputId}</option>)}</select></label><label className="pl-field"><span>Input Values JSON</span><textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} /></label><div className="pl-status-grid"><div className="pl-status-row"><span>Issuer</span><strong>{selectedInputDefinition?.issuer || '—'}</strong></div></div><button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void submitInput()}>{busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}</button>{error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}</div></section>
             </div>
             {renderResponsePanel('Input Response')}
           </>
@@ -879,7 +879,7 @@ function App() {
           <>
             <div className="pl-grid">
               <section className="pl-panel"><div className="pl-panel-head"><h2>Endpoint Shortcuts</h2></div><div className="pl-panel-body pl-panel-flush"><div className="pl-presets">{quickActions.map(action => <button key={action.id} type="button" className="pl-preset" onClick={() => populateComposer(action.method, action.path, action.body || '')}><div className="pl-preset-head"><Method method={action.method} /><code>{action.path}</code></div><strong>{action.label}</strong><span>{action.note}</span></button>)}</div></div></section>
-              <section className="pl-panel"><div className="pl-panel-head"><h2>Composer</h2></div><div className="pl-panel-body"><div className="pl-composer-row"><label className="pl-field"><span>Method</span><select value={method} onChange={event => setMethod(event.target.value as HttpMethod)}><option value="GET">GET</option><option value="POST">POST</option></select></label><label className="pl-field"><span>Path</span><input ref={composerPathInputRef} value={path} onChange={event => setPath(event.target.value)} /></label></div><label className="pl-field"><span>JSON Body</span><textarea value={body} onChange={event => setBody(event.target.value)} rows={12} placeholder="Optional for GET requests" /></label><div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void executeComposer()}>{busy ? 'Sending...' : 'Send Request'}</button></div>{error ? <div className="pl-banner"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}<CodeBlock title="cURL Preview" copyText={curlPreview}>{curlPreview}</CodeBlock></div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Composer</h2></div><div className="pl-panel-body"><div className="pl-composer-row"><label className="pl-field"><span>Method</span><select value={method} onChange={event => setMethod(event.target.value as HttpMethod)}><option value="GET">GET</option><option value="POST">POST</option></select></label><label className="pl-field"><span>Path</span><input ref={composerPathInputRef} value={path} onChange={event => setPath(event.target.value)} /></label></div><label className="pl-field"><span>JSON Body</span><textarea value={body} onChange={event => setBody(event.target.value)} rows={12} placeholder="Optional for GET requests" /></label><div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void executeComposer()}>{busy ? 'Sending...' : 'Send Request'}</button></div>{error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}<CodeBlock title="cURL Preview" copyText={curlPreview}>{curlPreview}</CodeBlock></div></section>
             </div>
             {renderResponsePanel('Composer Response')}
           </>
