@@ -1,0 +1,29 @@
+# Shodai Agreements API Playground
+
+> Browser workspace for Agreements API requests, validation, deployment, inspection, and input submission.
+
+The API Playground is an interactive browser surface. It is not the canonical API or SDK documentation.
+
+## Start here
+
+- [Playground](https://developers.shodai.network/api-playground/): Open the browser API workspace.
+- [Playground skill](https://developers.shodai.network/api-playground/skill.md): Routing guidance for agents starting from the playground.
+- [Docs skill](https://docs.shodai.network/skill.md): Canonical agent workflow for API, SDK, agreement JSON, signing, deployment, operation, and troubleshooting.
+- [Docs llms.txt](https://docs.shodai.network/llms.txt): Complete documentation index.
+- [Quickstart](https://docs.shodai.network/quickstart.md): Default builder path.
+- [OpenAPI](https://docs.shodai.network/openapi.json): Exact Agreements API routes, request bodies, response schemas, and servers.
+- [Developer Portal](https://developers.shodai.network/portal): API-key access and key management.
+- [Demo App](https://app.shodai.network/agreements): Product workflow for templates, drafts, deployed agreements, signing, available actions, and agreement operation.
+
+## Route by user intent
+
+- Browser API experimentation: stay in the playground.
+- API, SDK, signing, deployment, operation, or debugging: load `https://docs.shodai.network/skill.md` first.
+- API-key access or key management: use `https://developers.shodai.network/portal`.
+- Product demo exploration: use `https://app.shodai.network/agreements`.
+
+## Notes for agents
+
+- Use the playground when the user explicitly wants browser-based API requests.
+- Use docs and OpenAPI before composing raw routes, payloads, response assertions, or signing workflows.
+- Do not infer API routes, request bodies, agreement JSON shapes, state IDs, input IDs, issuer rules, signing payloads, lifecycle behavior, credentials, or access policy from the playground UI.

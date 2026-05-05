@@ -60,13 +60,15 @@ const API_BASE_URL_OVERRIDES = readApiBaseUrlOverrides();
 const DEFAULT_OWNER = '0x1111111111111111111111111111111111111111';
 const DEFAULT_COUNTERPARTY = '0x2222222222222222222222222222222222222222';
 const PRODUCTION_APP_HOST = 'app.shodai.network';
+const PRODUCTION_PLAYGROUND_HOST = 'developers.shodai.network';
 const PRODUCTION_DEVELOPER_PORTAL_URL = 'https://developers.shodai.network/portal/';
 const PRODUCTION_SUPPORT_URL = 'https://developers.shodai.network/support';
+const PRODUCTION_DEMO_APP_URL = 'https://app.shodai.network/agreements';
 const DEVELOPER_PORTAL_PATH = '/developer-portal/portal';
 const DEVELOPER_SUPPORT_PATH = 'http://127.0.0.1:5178/developer-portal/support';
 const DEVELOPER_DOCS_URL = 'https://docs.shodai.network';
 const DOCS_API_REFERENCE_URL =
-  `${DEVELOPER_DOCS_URL}/api-reference/system/get-the-openapi-document-for-the-agreements-api`;
+  `${DEVELOPER_DOCS_URL}/reference/api/system/get-the-openapi-document-for-the-agreements-api`;
 const DEMO_APP_PATH = '/agreements/home';
 const GITHUB_URL = 'https://github.com/CNSLabs/';
 
@@ -206,8 +208,10 @@ function App() {
   const environmentLabel = formatEnvironmentLabel(environment);
   const developerPortalUrl = useMemo(() => resolveDeveloperPortalUrl(), []);
   const supportUrl = useMemo(() => resolveSupportUrl(), []);
+  const demoAppUrl = useMemo(() => resolveDemoAppUrl(), []);
   const developerPortalLinkProps = getExternalLinkProps(developerPortalUrl);
   const supportLinkProps = getExternalLinkProps(supportUrl);
+  const demoAppLinkProps = getExternalLinkProps(demoAppUrl);
   const docsUrl = DEVELOPER_DOCS_URL;
   const apiReferenceUrl = useMemo(() => resolveApiReferenceUrl(resolvedBaseUrl), [resolvedBaseUrl]);
   const navItems = [
@@ -215,7 +219,7 @@ function App() {
     { label: 'Docs', href: docsUrl, props: { target: '_blank', rel: 'noreferrer' } },
     { label: 'API Reference', href: apiReferenceUrl, props: { target: '_blank', rel: 'noreferrer' } },
     { label: 'API Playground', href: '#main', active: true },
-    { label: 'Demo App', href: DEMO_APP_PATH },
+    { label: 'Demo App', href: demoAppUrl, props: demoAppLinkProps },
     { label: 'GitHub', href: GITHUB_URL, props: { target: '_blank', rel: 'noreferrer' } },
   ];
   const availableInputIds = useMemo(() => {
@@ -888,7 +892,7 @@ function App() {
 
       <footer ref={footerRef} className="pl-footer">
         <div>© 2026 CNS Labs Inc.</div>
-        <div className="pl-footer-links"><a href="https://docs.shodai.network" target="_blank" rel="noreferrer">Docs</a><a href={supportUrl} {...supportLinkProps}>Support</a><a href="https://github.com/CNSLabs" target="_blank" rel="noreferrer">GitHub</a><a href="https://x.com/CNSLabs" target="_blank" rel="noreferrer">X / Twitter</a></div>
+        <div className="pl-footer-links"><a href="https://docs.shodai.network" target="_blank" rel="noreferrer">Docs</a><a href={supportUrl} {...supportLinkProps}>Support</a><a href="https://github.com/CNSLabs" target="_blank" rel="noreferrer">GitHub</a><a href="https://x.com/shodai_network" target="_blank" rel="noreferrer">X / Twitter</a></div>
       </footer>
       {isDrawerOpen ? (
         <div
@@ -1166,17 +1170,29 @@ function resolveCurlBaseUrl(baseUrl: string) {
 }
 
 function resolveDeveloperPortalUrl() {
-  if (typeof window !== 'undefined' && window.location.hostname === PRODUCTION_APP_HOST) {
+  if (isHostedProductionSurface()) {
     return PRODUCTION_DEVELOPER_PORTAL_URL;
   }
   return DEVELOPER_PORTAL_PATH;
 }
 
 function resolveSupportUrl() {
-  if (typeof window !== 'undefined' && window.location.hostname === PRODUCTION_APP_HOST) {
+  if (isHostedProductionSurface()) {
     return PRODUCTION_SUPPORT_URL;
   }
   return DEVELOPER_SUPPORT_PATH;
+}
+
+function resolveDemoAppUrl() {
+  if (isHostedProductionSurface()) {
+    return PRODUCTION_DEMO_APP_URL;
+  }
+  return DEMO_APP_PATH;
+}
+
+function isHostedProductionSurface() {
+  if (typeof window === 'undefined') return false;
+  return [PRODUCTION_APP_HOST, PRODUCTION_PLAYGROUND_HOST].includes(window.location.hostname);
 }
 
 function resolveApiReferenceUrl(resolvedApiBaseUrl: string) {
