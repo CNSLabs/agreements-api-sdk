@@ -28,6 +28,7 @@ ENV VITE_EXTERNAL_API_BASE_URL=$VITE_EXTERNAL_API_BASE_URL
 COPY packages/agreements-api-client/tsconfig.json ./packages/agreements-api-client/
 COPY packages/agreements-api-client/src ./packages/agreements-api-client/src
 COPY apps/agreements-api-playground/src ./apps/agreements-api-playground/src
+COPY apps/agreements-api-playground/public ./apps/agreements-api-playground/public
 COPY apps/agreements-api-playground/index.html ./apps/agreements-api-playground/
 COPY apps/agreements-api-playground/nginx.conf ./apps/agreements-api-playground/
 COPY apps/agreements-api-playground/vite.config.ts ./apps/agreements-api-playground/
