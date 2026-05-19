@@ -16,7 +16,7 @@ export class AgreementsApiError extends Error {
   /** When the server returned a JSON body matching `ErrorResponse`. */
   get errorPayload(): ErrorResponse | undefined {
     const b = this.parsedBody;
-    if (b && typeof b === 'object' && 'statusCode' in b && 'message' in b) {
+    if (b && typeof b === 'object' && 'error' in b) {
       return b as ErrorResponse;
     }
     return undefined;
@@ -24,6 +24,10 @@ export class AgreementsApiError extends Error {
 }
 
 export function extractAgreementsApiErrorMessage(parsedBody: unknown, bodyText: string, status: number): string {
+  if (parsedBody && typeof parsedBody === 'object' && 'error' in parsedBody) {
+    const error = (parsedBody as { error?: { message?: unknown } }).error;
+    if (typeof error?.message === 'string' && error.message.trim()) return error.message;
+  }
   if (parsedBody && typeof parsedBody === 'object' && 'message' in parsedBody) {
     const message = (parsedBody as { message?: string | string[] }).message;
     if (Array.isArray(message)) return message.join('\n');

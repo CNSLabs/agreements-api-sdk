@@ -165,13 +165,21 @@ This flow requires:
 ### 5. Inspect agreements after deployment
 
 ```ts
-const agreements = await client.listAgreements({ status: 'Deployed' });
-const agreementRecord = await client.getAgreement(agreements[0].id);
+const agreementsPage = await client.listAgreements({
+  state: 'AWAITING_PAYMENT',
+  createdAt: { gte: '2026-05-01T00:00:00.000Z' },
+  sort: { createdAt: 'desc' },
+  limit: 25,
+});
+const agreementRecord = await client.getAgreement(agreementsPage.data[0].id);
 const state = await client.getAgreementState(agreementRecord.id);
-const inputs = await client.listAgreementInputs(agreementRecord.id);
+const inputsPage = await client.listAgreementInputs(agreementRecord.id, {
+  sort: { updatedAt: 'desc' },
+  limit: 25,
+});
 
 console.log(state.state);
-console.log(inputs.length);
+console.log(inputsPage.data.length);
 ```
 
 ### 6. Discover execution input IDs

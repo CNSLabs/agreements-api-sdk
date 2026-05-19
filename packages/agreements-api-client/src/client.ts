@@ -1,11 +1,16 @@
 import { extractAgreementsApiErrorMessage, AgreementsApiError } from './errors.js';
 import type {
+  AgreementInputListParams,
   AgreementInputRecord,
+  AgreementListParams,
   AgreementRecord,
+  AgreementSummary,
   AgreementStateResponse,
   DirectDeployAgreementWithPermitRequest,
   HealthResponse,
   ApiClientConfig,
+  ApiResponse,
+  ListResponse,
   ProcessInputRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
@@ -38,17 +43,16 @@ export class ApiClient {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
   }
 
-  async listAgreements(params?: { status?: 'Draft' | 'Deployed' }): Promise<AgreementRecord[]> {
-    const q = params?.status ? `?status=${encodeURIComponent(params.status)}` : '';
-    return this.request<AgreementRecord[]>('GET', `${agreementsApiPaths.agreements()}${q}`);
+  async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {
+    return this.requestList<AgreementSummary>('GET', withQuery(agreementsApiPaths.agreements(), params));
   }
 
   async getAgreement(agreementId: string): Promise<AgreementRecord> {
-    return this.request<AgreementRecord>('GET', agreementsApiPaths.agreement(agreementId));
+    return this.requestData<AgreementRecord>('GET', agreementsApiPaths.agreement(agreementId));
   }
 
   async validateTemplate(agreement: Record<string, unknown>): Promise<ValidateDirectAgreementTemplateResponse> {
-    return this.request<ValidateDirectAgreementTemplateResponse>(
+    return this.requestData<ValidateDirectAgreementTemplateResponse>(
       'POST',
       agreementsApiPaths.agreementsValidateTemplate(),
       agreement,
@@ -57,24 +61,23 @@ export class ApiClient {
   }
 
   async validateDeployment(body: ValidateDirectAgreementRequest): Promise<ValidateDirectAgreementResponse> {
-    return this.request<ValidateDirectAgreementResponse>('POST', agreementsApiPaths.agreementsValidate(), body, 201);
+    return this.requestData<ValidateDirectAgreementResponse>('POST', agreementsApiPaths.agreementsValidate(), body, 201);
   }
 
   async deployWithPermit(body: DirectDeployAgreementWithPermitRequest): Promise<AgreementRecord> {
-    return this.request<AgreementRecord>('POST', agreementsApiPaths.agreementsDeployWithPermit(), body, 201);
+    return this.requestData<AgreementRecord>('POST', agreementsApiPaths.agreementsDeployWithPermit(), body, 201);
   }
 
   async getAgreementState(agreementId: string): Promise<AgreementStateResponse> {
-    return this.request<AgreementStateResponse>('GET', agreementsApiPaths.agreementState(agreementId));
+    return this.requestData<AgreementStateResponse>('GET', agreementsApiPaths.agreementState(agreementId));
   }
 
-  async listAgreementInputs(agreementId: string, params?: { userId?: string }): Promise<AgreementInputRecord[]> {
-    const q = params?.userId ? `?userId=${encodeURIComponent(params.userId)}` : '';
-    return this.request<AgreementInputRecord[]>('GET', `${agreementsApiPaths.agreementInputs(agreementId)}${q}`);
+  async listAgreementInputs(agreementId: string, params?: AgreementInputListParams): Promise<ListResponse<AgreementInputRecord>> {
+    return this.requestList<AgreementInputRecord>('GET', withQuery(agreementsApiPaths.agreementInputs(agreementId), params));
   }
 
   async submitAgreementInput(agreementId: string, body: ProcessInputRequest): Promise<AgreementInputRecord> {
-    return this.request<AgreementInputRecord>('POST', agreementsApiPaths.agreementInput(agreementId), body, 201);
+    return this.requestData<AgreementInputRecord>('POST', agreementsApiPaths.agreementInput(agreementId), body, 201);
   }
 
   /**
@@ -160,6 +163,33 @@ export class ApiClient {
 
     return (parsedBody as T) ?? (bodyText as unknown as T);
   }
+
+  async requestData<T>(method: HttpMethod, path: string, body?: unknown, okStatus: number = 200): Promise<T> {
+    const envelope = await this.request<ApiResponse<T>>(method, path, body, okStatus);
+    return envelope.data;
+  }
+
+  async requestList<T>(method: HttpMethod, path: string, body?: unknown, okStatus: number = 200): Promise<ListResponse<T>> {
+    return this.request<ListResponse<T>>(method, path, body, okStatus);
+  }
+}
+
+function withQuery(path: string, params?: Record<string, string | number | Record<string, string | undefined> | undefined>): string {
+  if (!params) return path;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [modifier, nestedValue] of Object.entries(value)) {
+        if (nestedValue !== undefined && nestedValue !== null) {
+          search.set(`${key}[${modifier}]`, String(nestedValue));
+        }
+      }
+    } else if (value !== undefined && value !== null) {
+      search.set(key, String(value));
+    }
+  }
+  const suffix = search.toString();
+  return suffix ? `${path}?${suffix}` : path;
 }
 
 function resolveConfiguredBaseUrl(config: ApiClientConfig): string {
