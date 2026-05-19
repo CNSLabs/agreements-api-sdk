@@ -112,7 +112,6 @@ export type SortFilter<TField extends string> = Partial<Record<TField, SortDirec
 
 export type AgreementListParams = {
   state?: string;
-  templateId?: string;
   createdAt?: DateFilter;
   updatedAt?: DateFilter;
   sort?: SortFilter<AgreementListSortField>;
