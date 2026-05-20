@@ -179,6 +179,12 @@ function withQuery(path: string, params?: Record<string, string | number | Recor
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (key === 'sort') {
+        const selectedSortFields = Object.entries(value).filter(([, nestedValue]) => nestedValue !== undefined && nestedValue !== null);
+        if (selectedSortFields.length > 1) {
+          throw new Error('Multiple sort fields are not supported; pass a single sort field.');
+        }
+      }
       for (const [modifier, nestedValue] of Object.entries(value)) {
         if (nestedValue !== undefined && nestedValue !== null) {
           search.set(`${key}[${modifier}]`, String(nestedValue));

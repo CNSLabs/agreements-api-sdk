@@ -10,7 +10,6 @@ The package bundles:
 - `viem` helpers that compose with agreement deployment and input-signing flows
 
 Maintainer workflows such as local builds and publishing live in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
-Release notes and migration guidance live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Install
 
@@ -110,7 +109,7 @@ Error responses use an error envelope:
 ```json
 {
   "error": {
-    "code": "UNAUTHORIZED",
+    "code": "unauthorized",
     "message": "Missing API key",
     "requestId": "req_123"
   }
@@ -238,7 +237,7 @@ Agreement list filters:
 
 - `state`: current agreement state, such as `AWAITING_PAYMENT`
 - `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
-- `sort`: one or more sort fields: `createdAt`, `updatedAt`, or `displayName`
+- `sort`: one sort field: `createdAt`, `updatedAt`, or `displayName`
 - `limit`: page size
 - `cursor`: cursor returned by `pageInfo.nextCursor`
 
@@ -248,7 +247,7 @@ Input history filters:
 - `inputId`: input ID defined in the agreement JSON
 - `status`: input submission status: `PENDING`, `MINED`, or `FAILED`
 - `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
-- `sort`: one or more sort fields: `createdAt` or `updatedAt`
+- `sort`: one sort field: `createdAt` or `updatedAt`
 - `limit`: page size
 - `cursor`: cursor returned by `pageInfo.nextCursor`
 
