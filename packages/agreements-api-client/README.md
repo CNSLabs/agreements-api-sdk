@@ -10,6 +10,7 @@ The package bundles:
 - `viem` helpers that compose with agreement deployment and input-signing flows
 
 Maintainer workflows such as local builds and publishing live in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
+Release notes and migration guidance live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Install
 
@@ -68,6 +69,55 @@ When `baseUrl` is provided, it wins over the environment host mapping.
 - use the API key issued for your API principal by your deployment operator
 - `headers` lets you attach correlation IDs, telemetry headers, or other request metadata
 - `fetch` can be overridden if your runtime does not provide a compatible global `fetch`
+
+## Response Envelopes and Query Results
+
+The Agreements API wraps successful JSON responses in an envelope so every response can carry request metadata:
+
+```json
+{
+  "data": {},
+  "meta": {
+    "apiVersion": "v0",
+    "requestId": "req_123"
+  }
+}
+```
+
+The SDK unwraps single-resource responses for convenience. For example, `getAgreement()`, `getAgreementState()`, `validateTemplate()`, `validateDeployment()`, `deployWithPermit()`, and `submitAgreementInput()` return the `data` value directly.
+
+List methods return the full list envelope because paging information is part of the result:
+
+```ts
+const agreementsPage = await client.listAgreements({ limit: 25 });
+
+console.log(agreementsPage.data);
+console.log(agreementsPage.pageInfo.nextCursor);
+console.log(agreementsPage.meta.requestId);
+```
+
+List responses use:
+
+- `data`: the current page of records
+- `meta.apiVersion`: the API version that produced the response
+- `meta.requestId`: the request ID to include in support or debugging reports
+- `pageInfo.limit`: the page size applied by the API
+- `pageInfo.nextCursor`: the cursor for the next page, or `null` when there is no next page
+- `pageInfo.totalCount`: the total matching record count, when the API includes it
+
+Error responses use an error envelope:
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Missing API key",
+    "requestId": "req_123"
+  }
+}
+```
+
+When an SDK request fails, `AgreementsApiError#errorPayload` exposes this structured error body when the server returns it.
 
 ## Choose a Usage Path
 
@@ -182,6 +232,28 @@ console.log(state.state);
 console.log(inputsPage.data.length);
 ```
 
+`listAgreements()` returns agreement summaries. Use `getAgreement(agreementsPage.data[index].id)` when you need the full agreement JSON, participants, observers, variables, or on-chain context.
+
+Agreement list filters:
+
+- `state`: current agreement state, such as `AWAITING_PAYMENT`
+- `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
+- `sort`: one or more sort fields: `createdAt`, `updatedAt`, or `displayName`
+- `limit`: page size
+- `cursor`: cursor returned by `pageInfo.nextCursor`
+
+Input history filters:
+
+- `userId`: platform user ID associated with the submission
+- `inputId`: input ID defined in the agreement JSON
+- `status`: input submission status: `PENDING`, `MINED`, or `FAILED`
+- `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
+- `sort`: one or more sort fields: `createdAt` or `updatedAt`
+- `limit`: page size
+- `cursor`: cursor returned by `pageInfo.nextCursor`
+
+Nested filters and sorts are encoded as query parameters such as `createdAt[gte]=2026-05-01T00%3A00%3A00.000Z` and `sort[createdAt]=desc`.
+
 ### 6. Discover execution input IDs
 
 If you are rendering an input-submission UI from agreement JSON, use `getExecutionInputIds()`:
@@ -247,7 +319,8 @@ In practice:
 
 - `getOpenApiDocument()` to inspect the raw OpenAPI document exposed by the gateway
 - `getHealth()` to check gateway reachability
-- `listAgreements()` and `getAgreement()` to browse or load agreement records
+- `listAgreements()` and `getAgreement()` to browse agreement summaries or load full agreement records
+- `listAgreementInputs()` to inspect paged input history for an agreement
 - `validateTemplate()` and `validateDeployment()` before deploy
 - `deployWithPermit()` and `submitAgreementInput()` for HTTP-only signed calls
 - `exchangeJson()` for low-level debugging with full status, headers, and raw body access
