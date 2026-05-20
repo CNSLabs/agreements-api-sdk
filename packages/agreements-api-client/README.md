@@ -10,7 +10,6 @@ The package bundles:
 - `viem` helpers that compose with agreement deployment and input-signing flows
 
 Maintainer workflows such as local builds and publishing live in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
-Release notes and migration guidance live in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Install
 

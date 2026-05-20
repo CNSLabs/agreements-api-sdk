@@ -29,8 +29,7 @@
     }
   },
   "files": [
-    "dist",
-    "CHANGELOG.md"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
