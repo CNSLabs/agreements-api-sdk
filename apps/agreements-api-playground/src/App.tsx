@@ -10,9 +10,13 @@ import {
   joinUrl,
   resolveApiBaseUrl,
   submitAgreementInputWithPermit,
+  type AgreementInputRecord,
   type AgreementRecord,
+  type AgreementStateResponse,
   type AgreementsApiEnvironment,
+  type ApiResponse,
   type DirectParticipantRecord,
+  type ListResponse,
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
 import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
@@ -411,10 +415,11 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      const record = await runAgreementsRequest<AgreementRecord>({
+      const envelope = await runAgreementsRequest<ApiResponse<AgreementRecord>>({
         method: 'GET',
         path: `${API_BASE_PATH}/agreements/${agreementId.trim()}`,
       });
+      const record = unwrapResourceEnvelope(envelope, 'agreement');
       setLoadedAgreement(record);
       setDisplayName(record.displayName || displayName);
       setDocUri(record.docUri || '');
@@ -529,11 +534,12 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runAgreementsRequest({
+      const envelope = await runAgreementsRequest<ApiResponse<AgreementStateResponse>>({
         method: 'GET',
         path: `${API_BASE_PATH}/agreements/${agreementId.trim()}/state`,
       });
-      setNotice('Agreement state loaded.');
+      const state = unwrapResourceEnvelope(envelope, 'agreement state');
+      setNotice(`Agreement state loaded${state.state ? `: ${state.state}` : ''}.`);
     } catch (stateError) {
       setError(stateError instanceof Error ? stateError.message : String(stateError));
     } finally {
@@ -549,11 +555,15 @@ function App() {
     setBusy(true);
     setError('');
     try {
-      await runAgreementsRequest({
+      const page = await runAgreementsRequest<ListResponse<AgreementInputRecord>>({
         method: 'GET',
-        path: `${API_BASE_PATH}/agreements/${agreementId.trim()}/inputs`,
+        path: `${API_BASE_PATH}/agreements/${agreementId.trim()}/inputs?limit=25`,
       });
-      setNotice('Input history loaded.');
+      setNotice(
+        `Input history loaded: ${page.data.length} record${page.data.length === 1 ? '' : 's'} on this page${
+          page.pageInfo.nextCursor ? ', more available' : ''
+        }.`,
+      );
     } catch (inputsError) {
       setError(inputsError instanceof Error ? inputsError.message : String(inputsError));
     } finally {
@@ -1243,6 +1253,13 @@ function formatBaseUrlLabel(baseUrl: string) {
 function formatOutput(value: unknown) {
   if (typeof value === 'string') return value;
   return JSON.stringify(value, null, 2);
+}
+
+function unwrapResourceEnvelope<T>(payload: ApiResponse<T>, label: string): T {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data;
+  }
+  throw new Error(`Expected ${label} response envelope with a data field.`);
 }
 
 function formatErrorMessage(value: unknown) {
