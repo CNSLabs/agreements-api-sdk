@@ -1,15 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-05-20
 
 ### Added
 
-- Added response envelopes for successful API responses. Resource responses now include `data` and `meta`; list responses include `data`, `meta`, and `pageInfo`.
+- Added response envelopes for successful raw API responses. Resource responses include `data` and `meta`; list responses include `data`, `meta`, and `pageInfo`.
 - Added structured error envelopes with `error.code`, `error.message`, optional `error.details`, and `error.requestId`.
 - Added cursor paging to agreement and input-history list responses through `pageInfo.limit`, `pageInfo.nextCursor`, and optional `pageInfo.totalCount`.
 - Added agreement list filtering by `state`, `createdAt`, and `updatedAt`.
 - Added input-history filtering by `userId`, `inputId`, `status`, `createdAt`, and `updatedAt`.
-- Added list sorting. Agreements can be sorted by `createdAt`, `updatedAt`, and `displayName`; input history can be sorted by `createdAt` and `updatedAt`.
+- Added list sorting. Agreements can be sorted by one of `createdAt`, `updatedAt`, or `displayName`; input history can be sorted by one of `createdAt` or `updatedAt`.
 - Added SDK types for `ApiResponse`, `ListResponse`, `PageInfo`, `DateFilter`, `SortFilter`, `AgreementListParams`, and `AgreementInputListParams`.
 
 ### Changed
@@ -46,15 +46,6 @@ if (firstPage.pageInfo.nextCursor) {
   });
   console.log(secondPage.data);
 }
-```
-
-If your code filtered agreements by `status`, update it to use the new agreement state filter where appropriate:
-
-```ts
-const agreementsPage = await client.listAgreements({
-  state: 'AWAITING_PAYMENT',
-  sort: { updatedAt: 'desc' },
-});
 ```
 
 If your code needs complete agreement details from a list result, fetch the full record:

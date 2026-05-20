@@ -108,7 +108,9 @@ export type DateFilter = {
 export type SortDirection = 'asc' | 'desc';
 export type AgreementListSortField = 'createdAt' | 'updatedAt' | 'displayName';
 export type AgreementInputListSortField = 'createdAt' | 'updatedAt';
-export type SortFilter<TField extends string> = Partial<Record<TField, SortDirection>>;
+export type SortFilter<TField extends string> = {
+  [Field in TField]: { [Key in Field]: SortDirection } & Partial<Record<Exclude<TField, Field>, never>>;
+}[TField];
 
 export type AgreementListParams = {
   state?: string;
