@@ -39,6 +39,22 @@ export type AgreementRecord = {
   onChain?: Record<string, unknown>;
 };
 
+export type AgreementSummary = {
+  id: string;
+  address?: string;
+  chainId: number;
+  status: 'Draft' | 'Deployed';
+  lastInputId?: string;
+  lastInputAt?: string;
+  state?: string;
+  templateId?: string;
+  updatedAt: string;
+  createdAt: string;
+  displayName: string;
+  owner?: string;
+  docUri?: string;
+};
+
 export type ParticipantRecord = {
   variableKey: string;
   email?: string;
@@ -55,10 +71,63 @@ export type HealthResponse = {
   timestamp: string;
 };
 
+export type ApiResponse<T> = {
+  data: T;
+  meta: {
+    apiVersion: string;
+    requestId: string;
+  };
+};
+
+export type PageInfo = {
+  limit: number;
+  nextCursor: string | null;
+  totalCount?: number;
+};
+
+export type ListResponse<T> = ApiResponse<T[]> & {
+  pageInfo: PageInfo;
+};
+
 export type ErrorResponse = {
-  statusCode: number;
-  message: string | string[];
-  error?: string;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+    requestId: string;
+  };
+};
+
+export type DateFilter = {
+  gt?: string;
+  gte?: string;
+  lt?: string;
+  lte?: string;
+};
+
+export type SortDirection = 'asc' | 'desc';
+export type AgreementListSortField = 'createdAt' | 'updatedAt' | 'displayName';
+export type AgreementInputListSortField = 'createdAt' | 'updatedAt';
+export type SortFilter<TField extends string> = Partial<Record<TField, SortDirection>>;
+
+export type AgreementListParams = {
+  state?: string;
+  createdAt?: DateFilter;
+  updatedAt?: DateFilter;
+  sort?: SortFilter<AgreementListSortField>;
+  limit?: number;
+  cursor?: string;
+};
+
+export type AgreementInputListParams = {
+  userId?: string;
+  inputId?: string;
+  status?: 'PENDING' | 'MINED' | 'FAILED';
+  createdAt?: DateFilter;
+  updatedAt?: DateFilter;
+  sort?: SortFilter<AgreementInputListSortField>;
+  limit?: number;
+  cursor?: string;
 };
 
 export type ValidateDirectAgreementRequest = {
@@ -104,6 +173,7 @@ export type AgreementStateResponse = {
 };
 
 export type AgreementInputRecord = {
+  agreementId: string;
   agreementAddress: string;
   chainId: number;
   inputId: string;

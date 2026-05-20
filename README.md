@@ -24,6 +24,7 @@ npm install @cns-labs/agreements-api-client viem
 ## Start Here
 
 - SDK usage and API lifecycle docs: [`packages/agreements-api-client/README.md`](./packages/agreements-api-client/README.md)
+- SDK release notes and migration guidance: [`packages/agreements-api-client/CHANGELOG.md`](./packages/agreements-api-client/CHANGELOG.md)
 - Reference implementation and local browser workflow: [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playground/README.md)
 - Full end-to-end example UI: [`apps/agreements-api-playground/src/App.tsx`](./apps/agreements-api-playground/src/App.tsx)
 
