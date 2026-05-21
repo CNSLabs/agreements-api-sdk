@@ -19,7 +19,7 @@ import {
   type ListResponse,
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
-import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
+import { createPublicClient, createWalletClient, custom, http, type Address, type Chain } from 'viem';
 import { linea, lineaSepolia } from 'viem/chains';
 import { createBrowserTelemetryHeaders } from './telemetry';
 
@@ -55,8 +55,9 @@ function getPreferredTheme(): Theme {
 
 type DeployChainConfig = {
   chainId: number;
-  chain: typeof linea | typeof lineaSepolia;
+  chain: Chain;
   chainName: string;
+  rpcUrl?: string;
 };
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
@@ -174,6 +175,7 @@ function App() {
   const [walletBusy, setWalletBusy] = useState(false);
   const [walletError, setWalletError] = useState('');
 
+  const [selectedChainId, setSelectedChainId] = useState(() => resolveDefaultDeployChainId(DEFAULT_ENVIRONMENT));
   const [agreementId, setAgreementId] = useState('');
   const [displayName, setDisplayName] = useState('Agreements Playground Agreement');
   const [docUri, setDocUri] = useState('');
@@ -208,7 +210,11 @@ function App() {
     [apiKey, environment, resolvedBaseUrl],
   );
 
-  const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
+  const supportedDeployChains = useMemo(() => resolveSupportedDeployChainConfigs(environment), [environment]);
+  const deployChain = useMemo(
+    () => supportedDeployChains.find(chain => chain.chainId === selectedChainId) || supportedDeployChains[0],
+    [selectedChainId, supportedDeployChains],
+  );
   const environmentLabel = formatEnvironmentLabel(environment);
   const developerPortalUrl = useMemo(() => resolveDeveloperPortalUrl(), []);
   const supportUrl = useMemo(() => resolveSupportUrl(), []);
@@ -323,6 +329,11 @@ function App() {
     }
   }, [availableInputIds, selectedInputId]);
 
+  useEffect(() => {
+    if (supportedDeployChains.some(chain => chain.chainId === selectedChainId)) return;
+    setSelectedChainId(supportedDeployChains[0].chainId);
+  }, [selectedChainId, supportedDeployChains]);
+
   async function runAgreementsRequest<T>(config: {
     method: HttpMethod;
     path: string;
@@ -427,6 +438,9 @@ function App() {
       if (record.variables) setInitValuesText(JSON.stringify(record.variables, null, 2));
       if (record.participants) setParticipantsText(JSON.stringify(record.participants, null, 2));
       if (record.observers) setObserversText(JSON.stringify(record.observers, null, 2));
+      if (record.chainId && supportedDeployChains.some(chain => chain.chainId === record.chainId)) {
+        setSelectedChainId(record.chainId);
+      }
       setNotice('Agreement loaded.');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -484,7 +498,7 @@ function App() {
 
       const publicClient = createPublicClient({
         chain: deployChain.chain,
-        transport: http(),
+        transport: http(deployChain.rpcUrl),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
@@ -499,6 +513,7 @@ function App() {
         client: agreementsClient,
         walletClient: walletClient as never,
         publicClient: publicClient as never,
+        chainId: deployChain.chainId,
         agreement,
         displayName: displayName.trim() || 'Agreements Playground Agreement',
         initValues,
@@ -584,15 +599,16 @@ function App() {
 
       const agreement = tryAgreementJson(loadedAgreement?.json);
       if (!agreement || !loadedAgreement?.address) throw new Error('Load a deployed agreement first.');
+      const inputChain = resolveDeployChainConfigById(loadedAgreement.chainId);
 
-      await ensureWalletChain(provider, deployChain);
+      await ensureWalletChain(provider, inputChain);
       const publicClient = createPublicClient({
-        chain: deployChain.chain,
-        transport: http(),
+        chain: inputChain.chain,
+        transport: http(inputChain.rpcUrl),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
-        chain: deployChain.chain,
+        chain: inputChain.chain,
         transport: custom(provider),
       });
       const values = parseJsonObject(inputValuesText, 'Input values');
@@ -631,6 +647,7 @@ function App() {
   function buildValidatePayload() {
     return {
       agreement: parseJsonObject(agreementJsonText, 'Agreement JSON'),
+      chainId: deployChain.chainId,
       initValues: parseJsonObject(initValuesText, 'Init values'),
       participants: parseJsonArray(participantsText, 'Participants'),
       observers: parseJsonArray(observersText, 'Observers'),
@@ -649,6 +666,7 @@ function App() {
     participantsText,
     observersText,
     docUri,
+    chainId: deployChain.chainId,
   });
   const viewItems: Array<{ id: AppView; label: string; description: string }> = [
     { id: 'overview', label: 'Overview', description: 'Choose a workflow' },
@@ -762,6 +780,17 @@ function App() {
           </div>
           <div className="pl-toolbar-cell">
             <label className="pl-field">
+              <span>Deployment Chain</span>
+              <select value={String(deployChain.chainId)} onChange={event => setSelectedChainId(Number(event.target.value))}>
+                {supportedDeployChains.map(chain => (
+                  <option key={chain.chainId} value={String(chain.chainId)}>{chain.chainName} ({chain.chainId})</option>
+                ))}
+              </select>
+            </label>
+            <span className="pl-field-link">Used for deploy signing and agreement list filters.</span>
+          </div>
+          <div className="pl-toolbar-cell">
+            <label className="pl-field">
               <span>API Key</span>
               <input value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="cns_pk_..." autoComplete="off" />
             </label>
@@ -869,7 +898,7 @@ function App() {
               <section className="pl-panel">
                 <div className="pl-panel-head"><h2>Loaded Agreement</h2></div>
                 <div className="pl-panel-body">
-                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
+                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
                   <button type="button" className="pl-btn" disabled={!loadedAgreement} onClick={() => setActiveView('input')}>Use This For Input Submission →</button>
                 </div>
               </section>
@@ -882,7 +911,7 @@ function App() {
         {activeView === 'input' ? (
           <>
             <div className="pl-grid">
-              <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
               <section className="pl-panel"><div className="pl-panel-head"><h2>Sign Input</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Input ID</span><select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>{!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}{availableInputIds.map(inputId => <option key={inputId} value={inputId}>{inputId}</option>)}</select></label><label className="pl-field"><span>Input Values JSON</span><textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} /></label><div className="pl-status-grid"><div className="pl-status-row"><span>Issuer</span><strong>{selectedInputDefinition?.issuer || '—'}</strong></div></div><button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void submitInput()}>{busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}</button>{error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}</div></section>
             </div>
             {renderResponsePanel('Input Response')}
@@ -1062,6 +1091,7 @@ function CodeBlock({ title, children, copyText }: { title: string; children: str
 
 function buildQuickActions(params: {
   agreementId: string;
+  chainId: number;
   agreementJsonText: string;
   displayName: string;
   initValuesText: string;
@@ -1073,6 +1103,7 @@ function buildQuickActions(params: {
   const agreement = parseJsonObjectLoose(params.agreementJsonText, SAMPLE_AGREEMENT);
   const validateBody = {
     agreement,
+    chainId: params.chainId,
     displayName: params.displayName.trim() || 'Agreements Playground Agreement',
     initValues: parseJsonObjectLoose(params.initValuesText, {}),
     participants: parseJsonArrayLoose(params.participantsText, []),
@@ -1082,7 +1113,7 @@ function buildQuickActions(params: {
 
   return [
     { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${API_BASE_PATH}/health`, note: 'Check gateway availability.' },
-    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${API_BASE_PATH}/agreements`, note: 'List agreements visible to this API principal.' },
+    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${API_BASE_PATH}/agreements?chainId=${params.chainId}`, note: 'List agreements visible to this API principal on the selected chain.' },
     { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
     { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
     { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
@@ -1091,9 +1122,55 @@ function buildQuickActions(params: {
   ];
 }
 
-function resolveDeployChainConfig(environment: AgreementsApiEnvironment) {
-  const chain = environment === 'production' ? linea : lineaSepolia;
-  return { chainId: chain.id, chain, chainName: chain.name } as DeployChainConfig;
+function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
+  const configured = Number(import.meta.env.VITE_DEFAULT_AGREEMENTS_CHAIN_ID);
+  if (Number.isInteger(configured) && configured > 0) return configured;
+  return environment === 'production' ? linea.id : lineaSepolia.id;
+}
+
+function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironment): DeployChainConfig[] {
+  const raw = import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS;
+  const chainIds: number[] = raw
+    ? raw.split(',').map((value: string) => Number(value.trim())).filter((value: number) => Number.isInteger(value) && value > 0)
+    : [resolveDefaultDeployChainId(environment)];
+  const deduped = [...new Set(chainIds)];
+  if (!deduped.length) return [resolveDeployChainConfigById(resolveDefaultDeployChainId(environment))];
+  return deduped.map(resolveDeployChainConfigById);
+}
+
+function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
+  const knownChains = [lineaSepolia, linea] as const;
+  const chain = knownChains.find(candidate => candidate.id === chainId);
+  if (!chain) {
+    throw new Error(`Unsupported playground deployment chain ${chainId}. Add chain metadata before enabling it.`);
+  }
+  return {
+    chainId: chain.id,
+    chain,
+    chainName: chain.name,
+    rpcUrl: resolveRpcUrl(chain.id, chain),
+  };
+}
+
+function resolveRpcUrl(chainId: number, chain: Chain): string | undefined {
+  const rpcUrlsJson = import.meta.env.VITE_AGREEMENTS_RPC_URLS;
+  if (rpcUrlsJson) {
+    try {
+      const parsed = JSON.parse(rpcUrlsJson) as Record<string, unknown>;
+      const configured = parsed[String(chainId)];
+      if (typeof configured === 'string' && configured.trim()) return configured.trim();
+    } catch {
+      throw new Error('VITE_AGREEMENTS_RPC_URLS must be valid JSON.');
+    }
+  }
+
+  const infuraProjectId = import.meta.env.VITE_INFURA_PROJECT_ID;
+  if (infuraProjectId) {
+    if (chainId === linea.id) return `https://linea-mainnet.infura.io/v3/${infuraProjectId}`;
+    if (chainId === lineaSepolia.id) return `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
+  }
+
+  return chain.rpcUrls.default.http[0];
 }
 
 function getInjectedProvider(): Eip1193Provider | null {

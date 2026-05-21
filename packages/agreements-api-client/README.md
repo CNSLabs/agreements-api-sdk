@@ -153,6 +153,7 @@ Use this before deployment when you already know the initial values and particip
 ```ts
 const validation = await client.validateDeployment({
   agreement,
+  chainId: 59141,
   initValues,
   participants,
   observers,
@@ -170,6 +171,7 @@ Use this if your app signs permits itself and only needs the HTTP client to send
 const deployed = await client.deployWithPermit({
   agreement,
   displayName: 'Consulting Agreement',
+  chainId: 59141,
   signer,
   deadline,
   signature,
@@ -196,6 +198,7 @@ const agreementRecord = await deployAgreementWithPermit({
   client,
   walletClient,
   publicClient,
+  chainId: 59141,
   agreement,
   displayName: 'Consulting Agreement',
   initValues,
@@ -215,6 +218,7 @@ This flow requires:
 
 ```ts
 const agreementsPage = await client.listAgreements({
+  chainId: 59141,
   state: 'AWAITING_PAYMENT',
   createdAt: { gte: '2026-05-01T00:00:00.000Z' },
   sort: { createdAt: 'desc' },
@@ -236,6 +240,7 @@ console.log(inputsPage.data.length);
 Agreement list filters:
 
 - `state`: current agreement state, such as `AWAITING_PAYMENT`
+- `chainId`: agreement deployment chain
 - `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
 - `sort`: one sort field: `createdAt`, `updatedAt`, or `displayName`
 - `limit`: page size

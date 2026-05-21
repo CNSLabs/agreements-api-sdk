@@ -135,6 +135,7 @@ export type AgreementInputListParams = {
 
 export type ValidateDirectAgreementRequest = {
   agreement: Record<string, unknown>;
+  chainId?: number;
   initValues?: Record<string, unknown>;
   participants?: DirectParticipantRecord[];
   observers?: string[];
