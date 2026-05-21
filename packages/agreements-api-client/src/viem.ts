@@ -119,6 +119,7 @@ export type DeployWithPermitCallParams = {
   client: ApiClient;
   walletClient: WalletClient;
   publicClient: PublicClient;
+  chainId?: number;
   agreement: AgreementJson;
   displayName: string;
   initValues?: Record<string, InitValue>;
@@ -140,6 +141,7 @@ export async function deployAgreementWithPermit(
   params: DeployWithPermitCallParams,
 ): Promise<AgreementRecord> {
   const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
+  const chainId = params.chainId ?? (await params.publicClient.getChainId());
 
   const docUriRaw = params.docUri ?? params.permitOptions?.docUri;
   const docUri = docUriRaw !== undefined && docUriRaw !== '' ? docUriRaw : undefined;
@@ -165,6 +167,7 @@ export async function deployAgreementWithPermit(
   const body: DirectDeployAgreementWithPermitRequest = {
     agreement: params.agreement as unknown as Record<string, unknown>,
     displayName: params.displayName,
+    chainId,
     participants: params.participants,
     observers: params.observers,
     signer: signerAddress,
