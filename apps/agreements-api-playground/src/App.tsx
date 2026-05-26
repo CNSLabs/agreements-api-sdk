@@ -20,7 +20,7 @@ import {
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
 import { createPublicClient, createWalletClient, custom, http, type Address, type Chain } from 'viem';
-import { linea, lineaSepolia } from 'viem/chains';
+import { linea, lineaSepolia, sepolia } from 'viem/chains';
 import { createBrowserTelemetryHeaders } from './telemetry';
 
 type HttpMethod = 'GET' | 'POST';
@@ -1139,7 +1139,7 @@ function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironmen
 }
 
 function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
-  const knownChains = [lineaSepolia, linea] as const;
+  const knownChains = [lineaSepolia, linea, sepolia] as const;
   const chain = knownChains.find(candidate => candidate.id === chainId);
   if (!chain) {
     throw new Error(`Unsupported playground deployment chain ${chainId}. Add chain metadata before enabling it.`);
@@ -1168,6 +1168,7 @@ function resolveRpcUrl(chainId: number, chain: Chain): string | undefined {
   if (infuraProjectId) {
     if (chainId === linea.id) return `https://linea-mainnet.infura.io/v3/${infuraProjectId}`;
     if (chainId === lineaSepolia.id) return `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
+    if (chainId === sepolia.id) return `https://sepolia.infura.io/v3/${infuraProjectId}`;
   }
 
   return chain.rpcUrls.default.http[0];
