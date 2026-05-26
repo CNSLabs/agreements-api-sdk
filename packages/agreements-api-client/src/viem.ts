@@ -25,6 +25,10 @@ import type {
 export type SignDeployPermitParams = {
   walletClient: WalletClient;
   publicClient: PublicClient;
+  /**
+   * Optional expected signing chain. When provided, the public client chain must match it.
+   */
+  chainId?: number;
   agreement: AgreementJson;
   /** Unix seconds (e.g. `Math.floor(Date.now() / 1000) + 3600`). */
   deadline: number;
@@ -65,7 +69,7 @@ export function computeDefaultDeadlineSeconds(offsetSeconds: number = DEFAULT_PE
  * Sign the factory `deploy-with-permit` EIP-712 payload for inline BYOT agreement JSON.
  */
 export async function signDeployWithPermit(params: SignDeployPermitParams): Promise<SignDeployPermitResult> {
-  const chainId = await params.publicClient.getChainId();
+  const chainId = await resolveSigningChainId(params.publicClient, params.chainId);
   const factoryConfig = getFactoryConfigByChainId(chainId);
   if (!factoryConfig) {
     throw new Error(`No AgreementFactory deployment registered for chain ${chainId}.`);
@@ -141,7 +145,7 @@ export async function deployAgreementWithPermit(
   params: DeployWithPermitCallParams,
 ): Promise<AgreementRecord> {
   const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
-  const chainId = params.chainId ?? (await params.publicClient.getChainId());
+  const chainId = await resolveSigningChainId(params.publicClient, params.chainId);
 
   const docUriRaw = params.docUri ?? params.permitOptions?.docUri;
   const docUri = docUriRaw !== undefined && docUriRaw !== '' ? docUriRaw : undefined;
@@ -159,6 +163,7 @@ export async function deployAgreementWithPermit(
   const { signature, signerAddress } = await signDeployWithPermit({
     walletClient: params.walletClient,
     publicClient: params.publicClient,
+    chainId,
     agreement: params.agreement,
     deadline,
     permitOptions: permitOptionsForSign,
@@ -178,6 +183,17 @@ export async function deployAgreementWithPermit(
   };
 
   return params.client.deployWithPermit(body);
+}
+
+async function resolveSigningChainId(publicClient: PublicClient, requestedChainId?: number): Promise<number> {
+  const signingChainId = await publicClient.getChainId();
+  if (requestedChainId !== undefined && requestedChainId !== signingChainId) {
+    throw new Error(
+      `Requested chainId ${requestedChainId} does not match publicClient chainId ${signingChainId}. ` +
+        'Use a public client for the requested deployment chain before signing the permit.',
+    );
+  }
+  return requestedChainId ?? signingChainId;
 }
 
 export type SubmitInputCallParams = {
