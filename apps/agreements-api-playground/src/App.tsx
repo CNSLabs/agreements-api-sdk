@@ -20,7 +20,7 @@ import {
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
 import { createPublicClient, createWalletClient, custom, http, type Address, type Chain } from 'viem';
-import { baseSepolia, linea, lineaSepolia, sepolia } from 'viem/chains';
+import { base, baseSepolia, linea, lineaSepolia, sepolia } from 'viem/chains';
 import { createBrowserTelemetryHeaders } from './telemetry';
 
 type HttpMethod = 'GET' | 'POST';
@@ -1139,7 +1139,7 @@ function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironmen
 }
 
 function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
-  const knownChains = [lineaSepolia, linea, sepolia, baseSepolia] as const;
+  const knownChains = [lineaSepolia, linea, sepolia, baseSepolia, base] as const;
   const chain = knownChains.find(candidate => candidate.id === chainId);
   if (!chain) {
     throw new Error(`Unsupported playground deployment chain ${chainId}. Add chain metadata before enabling it.`);
