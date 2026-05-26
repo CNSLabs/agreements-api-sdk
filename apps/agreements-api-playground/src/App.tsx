@@ -243,7 +243,9 @@ function App() {
     return getExecutionInputs(agreement)[selectedInputId] || null;
   }, [loadedAgreement?.json, selectedInputId]);
   const curlPreview = useMemo(() => {
-    const parts = [`curl -i "${joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), path)}"`];
+    const parts = ['curl', '-i'];
+    if (path.includes('[') || path.includes(']')) parts.push('--globoff');
+    parts.push(`"${joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), path)}"`);
     if (apiKey.trim()) parts.push(`-H "X-API-Key: ${apiKey.trim()}"`);
     if (method !== 'GET') parts.push(`-X ${method}`);
     if (body.trim()) {
@@ -667,6 +669,7 @@ function App() {
     observersText,
     docUri,
     chainId: deployChain.chainId,
+    selectedInputId,
   });
   const viewItems: Array<{ id: AppView; label: string; description: string }> = [
     { id: 'overview', label: 'Overview', description: 'Choose a workflow' },
@@ -1098,8 +1101,11 @@ function buildQuickActions(params: {
   participantsText: string;
   observersText: string;
   docUri: string;
+  selectedInputId: string;
 }) {
   const agreementId = params.agreementId.trim() || 'agreement-123';
+  const selectedInputId = params.selectedInputId.trim() || 'approve';
+  const recentSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const agreement = parseJsonObjectLoose(params.agreementJsonText, SAMPLE_AGREEMENT);
   const validateBody = {
     agreement,
@@ -1110,16 +1116,102 @@ function buildQuickActions(params: {
     observers: parseJsonArrayLoose(params.observersText, []),
     ...(params.docUri.trim() ? { docUri: params.docUri.trim() } : {}),
   };
+  const agreementsPath = `${API_BASE_PATH}/agreements`;
+  const inputsPath = `${API_BASE_PATH}/agreements/${agreementId}/inputs`;
 
   return [
     { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${API_BASE_PATH}/health`, note: 'Check gateway availability.' },
-    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${API_BASE_PATH}/agreements?chainId=${params.chainId}`, note: 'List agreements visible to this API principal on the selected chain.' },
+    {
+      id: 'list',
+      label: 'List Agreements',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['chainId', params.chainId],
+        ['limit', 25],
+        ['sort[createdAt]', 'desc'],
+      ]),
+      note: 'List visible agreements on the selected chain with pagination and newest-first sorting.',
+    },
+    {
+      id: 'list-agreements-recent',
+      label: 'Recent Agreements',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['createdAt[gte]', recentSince],
+        ['sort[updatedAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter agreements created in the last 30 days and sort by most recently updated.',
+    },
+    {
+      id: 'list-agreements-state',
+      label: 'Agreements By State',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['chainId', params.chainId],
+        ['state', 'AWAITING_PAYMENT'],
+        ['sort[displayName]', 'asc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter by lifecycle state and sort alphabetically by display name.',
+    },
     { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
     { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
     { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
     { id: 'state', label: 'Get State', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
-    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
+    {
+      id: 'inputs',
+      label: 'Get Inputs',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['limit', 25],
+        ['sort[createdAt]', 'desc'],
+      ]),
+      note: 'Read paged cached input history with newest submissions first.',
+    },
+    {
+      id: 'inputs-status',
+      label: 'Inputs By Status',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['status', 'MINED'],
+        ['sort[updatedAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter input submissions by mining status and sort by last update.',
+    },
+    {
+      id: 'inputs-id-date',
+      label: 'Inputs By ID + Date',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['inputId', selectedInputId],
+        ['createdAt[gte]', recentSince],
+        ['sort[createdAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter one input ID within a date window and keep the result paged.',
+    },
+    {
+      id: 'inputs-user',
+      label: 'Inputs By User',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['userId', 'platform-user-id'],
+        ['sort[createdAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter input submissions for one platform user; replace the sample userId before sending.',
+    },
   ];
+}
+
+function buildQueryPath(path: string, params: Array<[string, string | number | undefined]>) {
+  const query = params
+    .filter(([, value]) => value !== undefined && value !== '')
+    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  return query ? `${path}?${query}` : path;
 }
 
 function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
