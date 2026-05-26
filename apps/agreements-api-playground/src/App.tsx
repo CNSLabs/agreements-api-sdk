@@ -57,7 +57,7 @@ type DeployChainConfig = {
   chainId: number;
   chain: Chain;
   chainName: string;
-  rpcUrl?: string;
+  rpcUrl: string;
 };
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
@@ -1128,11 +1128,13 @@ function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
   return environment === 'production' ? linea.id : lineaSepolia.id;
 }
 
+const DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS = [lineaSepolia.id, sepolia.id, baseSepolia.id] as const;
+
 function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironment): DeployChainConfig[] {
   const raw = import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS;
   const chainIds: number[] = raw
     ? raw.split(',').map((value: string) => Number(value.trim())).filter((value: number) => Number.isInteger(value) && value > 0)
-    : [resolveDefaultDeployChainId(environment)];
+    : [...DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS];
   const deduped = [...new Set(chainIds)];
   if (!deduped.length) return [resolveDeployChainConfigById(resolveDefaultDeployChainId(environment))];
   return deduped.map(resolveDeployChainConfigById);
@@ -1148,30 +1150,23 @@ function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
     chainId: chain.id,
     chain,
     chainName: chain.name,
-    rpcUrl: resolveRpcUrl(chain.id, chain),
+    rpcUrl: resolveRpcUrl(chain.id),
   };
 }
 
-function resolveRpcUrl(chainId: number, chain: Chain): string | undefined {
-  const rpcUrlsJson = import.meta.env.VITE_AGREEMENTS_RPC_URLS;
-  if (rpcUrlsJson) {
-    try {
-      const parsed = JSON.parse(rpcUrlsJson) as Record<string, unknown>;
-      const configured = parsed[String(chainId)];
-      if (typeof configured === 'string' && configured.trim()) return configured.trim();
-    } catch {
-      throw new Error('VITE_AGREEMENTS_RPC_URLS must be valid JSON.');
-    }
-  }
-
+function resolveRpcUrl(chainId: number): string {
   const infuraProjectId = import.meta.env.VITE_INFURA_PROJECT_ID;
   if (infuraProjectId) {
     if (chainId === linea.id) return `https://linea-mainnet.infura.io/v3/${infuraProjectId}`;
     if (chainId === lineaSepolia.id) return `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
     if (chainId === sepolia.id) return `https://sepolia.infura.io/v3/${infuraProjectId}`;
+    if (chainId === base.id) return `https://base-mainnet.infura.io/v3/${infuraProjectId}`;
+    if (chainId === baseSepolia.id) return `https://base-sepolia.infura.io/v3/${infuraProjectId}`;
   }
 
-  return chain.rpcUrls.default.http[0];
+  throw new Error(
+    `No Infura RPC URL configured for chainId ${chainId}. Set VITE_INFURA_PROJECT_ID and add Infura URL derivation before enabling the chain.`,
+  );
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
