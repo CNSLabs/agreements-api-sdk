@@ -27,14 +27,23 @@ export type {
   ParticipantRecord,
   ApiClientConfig,
   AgreementsApiEnvironment,
+  CreateWebhookRequest,
+  CreateWebhookResponse,
   DirectParticipantRecord,
   PermitSignature,
   ProcessInputRequest,
   SortDirection,
   SortFilter,
+  UpdateWebhookRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
+  WebhookEventType,
+  WebhookFilters,
+  WebhookSubscription,
+  WebhookSubscriptionEventType,
+  WebhookSubscriptionStatus,
+  WebhookTestResponse,
 } from './types.js';
 export { agreementsApiPaths, getExecutionInputIds, joinUrl } from './utils.js';
 export {

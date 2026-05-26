@@ -1,6 +1,6 @@
 # @cns-labs/agreements-api-client
 
-TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
+TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, webhook subscriptions, and permit-based input submission.
 
 The package bundles:
 
@@ -128,6 +128,7 @@ Use the HTTP client only when you want to:
 - validate deploy payloads
 - list or fetch agreements
 - inspect state and input history
+- manage webhook subscriptions
 - submit already-signed permit payloads
 
 Use the `viem` helpers when you also want the SDK to:
@@ -274,7 +275,33 @@ console.log(inputIds);
 
 This reads `execution.inputs` keys from the parsed agreement document.
 
-### 7. Submit a signed execution input
+### 7. Subscribe to agreement transition webhooks
+
+Create a webhook when your integration should receive signed push notifications for agreement transitions instead of polling state.
+
+```ts
+const webhook = await client.createWebhook({
+  url: 'https://example.com/shodai/webhooks',
+  eventTypes: ['agreement.transitioned'],
+  filters: {
+    templateIds: ['did:template:service-retainer-v0-1'],
+  },
+});
+
+console.log(webhook.id);
+console.log(webhook.secret);
+```
+
+Store `webhook.secret` immediately. It is returned only in the create response and is used to verify delivery signatures.
+
+```ts
+const webhooks = await client.listWebhooks();
+await client.testWebhook(webhooks.data[0].id);
+```
+
+Webhook deliveries include `x-shodai-webhook-timestamp` and `x-shodai-webhook-signature`. Verify the signature with HMAC-SHA256 over `${timestamp}.${rawBody}` using the subscription secret.
+
+### 8. Submit a signed execution input
 
 If your app already has a permit signature:
 
@@ -327,6 +354,7 @@ In practice:
 
 - `getOpenApiDocument()` to inspect the raw OpenAPI document exposed by the gateway
 - `getHealth()` to check gateway reachability
+- `createWebhook()`, `listWebhooks()`, `getWebhook()`, `updateWebhook()`, `deleteWebhook()`, and `testWebhook()` to manage signed webhook subscriptions
 - `listAgreements()` and `getAgreement()` to browse agreement summaries or load full agreement records
 - `listAgreementInputs()` to inspect paged input history for an agreement
 - `validateTemplate()` and `validateDeployment()` before deploy
