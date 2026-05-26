@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import {
   API_BASE_PATH,
   ApiClient,
@@ -167,7 +167,7 @@ function App() {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<ReactNode>('');
   const [response, setResponse] = useState<ResponseState | null>(null);
 
   const [walletAddress, setWalletAddress] = useState('');
@@ -533,7 +533,7 @@ function App() {
       });
       setLoadedAgreement(deployed);
       setAgreementId(deployed.id || agreementId);
-      setNotice(`Agreement deployed${deployed.address ? ` at ${deployed.address}` : ''}.`);
+      setNotice(renderDeploymentNotice(deployed, deployChain));
     } catch (deployError) {
       setError(deployError instanceof Error ? deployError.message : String(deployError));
     } finally {
@@ -636,7 +636,7 @@ function App() {
         bodyText: JSON.stringify(inputRecord, null, 2),
         parsedBody: inputRecord,
       });
-      setNotice(`Submitted input "${selectedInputId}".`);
+      setNotice(renderInputSubmissionNotice(inputRecord, inputChain));
     } catch (inputError) {
       setError(inputError instanceof Error ? inputError.message : String(inputError));
     } finally {
@@ -1152,6 +1152,69 @@ function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
     chainName: chain.name,
     rpcUrl: resolveRpcUrl(chain.id),
   };
+}
+
+function renderDeploymentNotice(deployed: AgreementRecord, fallbackChain: DeployChainConfig) {
+  if (!deployed.address) return 'Agreement deployed.';
+
+  const explorerUrl = resolveExplorerAddressUrl(deployed, fallbackChain);
+  if (!explorerUrl) return `Agreement deployed at ${deployed.address}.`;
+
+  return (
+    <>
+      Agreement deployed at{' '}
+      <a className="pl-banner-link" href={explorerUrl} target="_blank" rel="noreferrer">
+        {deployed.address}
+      </a>
+      .
+    </>
+  );
+}
+
+function renderInputSubmissionNotice(inputRecord: AgreementInputRecord, fallbackChain: DeployChainConfig) {
+  const txUrl = resolveExplorerTransactionUrl(inputRecord, fallbackChain);
+  if (!txUrl) return `Submitted input "${inputRecord.inputId}".`;
+
+  return (
+    <>
+      Submitted input &quot;{inputRecord.inputId}&quot;. Tx:{' '}
+      <a className="pl-banner-link" href={txUrl} target="_blank" rel="noreferrer">
+        {inputRecord.txHash}
+      </a>
+      .
+    </>
+  );
+}
+
+function resolveExplorerAddressUrl(deployed: AgreementRecord, fallbackChain: DeployChainConfig) {
+  const deployedChainId = Number(deployed.chainId);
+  const chainConfig =
+    Number.isInteger(deployedChainId) && deployedChainId > 0
+      ? tryResolveDeployChainConfigById(deployedChainId) || fallbackChain
+      : fallbackChain;
+  const explorerBaseUrl = chainConfig.chain.blockExplorers?.default.url;
+  if (!explorerBaseUrl) return null;
+  return `${explorerBaseUrl.replace(/\/$/, '')}/address/${deployed.address}`;
+}
+
+function resolveExplorerTransactionUrl(inputRecord: AgreementInputRecord, fallbackChain: DeployChainConfig) {
+  if (!inputRecord.txHash) return null;
+  const inputChainId = Number(inputRecord.chainId);
+  const chainConfig =
+    Number.isInteger(inputChainId) && inputChainId > 0
+      ? tryResolveDeployChainConfigById(inputChainId) || fallbackChain
+      : fallbackChain;
+  const explorerBaseUrl = chainConfig.chain.blockExplorers?.default.url;
+  if (!explorerBaseUrl) return null;
+  return `${explorerBaseUrl.replace(/\/$/, '')}/tx/${inputRecord.txHash}`;
+}
+
+function tryResolveDeployChainConfigById(chainId: number) {
+  try {
+    return resolveDeployChainConfigById(chainId);
+  } catch {
+    return null;
+  }
 }
 
 function resolveRpcUrl(chainId: number): string {
