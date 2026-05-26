@@ -10,16 +10,21 @@ import type {
   HealthResponse,
   ApiClientConfig,
   ApiResponse,
+  CreateWebhookRequest,
+  CreateWebhookResponse,
   ListResponse,
   ProcessInputRequest,
+  UpdateWebhookRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
+  WebhookSubscription,
+  WebhookTestResponse,
 } from './types.js';
 import { resolveApiBaseUrl } from './constants.js';
 import { agreementsApiPaths, joinUrl } from './utils.js';
 
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
 export class ApiClient {
   private readonly baseUrl: string;
@@ -41,6 +46,30 @@ export class ApiClient {
 
   async getHealth(): Promise<HealthResponse> {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
+  }
+
+  async createWebhook(body: CreateWebhookRequest): Promise<CreateWebhookResponse> {
+    return this.requestData<CreateWebhookResponse>('POST', agreementsApiPaths.webhooks(), body, 201);
+  }
+
+  async listWebhooks(): Promise<ListResponse<WebhookSubscription>> {
+    return this.requestList<WebhookSubscription>('GET', agreementsApiPaths.webhooks());
+  }
+
+  async getWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('GET', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async updateWebhook(webhookId: string, body: UpdateWebhookRequest): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('PATCH', agreementsApiPaths.webhook(webhookId), body);
+  }
+
+  async deleteWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('DELETE', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async testWebhook(webhookId: string): Promise<WebhookTestResponse> {
+    return this.requestData<WebhookTestResponse>('POST', agreementsApiPaths.webhookTest(webhookId), undefined, 201);
   }
 
   async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {

@@ -201,6 +201,54 @@ export type ProcessInputRequest = {
   signature: PermitSignature;
 };
 
+export type WebhookEventType = 'agreement.transitioned' | 'webhook.test';
+
+export type WebhookSubscriptionEventType = Extract<WebhookEventType, 'agreement.transitioned'>;
+
+export type WebhookSubscriptionStatus = 'active' | 'disabled';
+
+export type WebhookFilters = {
+  agreementIds?: string[];
+  templateIds?: string[];
+  inputIds?: string[];
+  fromStates?: string[];
+  toStates?: string[];
+};
+
+export type WebhookSubscription = {
+  id: string;
+  principalId: string;
+  createdByApiKeyId?: string;
+  url: string;
+  status: WebhookSubscriptionStatus;
+  eventTypes: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWebhookRequest = {
+  url: string;
+  eventTypes?: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+};
+
+export type CreateWebhookResponse = WebhookSubscription & {
+  secret: string;
+};
+
+export type UpdateWebhookRequest = {
+  url?: string;
+  eventTypes?: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+  status?: WebhookSubscriptionStatus;
+};
+
+export type WebhookTestResponse = {
+  ok: true;
+  deliveryId: string;
+};
+
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
 type ApiClientSharedConfig = {

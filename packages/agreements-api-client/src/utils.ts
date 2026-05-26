@@ -11,6 +11,9 @@ export function joinUrl(baseUrl: string, path: string): string {
 export const agreementsApiPaths = {
   openapiJson: () => `${API_BASE_PATH}/openapi.json`,
   health: () => `${API_BASE_PATH}/health`,
+  webhooks: () => `${API_BASE_PATH}/webhooks`,
+  webhook: (id: string) => `${API_BASE_PATH}/webhooks/${encodeURIComponent(id)}`,
+  webhookTest: (id: string) => `${API_BASE_PATH}/webhooks/${encodeURIComponent(id)}/test`,
   agreements: () => `${API_BASE_PATH}/agreements`,
   agreementsValidate: () => `${API_BASE_PATH}/agreements/validate`,
   agreementsValidateTemplate: () => `${API_BASE_PATH}/agreements/validate-template`,
