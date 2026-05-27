@@ -1223,9 +1223,6 @@ function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
   const configured = readPositiveInteger(readEnvironmentDefaultChainId(environment));
   if (configured && supportedChainIds.includes(configured)) return configured;
 
-  const legacyConfigured = readPositiveInteger(import.meta.env.VITE_DEFAULT_AGREEMENTS_CHAIN_ID);
-  if (legacyConfigured && supportedChainIds.includes(legacyConfigured)) return legacyConfigured;
-
   return supportedChainIds[0] || getFallbackDeployChainIds(environment)[0];
 }
 
@@ -1236,12 +1233,8 @@ function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironmen
 }
 
 function resolveSupportedDeployChainIds(environment: AgreementsApiEnvironment): number[] {
-  const raw =
-    readEnvironmentSupportedChainIds(environment) ||
-    normalizeOptionalValue(import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS);
-  const chainIds = raw
-    ? parseChainIdList(raw)
-    : [...getFallbackDeployChainIds(environment)];
+  const environmentRaw = readEnvironmentSupportedChainIds(environment);
+  const chainIds = environmentRaw ? parseChainIdList(environmentRaw) : [...getFallbackDeployChainIds(environment)];
   return [...new Set(chainIds)];
 }
 
@@ -1495,14 +1488,9 @@ function resolvePlaygroundApiBaseUrl(environment: AgreementsApiEnvironment) {
 }
 
 function readApiBaseUrlOverrides(): Partial<Record<AgreementsApiEnvironment, string>> {
-  const legacyOverride = normalizeOptionalBaseUrl(import.meta.env.VITE_EXTERNAL_API_BASE_URL);
   return {
-    testnet:
-      normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_TESTNET_BASE_URL) ||
-      (DEFAULT_ENVIRONMENT === 'testnet' ? legacyOverride : undefined),
-    production:
-      normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_PRODUCTION_BASE_URL) ||
-      (DEFAULT_ENVIRONMENT === 'production' ? legacyOverride : undefined),
+    testnet: normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_TESTNET_BASE_URL),
+    production: normalizeOptionalBaseUrl(import.meta.env.VITE_AGREEMENTS_API_PRODUCTION_BASE_URL),
   };
 }
 
