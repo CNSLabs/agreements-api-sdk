@@ -1215,22 +1215,62 @@ function buildQueryPath(path: string, params: Array<[string, string | number | u
   return query ? `${path}?${query}` : path;
 }
 
+const DEFAULT_TESTNET_DEPLOY_CHAIN_IDS = [lineaSepolia.id, sepolia.id, baseSepolia.id] as const;
+const DEFAULT_PRODUCTION_DEPLOY_CHAIN_IDS = [linea.id, base.id] as const;
+
 function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
-  const configured = Number(import.meta.env.VITE_DEFAULT_AGREEMENTS_CHAIN_ID);
-  if (Number.isInteger(configured) && configured > 0) return configured;
-  return environment === 'production' ? linea.id : lineaSepolia.id;
+  const supportedChainIds = resolveSupportedDeployChainIds(environment);
+  const configured = readPositiveInteger(readEnvironmentDefaultChainId(environment));
+  if (configured && supportedChainIds.includes(configured)) return configured;
+
+  const legacyConfigured = readPositiveInteger(import.meta.env.VITE_DEFAULT_AGREEMENTS_CHAIN_ID);
+  if (legacyConfigured && supportedChainIds.includes(legacyConfigured)) return legacyConfigured;
+
+  return supportedChainIds[0] || getFallbackDeployChainIds(environment)[0];
 }
 
-const DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS = [lineaSepolia.id, sepolia.id, baseSepolia.id] as const;
-
 function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironment): DeployChainConfig[] {
-  const raw = import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS;
-  const chainIds: number[] = raw
-    ? raw.split(',').map((value: string) => Number(value.trim())).filter((value: number) => Number.isInteger(value) && value > 0)
-    : [...DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS];
-  const deduped = [...new Set(chainIds)];
+  const deduped = resolveSupportedDeployChainIds(environment);
   if (!deduped.length) return [resolveDeployChainConfigById(resolveDefaultDeployChainId(environment))];
   return deduped.map(resolveDeployChainConfigById);
+}
+
+function resolveSupportedDeployChainIds(environment: AgreementsApiEnvironment): number[] {
+  const raw =
+    readEnvironmentSupportedChainIds(environment) ||
+    normalizeOptionalValue(import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS);
+  const chainIds = raw
+    ? parseChainIdList(raw)
+    : [...getFallbackDeployChainIds(environment)];
+  return [...new Set(chainIds)];
+}
+
+function readEnvironmentDefaultChainId(environment: AgreementsApiEnvironment) {
+  return environment === 'production'
+    ? import.meta.env.VITE_AGREEMENTS_API_PRODUCTION_DEFAULT_CHAIN_ID
+    : import.meta.env.VITE_AGREEMENTS_API_TESTNET_DEFAULT_CHAIN_ID;
+}
+
+function readEnvironmentSupportedChainIds(environment: AgreementsApiEnvironment) {
+  return environment === 'production'
+    ? normalizeOptionalValue(import.meta.env.VITE_AGREEMENTS_API_PRODUCTION_SUPPORTED_CHAINS)
+    : normalizeOptionalValue(import.meta.env.VITE_AGREEMENTS_API_TESTNET_SUPPORTED_CHAINS);
+}
+
+function getFallbackDeployChainIds(environment: AgreementsApiEnvironment): readonly number[] {
+  return environment === 'production' ? DEFAULT_PRODUCTION_DEPLOY_CHAIN_IDS : DEFAULT_TESTNET_DEPLOY_CHAIN_IDS;
+}
+
+function parseChainIdList(raw: string): number[] {
+  return raw
+    .split(',')
+    .map((value: string) => readPositiveInteger(value))
+    .filter((value): value is number => value !== null);
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : Number(typeof value === 'string' ? value.trim() : value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
@@ -1467,7 +1507,12 @@ function readApiBaseUrlOverrides(): Partial<Record<AgreementsApiEnvironment, str
 }
 
 function normalizeOptionalBaseUrl(value: unknown) {
-  const trimmed = typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';
+  const trimmed = normalizeOptionalValue(value)?.replace(/\/+$/, '') || '';
+  return trimmed || undefined;
+}
+
+function normalizeOptionalValue(value: unknown) {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed || undefined;
 }
 
