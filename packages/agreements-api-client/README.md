@@ -44,6 +44,8 @@ const health = await client.getHealth();
 - `production` resolves to `https://api.shodai.network`
 - The client automatically prefixes requests with `/v0/*`
 
+Hosted environments can support multiple agreement deployment chains at once. The `testnet` environment supports Linea Sepolia (`59141`), Ethereum Sepolia (`11155111`), and Base Sepolia (`84532`); the `production` environment supports Linea Mainnet (`59144`) and Base Mainnet (`8453`). Include a supported `chainId` when validating and deploying agreements, and use the deployed agreement record's `chainId` when signing inputs.
+
 ### Optional `baseUrl` override
 
 Use `baseUrl` only when you need to bypass the standard Shodai environment mapping, for example:
@@ -211,7 +213,8 @@ const agreementRecord = await deployAgreementWithPermit({
 This flow requires:
 
 - a connected wallet
-- chain configuration compatible with your agreement deployment
+- a selected `chainId` supported by the target API environment
+- chain configuration compatible with that selected deployment chain
 - `viem` `walletClient` and `publicClient`
 
 ### 5. Inspect agreements after deployment
