@@ -45,6 +45,10 @@ export type SignDeployPermitResult = {
 export type SignInputPermitParams = {
   walletClient: WalletClient;
   publicClient: PublicClient;
+  /**
+   * Expected deployed agreement chain. The public client chain must match it.
+   */
+  chainId: number;
   agreementContractAddress: Hex;
   agreement: AgreementJson;
   inputId: string;
@@ -98,6 +102,8 @@ export async function signDeployWithPermit(params: SignDeployPermitParams): Prom
  * Sign the engine `PermitInput` EIP-712 payload for a single DFSM input.
  */
 export async function signAgreementInputPermit(params: SignInputPermitParams): Promise<SignInputPermitResult> {
+  await resolveSigningChainId(params.publicClient, params.chainId);
+
   const engine = new AgreementEngine(
     params.agreementContractAddress,
     params.publicClient as never,
@@ -190,7 +196,7 @@ async function resolveSigningChainId(publicClient: PublicClient, requestedChainI
   if (requestedChainId !== undefined && requestedChainId !== signingChainId) {
     throw new Error(
       `Requested chainId ${requestedChainId} does not match publicClient chainId ${signingChainId}. ` +
-        'Use a public client for the requested deployment chain before signing the permit.',
+        'Use a public client for the requested agreement chain before signing the permit.',
     );
   }
   return requestedChainId ?? signingChainId;
@@ -201,6 +207,7 @@ export type SubmitInputCallParams = {
   agreementId: string;
   walletClient: WalletClient;
   publicClient: PublicClient;
+  chainId: number;
   agreementContractAddress: Address;
   agreement: AgreementJson;
   inputId: string;
@@ -219,6 +226,7 @@ export async function submitAgreementInputWithPermit(
   const { signature, signerAddress } = await signAgreementInputPermit({
     walletClient: params.walletClient,
     publicClient: params.publicClient,
+    chainId: params.chainId,
     agreementContractAddress: params.agreementContractAddress,
     agreement: params.agreement,
     inputId: params.inputId,

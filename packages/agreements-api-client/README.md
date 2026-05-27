@@ -300,6 +300,7 @@ const inputRecord = await submitAgreementInputWithPermit({
   agreementId: agreementRecord.id,
   walletClient,
   publicClient,
+  chainId: agreementRecord.chainId,
   agreementContractAddress,
   agreement,
   inputId: 'partyASignature',

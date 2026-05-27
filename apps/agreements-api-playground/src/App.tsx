@@ -623,6 +623,7 @@ function App() {
         agreementId: agreementId.trim(),
         walletClient: walletClient as never,
         publicClient: publicClient as never,
+        chainId: loadedAgreement.chainId,
         agreementContractAddress: loadedAgreement.address as Address,
         agreement,
         inputId: selectedInputId,

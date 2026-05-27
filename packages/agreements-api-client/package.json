@@ -1,6 +1,6 @@
 {
   "name": "@cns-labs/agreements-api-client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
   "author": "Agreements API Maintainers",
   "license": "Apache-2.0",
