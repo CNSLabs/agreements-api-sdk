@@ -36,13 +36,13 @@ VITE_AGREEMENTS_API_PRODUCTION_BASE_URL=
 Notes:
 
 - The app stores the selected environment, API key, draft id, and deploy workspace values in browser local storage.
-- `VITE_AGREEMENTS_API_ENVIRONMENT` is the primary deployment choice. It resolves both the API host and the default agreement chain.
+- `VITE_AGREEMENTS_API_ENVIRONMENT` resolves the standard API host. The playground lets you choose a supported deployment chain for that environment before validating, signing, and deploying.
 - Built-in mappings are:
-  - `testnet` -> `https://test-api.shodai.network` + Linea Sepolia
-  - `production` -> `https://api.shodai.network` + Linea Mainnet
+  - `testnet` -> `https://test-api.shodai.network` with Linea Sepolia, Ethereum Sepolia, and Base Sepolia deployment options
+  - `production` -> `https://api.shodai.network` with Linea Mainnet and Base Mainnet deployment options
 - `VITE_AGREEMENTS_API_TESTNET_BASE_URL` and `VITE_AGREEMENTS_API_PRODUCTION_BASE_URL` optionally override the API host used by each environment selector option. This is useful for staging rehearsals such as mapping `testnet` to `https://dev.cnslabs.cloud` and `production` to `https://alpha.cnslabs.cloud`.
 - The hero includes `Open Developer Docs`, which points to `https://docs.shodai.network`, and the environment selector includes an OpenAPI docs link for the current API host.
-- Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected environment.
+- Permit-based deployment also needs an injected wallet such as MetaMask; chain config is derived from the selected deployment chain.
 - Browser requests include `x-correlation-id`, `traceparent`, and `x-cns-client-app: agreements-api-playground` so backend telemetry can isolate playground-originated traffic.
 
 ## Env Inventory

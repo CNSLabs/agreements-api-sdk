@@ -113,6 +113,7 @@ export type SortFilter<TField extends string> = {
 }[TField];
 
 export type AgreementListParams = {
+  chainId?: number;
   state?: string;
   createdAt?: DateFilter;
   updatedAt?: DateFilter;
@@ -134,6 +135,7 @@ export type AgreementInputListParams = {
 
 export type ValidateDirectAgreementRequest = {
   agreement: Record<string, unknown>;
+  chainId?: number;
   initValues?: Record<string, unknown>;
   participants?: DirectParticipantRecord[];
   observers?: string[];
@@ -160,6 +162,7 @@ export type ValidateDirectAgreementTemplateResponse = {
 export type DirectDeployAgreementWithPermitRequest = {
   agreement: Record<string, unknown>;
   displayName: string;
+  chainId?: number;
   docUri?: string;
   initValues?: Record<string, unknown>;
   participants?: DirectParticipantRecord[];

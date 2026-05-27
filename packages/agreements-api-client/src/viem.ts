@@ -25,6 +25,10 @@ import type {
 export type SignDeployPermitParams = {
   walletClient: WalletClient;
   publicClient: PublicClient;
+  /**
+   * Optional expected signing chain. When provided, the public client chain must match it.
+   */
+  chainId?: number;
   agreement: AgreementJson;
   /** Unix seconds (e.g. `Math.floor(Date.now() / 1000) + 3600`). */
   deadline: number;
@@ -41,6 +45,10 @@ export type SignDeployPermitResult = {
 export type SignInputPermitParams = {
   walletClient: WalletClient;
   publicClient: PublicClient;
+  /**
+   * Expected deployed agreement chain. The public client chain must match it.
+   */
+  chainId: number;
   agreementContractAddress: Hex;
   agreement: AgreementJson;
   inputId: string;
@@ -65,7 +73,7 @@ export function computeDefaultDeadlineSeconds(offsetSeconds: number = DEFAULT_PE
  * Sign the factory `deploy-with-permit` EIP-712 payload for inline BYOT agreement JSON.
  */
 export async function signDeployWithPermit(params: SignDeployPermitParams): Promise<SignDeployPermitResult> {
-  const chainId = await params.publicClient.getChainId();
+  const chainId = await resolveSigningChainId(params.publicClient, params.chainId);
   const factoryConfig = getFactoryConfigByChainId(chainId);
   if (!factoryConfig) {
     throw new Error(`No AgreementFactory deployment registered for chain ${chainId}.`);
@@ -94,6 +102,8 @@ export async function signDeployWithPermit(params: SignDeployPermitParams): Prom
  * Sign the engine `PermitInput` EIP-712 payload for a single DFSM input.
  */
 export async function signAgreementInputPermit(params: SignInputPermitParams): Promise<SignInputPermitResult> {
+  await resolveSigningChainId(params.publicClient, params.chainId);
+
   const engine = new AgreementEngine(
     params.agreementContractAddress,
     params.publicClient as never,
@@ -119,6 +129,7 @@ export type DeployWithPermitCallParams = {
   client: ApiClient;
   walletClient: WalletClient;
   publicClient: PublicClient;
+  chainId?: number;
   agreement: AgreementJson;
   displayName: string;
   initValues?: Record<string, InitValue>;
@@ -140,6 +151,7 @@ export async function deployAgreementWithPermit(
   params: DeployWithPermitCallParams,
 ): Promise<AgreementRecord> {
   const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
+  const chainId = await resolveSigningChainId(params.publicClient, params.chainId);
 
   const docUriRaw = params.docUri ?? params.permitOptions?.docUri;
   const docUri = docUriRaw !== undefined && docUriRaw !== '' ? docUriRaw : undefined;
@@ -157,6 +169,7 @@ export async function deployAgreementWithPermit(
   const { signature, signerAddress } = await signDeployWithPermit({
     walletClient: params.walletClient,
     publicClient: params.publicClient,
+    chainId,
     agreement: params.agreement,
     deadline,
     permitOptions: permitOptionsForSign,
@@ -165,6 +178,7 @@ export async function deployAgreementWithPermit(
   const body: DirectDeployAgreementWithPermitRequest = {
     agreement: params.agreement as unknown as Record<string, unknown>,
     displayName: params.displayName,
+    chainId,
     participants: params.participants,
     observers: params.observers,
     signer: signerAddress,
@@ -177,11 +191,23 @@ export async function deployAgreementWithPermit(
   return params.client.deployWithPermit(body);
 }
 
+async function resolveSigningChainId(publicClient: PublicClient, requestedChainId?: number): Promise<number> {
+  const signingChainId = await publicClient.getChainId();
+  if (requestedChainId !== undefined && requestedChainId !== signingChainId) {
+    throw new Error(
+      `Requested chainId ${requestedChainId} does not match publicClient chainId ${signingChainId}. ` +
+        'Use a public client for the requested agreement chain before signing the permit.',
+    );
+  }
+  return requestedChainId ?? signingChainId;
+}
+
 export type SubmitInputCallParams = {
   client: ApiClient;
   agreementId: string;
   walletClient: WalletClient;
   publicClient: PublicClient;
+  chainId: number;
   agreementContractAddress: Address;
   agreement: AgreementJson;
   inputId: string;
@@ -200,6 +226,7 @@ export async function submitAgreementInputWithPermit(
   const { signature, signerAddress } = await signAgreementInputPermit({
     walletClient: params.walletClient,
     publicClient: params.publicClient,
+    chainId: params.chainId,
     agreementContractAddress: params.agreementContractAddress,
     agreement: params.agreement,
     inputId: params.inputId,

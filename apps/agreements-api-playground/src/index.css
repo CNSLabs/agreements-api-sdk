@@ -830,6 +830,11 @@ select:focus-visible {
   font-family: var(--font-mono);
   font-weight: 500;
 }
+.pl-banner-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
 .pl-banner-error {
   border-color: #ba1a1a;
   background: #fff0ee;

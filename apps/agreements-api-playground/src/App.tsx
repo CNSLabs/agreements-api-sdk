@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import {
   API_BASE_PATH,
   ApiClient,
@@ -19,8 +19,8 @@ import {
   type ListResponse,
 } from '@cns-labs/agreements-api-client';
 import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
-import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
-import { linea, lineaSepolia } from 'viem/chains';
+import { createPublicClient, createWalletClient, custom, http, type Address, type Chain } from 'viem';
+import { base, baseSepolia, linea, lineaSepolia, sepolia } from 'viem/chains';
 import { createBrowserTelemetryHeaders } from './telemetry';
 
 type HttpMethod = 'GET' | 'POST';
@@ -55,8 +55,9 @@ function getPreferredTheme(): Theme {
 
 type DeployChainConfig = {
   chainId: number;
-  chain: typeof linea | typeof lineaSepolia;
+  chain: Chain;
   chainName: string;
+  rpcUrl: string;
 };
 
 const DEFAULT_ENVIRONMENT = resolveDefaultEnvironment();
@@ -166,7 +167,7 @@ function App() {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<ReactNode>('');
   const [response, setResponse] = useState<ResponseState | null>(null);
 
   const [walletAddress, setWalletAddress] = useState('');
@@ -174,6 +175,7 @@ function App() {
   const [walletBusy, setWalletBusy] = useState(false);
   const [walletError, setWalletError] = useState('');
 
+  const [selectedChainId, setSelectedChainId] = useState(() => resolveDefaultDeployChainId(DEFAULT_ENVIRONMENT));
   const [agreementId, setAgreementId] = useState('');
   const [displayName, setDisplayName] = useState('Agreements Playground Agreement');
   const [docUri, setDocUri] = useState('');
@@ -208,7 +210,11 @@ function App() {
     [apiKey, environment, resolvedBaseUrl],
   );
 
-  const deployChain = useMemo(() => resolveDeployChainConfig(environment), [environment]);
+  const supportedDeployChains = useMemo(() => resolveSupportedDeployChainConfigs(environment), [environment]);
+  const deployChain = useMemo(
+    () => supportedDeployChains.find(chain => chain.chainId === selectedChainId) || supportedDeployChains[0],
+    [selectedChainId, supportedDeployChains],
+  );
   const environmentLabel = formatEnvironmentLabel(environment);
   const developerPortalUrl = useMemo(() => resolveDeveloperPortalUrl(), []);
   const supportUrl = useMemo(() => resolveSupportUrl(), []);
@@ -237,7 +243,9 @@ function App() {
     return getExecutionInputs(agreement)[selectedInputId] || null;
   }, [loadedAgreement?.json, selectedInputId]);
   const curlPreview = useMemo(() => {
-    const parts = [`curl -i "${joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), path)}"`];
+    const parts = ['curl', '-i'];
+    if (path.includes('[') || path.includes(']')) parts.push('--globoff');
+    parts.push(`"${joinUrl(resolveCurlBaseUrl(resolvedBaseUrl), path)}"`);
     if (apiKey.trim()) parts.push(`-H "X-API-Key: ${apiKey.trim()}"`);
     if (method !== 'GET') parts.push(`-X ${method}`);
     if (body.trim()) {
@@ -322,6 +330,11 @@ function App() {
       setSelectedInputId(availableInputIds[0]);
     }
   }, [availableInputIds, selectedInputId]);
+
+  useEffect(() => {
+    if (supportedDeployChains.some(chain => chain.chainId === selectedChainId)) return;
+    setSelectedChainId(supportedDeployChains[0].chainId);
+  }, [selectedChainId, supportedDeployChains]);
 
   async function runAgreementsRequest<T>(config: {
     method: HttpMethod;
@@ -427,6 +440,9 @@ function App() {
       if (record.variables) setInitValuesText(JSON.stringify(record.variables, null, 2));
       if (record.participants) setParticipantsText(JSON.stringify(record.participants, null, 2));
       if (record.observers) setObserversText(JSON.stringify(record.observers, null, 2));
+      if (record.chainId && supportedDeployChains.some(chain => chain.chainId === record.chainId)) {
+        setSelectedChainId(record.chainId);
+      }
       setNotice('Agreement loaded.');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -484,7 +500,7 @@ function App() {
 
       const publicClient = createPublicClient({
         chain: deployChain.chain,
-        transport: http(),
+        transport: http(deployChain.rpcUrl),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
@@ -499,6 +515,7 @@ function App() {
         client: agreementsClient,
         walletClient: walletClient as never,
         publicClient: publicClient as never,
+        chainId: deployChain.chainId,
         agreement,
         displayName: displayName.trim() || 'Agreements Playground Agreement',
         initValues,
@@ -518,7 +535,7 @@ function App() {
       });
       setLoadedAgreement(deployed);
       setAgreementId(deployed.id || agreementId);
-      setNotice(`Agreement deployed${deployed.address ? ` at ${deployed.address}` : ''}.`);
+      setNotice(renderDeploymentNotice(deployed, deployChain));
     } catch (deployError) {
       setError(deployError instanceof Error ? deployError.message : String(deployError));
     } finally {
@@ -584,15 +601,16 @@ function App() {
 
       const agreement = tryAgreementJson(loadedAgreement?.json);
       if (!agreement || !loadedAgreement?.address) throw new Error('Load a deployed agreement first.');
+      const inputChain = resolveDeployChainConfigById(loadedAgreement.chainId);
 
-      await ensureWalletChain(provider, deployChain);
+      await ensureWalletChain(provider, inputChain);
       const publicClient = createPublicClient({
-        chain: deployChain.chain,
-        transport: http(),
+        chain: inputChain.chain,
+        transport: http(inputChain.rpcUrl),
       });
       const walletClient = createWalletClient({
         account: walletAddress as Address,
-        chain: deployChain.chain,
+        chain: inputChain.chain,
         transport: custom(provider),
       });
       const values = parseJsonObject(inputValuesText, 'Input values');
@@ -605,6 +623,7 @@ function App() {
         agreementId: agreementId.trim(),
         walletClient: walletClient as never,
         publicClient: publicClient as never,
+        chainId: loadedAgreement.chainId,
         agreementContractAddress: loadedAgreement.address as Address,
         agreement,
         inputId: selectedInputId,
@@ -620,7 +639,7 @@ function App() {
         bodyText: JSON.stringify(inputRecord, null, 2),
         parsedBody: inputRecord,
       });
-      setNotice(`Submitted input "${selectedInputId}".`);
+      setNotice(renderInputSubmissionNotice(inputRecord, inputChain));
     } catch (inputError) {
       setError(inputError instanceof Error ? inputError.message : String(inputError));
     } finally {
@@ -631,6 +650,7 @@ function App() {
   function buildValidatePayload() {
     return {
       agreement: parseJsonObject(agreementJsonText, 'Agreement JSON'),
+      chainId: deployChain.chainId,
       initValues: parseJsonObject(initValuesText, 'Init values'),
       participants: parseJsonArray(participantsText, 'Participants'),
       observers: parseJsonArray(observersText, 'Observers'),
@@ -649,6 +669,8 @@ function App() {
     participantsText,
     observersText,
     docUri,
+    chainId: deployChain.chainId,
+    selectedInputId,
   });
   const viewItems: Array<{ id: AppView; label: string; description: string }> = [
     { id: 'overview', label: 'Overview', description: 'Choose a workflow' },
@@ -762,6 +784,17 @@ function App() {
           </div>
           <div className="pl-toolbar-cell">
             <label className="pl-field">
+              <span>Deployment Chain</span>
+              <select value={String(deployChain.chainId)} onChange={event => setSelectedChainId(Number(event.target.value))}>
+                {supportedDeployChains.map(chain => (
+                  <option key={chain.chainId} value={String(chain.chainId)}>{chain.chainName} ({chain.chainId})</option>
+                ))}
+              </select>
+            </label>
+            <span className="pl-field-link">Used for deploy signing and agreement list filters.</span>
+          </div>
+          <div className="pl-toolbar-cell">
+            <label className="pl-field">
               <span>API Key</span>
               <input value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="cns_pk_..." autoComplete="off" />
             </label>
@@ -869,7 +902,7 @@ function App() {
               <section className="pl-panel">
                 <div className="pl-panel-head"><h2>Loaded Agreement</h2></div>
                 <div className="pl-panel-body">
-                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
+                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
                   <button type="button" className="pl-btn" disabled={!loadedAgreement} onClick={() => setActiveView('input')}>Use This For Input Submission →</button>
                 </div>
               </section>
@@ -882,7 +915,7 @@ function App() {
         {activeView === 'input' ? (
           <>
             <div className="pl-grid">
-              <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
+              <section className="pl-panel"><div className="pl-panel-head"><h2>Target Agreement</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label><div className="pl-row"><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadAgreement()}>Reload Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Existing Inputs</button></div>{loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>Selected</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Agreement is not yet deployed on-chain.'}</strong></div></div> : <div className="pl-empty">Load a deployed agreement before trying to sign an input.</div>}</div></section>
               <section className="pl-panel"><div className="pl-panel-head"><h2>Sign Input</h2></div><div className="pl-panel-body"><label className="pl-field"><span>Input ID</span><select value={selectedInputId} onChange={event => setSelectedInputId(event.target.value)}>{!availableInputIds.length ? <option value={selectedInputId}>{selectedInputId || 'Load agreement first'}</option> : null}{availableInputIds.map(inputId => <option key={inputId} value={inputId}>{inputId}</option>)}</select></label><label className="pl-field"><span>Input Values JSON</span><textarea value={inputValuesText} onChange={event => setInputValuesText(event.target.value)} rows={10} /></label><div className="pl-status-grid"><div className="pl-status-row"><span>Issuer</span><strong>{selectedInputDefinition?.issuer || '—'}</strong></div></div><button type="button" className="pl-btn pl-btn-primary" disabled={busy || !walletAddress} onClick={() => void submitInput()}>{busy ? 'Signing / Submitting...' : 'Sign + Submit Input'}</button>{error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}{notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}</div></section>
             </div>
             {renderResponsePanel('Input Response')}
@@ -1062,38 +1095,234 @@ function CodeBlock({ title, children, copyText }: { title: string; children: str
 
 function buildQuickActions(params: {
   agreementId: string;
+  chainId: number;
   agreementJsonText: string;
   displayName: string;
   initValuesText: string;
   participantsText: string;
   observersText: string;
   docUri: string;
+  selectedInputId: string;
 }) {
   const agreementId = params.agreementId.trim() || 'agreement-123';
+  const selectedInputId = params.selectedInputId.trim() || 'approve';
+  const recentSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const agreement = parseJsonObjectLoose(params.agreementJsonText, SAMPLE_AGREEMENT);
   const validateBody = {
     agreement,
+    chainId: params.chainId,
     displayName: params.displayName.trim() || 'Agreements Playground Agreement',
     initValues: parseJsonObjectLoose(params.initValuesText, {}),
     participants: parseJsonArrayLoose(params.participantsText, []),
     observers: parseJsonArrayLoose(params.observersText, []),
     ...(params.docUri.trim() ? { docUri: params.docUri.trim() } : {}),
   };
+  const agreementsPath = `${API_BASE_PATH}/agreements`;
+  const inputsPath = `${API_BASE_PATH}/agreements/${agreementId}/inputs`;
 
   return [
     { id: 'health', label: 'Gateway Health', method: 'GET' as const, path: `${API_BASE_PATH}/health`, note: 'Check gateway availability.' },
-    { id: 'list', label: 'List Agreements', method: 'GET' as const, path: `${API_BASE_PATH}/agreements`, note: 'List agreements visible to this API principal.' },
+    {
+      id: 'list',
+      label: 'List Agreements',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['chainId', params.chainId],
+        ['limit', 25],
+        ['sort[createdAt]', 'desc'],
+      ]),
+      note: 'List visible agreements on the selected chain with pagination and newest-first sorting.',
+    },
+    {
+      id: 'list-agreements-recent',
+      label: 'Recent Agreements',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['createdAt[gte]', recentSince],
+        ['sort[updatedAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter agreements created in the last 30 days and sort by most recently updated.',
+    },
+    {
+      id: 'list-agreements-state',
+      label: 'Agreements By State',
+      method: 'GET' as const,
+      path: buildQueryPath(agreementsPath, [
+        ['chainId', params.chainId],
+        ['state', 'AWAITING_PAYMENT'],
+        ['sort[displayName]', 'asc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter by lifecycle state and sort alphabetically by display name.',
+    },
     { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
     { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
     { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
     { id: 'state', label: 'Get State', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
-    { id: 'inputs', label: 'Get Inputs', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/inputs`, note: 'Read cached input history.' },
+    {
+      id: 'inputs',
+      label: 'Get Inputs',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['limit', 25],
+        ['sort[createdAt]', 'desc'],
+      ]),
+      note: 'Read paged cached input history with newest submissions first.',
+    },
+    {
+      id: 'inputs-status',
+      label: 'Inputs By Status',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['status', 'MINED'],
+        ['sort[updatedAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter input submissions by mining status and sort by last update.',
+    },
+    {
+      id: 'inputs-id-date',
+      label: 'Inputs By ID + Date',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['inputId', selectedInputId],
+        ['createdAt[gte]', recentSince],
+        ['sort[createdAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter one input ID within a date window and keep the result paged.',
+    },
+    {
+      id: 'inputs-user',
+      label: 'Inputs By User',
+      method: 'GET' as const,
+      path: buildQueryPath(inputsPath, [
+        ['userId', 'platform-user-id'],
+        ['sort[createdAt]', 'desc'],
+        ['limit', 25],
+      ]),
+      note: 'Filter input submissions for one platform user; replace the sample userId before sending.',
+    },
   ];
 }
 
-function resolveDeployChainConfig(environment: AgreementsApiEnvironment) {
-  const chain = environment === 'production' ? linea : lineaSepolia;
-  return { chainId: chain.id, chain, chainName: chain.name } as DeployChainConfig;
+function buildQueryPath(path: string, params: Array<[string, string | number | undefined]>) {
+  const query = params
+    .filter(([, value]) => value !== undefined && value !== '')
+    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+    .join('&');
+  return query ? `${path}?${query}` : path;
+}
+
+function resolveDefaultDeployChainId(environment: AgreementsApiEnvironment) {
+  const configured = Number(import.meta.env.VITE_DEFAULT_AGREEMENTS_CHAIN_ID);
+  if (Number.isInteger(configured) && configured > 0) return configured;
+  return environment === 'production' ? linea.id : lineaSepolia.id;
+}
+
+const DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS = [lineaSepolia.id, sepolia.id, baseSepolia.id] as const;
+
+function resolveSupportedDeployChainConfigs(environment: AgreementsApiEnvironment): DeployChainConfig[] {
+  const raw = import.meta.env.VITE_SUPPORTED_AGREEMENTS_CHAINS;
+  const chainIds: number[] = raw
+    ? raw.split(',').map((value: string) => Number(value.trim())).filter((value: number) => Number.isInteger(value) && value > 0)
+    : [...DEFAULT_SUPPORTED_DEPLOY_CHAIN_IDS];
+  const deduped = [...new Set(chainIds)];
+  if (!deduped.length) return [resolveDeployChainConfigById(resolveDefaultDeployChainId(environment))];
+  return deduped.map(resolveDeployChainConfigById);
+}
+
+function resolveDeployChainConfigById(chainId: number): DeployChainConfig {
+  const knownChains = [lineaSepolia, linea, sepolia, baseSepolia, base] as const;
+  const chain = knownChains.find(candidate => candidate.id === chainId);
+  if (!chain) {
+    throw new Error(`Unsupported playground deployment chain ${chainId}. Add chain metadata before enabling it.`);
+  }
+  return {
+    chainId: chain.id,
+    chain,
+    chainName: chain.name,
+    rpcUrl: resolveRpcUrl(chain.id),
+  };
+}
+
+function renderDeploymentNotice(deployed: AgreementRecord, fallbackChain: DeployChainConfig) {
+  if (!deployed.address) return 'Agreement deployed.';
+
+  const explorerUrl = resolveExplorerAddressUrl(deployed, fallbackChain);
+  if (!explorerUrl) return `Agreement deployed at ${deployed.address}.`;
+
+  return (
+    <>
+      Agreement deployed at{' '}
+      <a className="pl-banner-link" href={explorerUrl} target="_blank" rel="noreferrer">
+        {deployed.address}
+      </a>
+      .
+    </>
+  );
+}
+
+function renderInputSubmissionNotice(inputRecord: AgreementInputRecord, fallbackChain: DeployChainConfig) {
+  const txUrl = resolveExplorerTransactionUrl(inputRecord, fallbackChain);
+  if (!txUrl) return `Submitted input "${inputRecord.inputId}".`;
+
+  return (
+    <>
+      Submitted input &quot;{inputRecord.inputId}&quot;. Tx:{' '}
+      <a className="pl-banner-link" href={txUrl} target="_blank" rel="noreferrer">
+        {inputRecord.txHash}
+      </a>
+      .
+    </>
+  );
+}
+
+function resolveExplorerAddressUrl(deployed: AgreementRecord, fallbackChain: DeployChainConfig) {
+  const deployedChainId = Number(deployed.chainId);
+  const chainConfig =
+    Number.isInteger(deployedChainId) && deployedChainId > 0
+      ? tryResolveDeployChainConfigById(deployedChainId) || fallbackChain
+      : fallbackChain;
+  const explorerBaseUrl = chainConfig.chain.blockExplorers?.default.url;
+  if (!explorerBaseUrl) return null;
+  return `${explorerBaseUrl.replace(/\/$/, '')}/address/${deployed.address}`;
+}
+
+function resolveExplorerTransactionUrl(inputRecord: AgreementInputRecord, fallbackChain: DeployChainConfig) {
+  if (!inputRecord.txHash) return null;
+  const inputChainId = Number(inputRecord.chainId);
+  const chainConfig =
+    Number.isInteger(inputChainId) && inputChainId > 0
+      ? tryResolveDeployChainConfigById(inputChainId) || fallbackChain
+      : fallbackChain;
+  const explorerBaseUrl = chainConfig.chain.blockExplorers?.default.url;
+  if (!explorerBaseUrl) return null;
+  return `${explorerBaseUrl.replace(/\/$/, '')}/tx/${inputRecord.txHash}`;
+}
+
+function tryResolveDeployChainConfigById(chainId: number) {
+  try {
+    return resolveDeployChainConfigById(chainId);
+  } catch {
+    return null;
+  }
+}
+
+function resolveRpcUrl(chainId: number): string {
+  const infuraProjectId = import.meta.env.VITE_INFURA_PROJECT_ID;
+  if (infuraProjectId) {
+    if (chainId === linea.id) return `https://linea-mainnet.infura.io/v3/${infuraProjectId}`;
+    if (chainId === lineaSepolia.id) return `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
+    if (chainId === sepolia.id) return `https://sepolia.infura.io/v3/${infuraProjectId}`;
+    if (chainId === base.id) return `https://base-mainnet.infura.io/v3/${infuraProjectId}`;
+    if (chainId === baseSepolia.id) return `https://base-sepolia.infura.io/v3/${infuraProjectId}`;
+  }
+
+  throw new Error(
+    `No Infura RPC URL configured for chainId ${chainId}. Set VITE_INFURA_PROJECT_ID and add Infura URL derivation before enabling the chain.`,
+  );
 }
 
 function getInjectedProvider(): Eip1193Provider | null {
