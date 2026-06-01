@@ -299,7 +299,49 @@ const webhooks = await client.listWebhooks();
 await client.testWebhook(webhooks.data[0].id);
 ```
 
-Webhook deliveries include `x-shodai-webhook-timestamp` and `x-shodai-webhook-signature`. Verify the signature with HMAC-SHA256 over `${timestamp}.${rawBody}` using the subscription secret.
+Webhook deliveries are JSON `POST` requests signed with the subscription secret. In your backend webhook route, pass the exact raw body and request headers to the server-side receiver helper before trusting or parsing the event:
+
+```ts
+import { createServer } from 'node:http';
+import { constructWebhookEvent, WebhookVerificationError } from '@cns-labs/agreements-api-client/webhooks';
+
+const webhookSecret = process.env.SHODAI_WEBHOOK_SECRET!;
+
+createServer((request, response) => {
+  if (request.method !== 'POST' || request.url !== '/shodai/webhooks') {
+    response.writeHead(404);
+    response.end();
+    return;
+  }
+
+  const chunks: Buffer[] = [];
+  request.on('data', chunk => chunks.push(Buffer.from(chunk)));
+  request.on('end', () => {
+    const rawBody = Buffer.concat(chunks);
+
+    try {
+      const event = constructWebhookEvent(rawBody, request.headers, webhookSecret);
+
+      if (event.eventType === 'agreement.transitioned') {
+        console.log(event.agreementId, event.fromState, event.toState);
+      }
+
+      response.writeHead(204);
+      response.end();
+    } catch (error) {
+      if (error instanceof WebhookVerificationError) {
+        response.writeHead(error.statusCode);
+        response.end(error.code);
+        return;
+      }
+      response.writeHead(500);
+      response.end('webhook_error');
+    }
+  });
+}).listen(3000);
+```
+
+Do not verify against an already parsed JSON object; signature verification depends on the original raw bytes. The SDK verifies Shodai's signature, timestamp tolerance, required headers, header/body event id consistency, and JSON event shape. Your application still owns durable deduplication by the signed event id, queues, logging, persistence, and business side effects.
 
 ### 8. Submit a signed execution input
 

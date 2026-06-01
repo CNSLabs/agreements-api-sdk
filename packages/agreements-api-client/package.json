@@ -1,6 +1,6 @@
 {
   "name": "@cns-labs/agreements-api-client",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
   "author": "Agreements API Maintainers",
   "license": "Apache-2.0",
@@ -26,6 +26,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./webhooks": {
+      "types": "./dist/webhooks.d.ts",
+      "import": "./dist/webhooks.js"
     }
   },
   "files": [
