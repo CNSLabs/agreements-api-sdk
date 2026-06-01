@@ -38,7 +38,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "pnpm run build",
-    "lint": "tsc --noEmit -p tsconfig.json"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@cns-labs/agreements-protocol-evm": "^0.1.3",
