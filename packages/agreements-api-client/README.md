@@ -301,6 +301,22 @@ await client.testWebhook(webhooks.data[0].id);
 
 Webhook deliveries are JSON `POST` requests signed with the subscription secret. In your backend webhook route, pass the exact raw body and request headers to the server-side receiver helper before trusting or parsing the event:
 
+```json
+{
+  "id": "evt_123",
+  "type": "agreement.transitioned",
+  "apiVersion": "2026-06-01",
+  "createdAt": "2026-06-02T18:00:00.000Z",
+  "data": {
+    "agreementId": "agr_123",
+    "templateId": "did:template:service-retainer-v0-1",
+    "fromState": "AWAITING_PAYMENT",
+    "toState": "WORK_IN_PROGRESS",
+    "inputId": "submitInitialPaymentProof"
+  }
+}
+```
+
 ```ts
 import { createServer } from 'node:http';
 import { constructWebhookEvent, WebhookVerificationError } from '@cns-labs/agreements-api-client/webhooks';
@@ -322,8 +338,8 @@ createServer((request, response) => {
     try {
       const event = constructWebhookEvent(rawBody, request.headers, webhookSecret);
 
-      if (event.eventType === 'agreement.transitioned') {
-        console.log(event.agreementId, event.fromState, event.toState);
+      if (event.type === 'agreement.transitioned') {
+        console.log(event.data.agreementId, event.data.fromState, event.data.toState);
       }
 
       response.writeHead(204);
@@ -341,7 +357,7 @@ createServer((request, response) => {
 }).listen(3000);
 ```
 
-Do not verify against an already parsed JSON object; signature verification depends on the original raw bytes. The SDK verifies Shodai's signature, timestamp tolerance, required headers, header/body event id consistency, and JSON event shape. Your application still owns durable deduplication by the signed event id, queues, logging, persistence, and business side effects.
+Do not verify against an already parsed JSON object; signature verification depends on the original raw bytes. The SDK verifies Shodai's signature, timestamp tolerance, required headers, header/body event id consistency, and JSON event envelope shape. Your application still owns durable deduplication by the signed event `id`, queues, logging, persistence, and business side effects.
 
 ### 8. Submit a signed execution input
 

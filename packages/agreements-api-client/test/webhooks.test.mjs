@@ -16,21 +16,26 @@ const nowSeconds = 1_800_000_000;
 const timestamp = String(nowSeconds);
 
 const testPayload = {
-  eventId: 'evt_test',
-  eventType: 'webhook.test',
-  timestamp: '2026-06-01T00:00:00.000Z',
+  id: 'evt_test',
+  type: 'webhook.test',
+  apiVersion: '2026-06-01',
+  createdAt: '2026-06-01T00:00:00.000Z',
+  data: {},
 };
 
 const transitionPayload = {
-  eventId: 'evt_transition',
-  eventType: 'agreement.transitioned',
-  agreementId: 'agreement-1',
-  agreementName: 'Retainer',
-  templateId: 'template-1',
-  fromState: 'AWAITING_PAYMENT',
-  toState: 'WORK_IN_PROGRESS',
-  inputId: 'submitInitialPaymentProof',
-  timestamp: '2026-06-01T00:00:00.000Z',
+  id: 'evt_transition',
+  type: 'agreement.transitioned',
+  apiVersion: '2026-06-01',
+  createdAt: '2026-06-01T00:00:00.000Z',
+  data: {
+    agreementId: 'agreement-1',
+    agreementName: 'Retainer',
+    templateId: 'template-1',
+    fromState: 'AWAITING_PAYMENT',
+    toState: 'WORK_IN_PROGRESS',
+    inputId: 'submitInitialPaymentProof',
+  },
 };
 
 function body(payload) {
@@ -69,8 +74,11 @@ describe('webhook receiver helpers', () => {
     const event = constructWebhookEvent(rawBody, headersFor(rawBody, 'evt_test'), secret, {
       now: nowSeconds,
     });
-    assert.equal(event.eventType, 'webhook.test');
-    assert.equal(event.eventId, 'evt_test');
+    assert.equal(event.type, 'webhook.test');
+    assert.equal(event.id, 'evt_test');
+    assert.equal(event.apiVersion, '2026-06-01');
+    assert.equal(event.createdAt, '2026-06-01T00:00:00.000Z');
+    assert.deepEqual(event.data, {});
   });
 
   it('verifies a backend-shaped agreement.transitioned delivery', () => {
@@ -79,14 +87,16 @@ describe('webhook receiver helpers', () => {
       now: nowSeconds,
     });
 
-    assert.equal(event.eventType, 'agreement.transitioned');
-    assert.equal(event.eventId, 'evt_transition');
-    assert.equal(event.agreementId, 'agreement-1');
-    assert.equal(event.agreementName, 'Retainer');
-    assert.equal(event.templateId, 'template-1');
-    assert.equal(event.fromState, 'AWAITING_PAYMENT');
-    assert.equal(event.toState, 'WORK_IN_PROGRESS');
-    assert.equal(event.inputId, 'submitInitialPaymentProof');
+    assert.equal(event.type, 'agreement.transitioned');
+    assert.equal(event.id, 'evt_transition');
+    assert.equal(event.apiVersion, '2026-06-01');
+    assert.equal(event.createdAt, '2026-06-01T00:00:00.000Z');
+    assert.equal(event.data.agreementId, 'agreement-1');
+    assert.equal(event.data.agreementName, 'Retainer');
+    assert.equal(event.data.templateId, 'template-1');
+    assert.equal(event.data.fromState, 'AWAITING_PAYMENT');
+    assert.equal(event.data.toState, 'WORK_IN_PROGRESS');
+    assert.equal(event.data.inputId, 'submitInitialPaymentProof');
   });
 
   it('rejects altered bodies and signatures', () => {
@@ -185,9 +195,11 @@ describe('webhook receiver helpers', () => {
     );
 
     const malformedTransition = body({
-      eventId: 'evt_bad',
-      eventType: 'agreement.transitioned',
-      timestamp: '2026-06-01T00:00:00.000Z',
+      id: 'evt_bad',
+      type: 'agreement.transitioned',
+      apiVersion: '2026-06-01',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      data: {},
     });
     assertWebhookError(
       () => constructWebhookEvent(malformedTransition, headersFor(malformedTransition, 'evt_bad'), secret, {
@@ -196,7 +208,57 @@ describe('webhook receiver helpers', () => {
       'invalid_payload',
     );
 
-    const unknownEvent = body({ eventId: 'evt_future', eventType: 'future.event' });
+    for (const requiredField of ['templateId', 'fromState', 'toState', 'inputId']) {
+      const payload = {
+        ...transitionPayload,
+        id: `evt_missing_${requiredField}`,
+        data: { ...transitionPayload.data },
+      };
+      delete payload.data[requiredField];
+      const rawPayload = body(payload);
+      assertWebhookError(
+        () => constructWebhookEvent(rawPayload, headersFor(rawPayload, payload.id), secret, {
+          now: nowSeconds,
+        }),
+        'invalid_payload',
+      );
+    }
+
+    const invalidData = body({
+      id: 'evt_bad_data',
+      type: 'agreement.transitioned',
+      apiVersion: '2026-06-01',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      data: null,
+    });
+    assertWebhookError(
+      () => constructWebhookEvent(invalidData, headersFor(invalidData, 'evt_bad_data'), secret, {
+        now: nowSeconds,
+      }),
+      'invalid_payload',
+    );
+
+    const unsupportedVersion = body({
+      id: 'evt_bad_version',
+      type: 'webhook.test',
+      apiVersion: '2026-05-01',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      data: {},
+    });
+    assertWebhookError(
+      () => constructWebhookEvent(unsupportedVersion, headersFor(unsupportedVersion, 'evt_bad_version'), secret, {
+        now: nowSeconds,
+      }),
+      'invalid_payload',
+    );
+
+    const unknownEvent = body({
+      id: 'evt_future',
+      type: 'future.event',
+      apiVersion: '2026-06-01',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      data: {},
+    });
     assertWebhookError(
       () => constructWebhookEvent(unknownEvent, headersFor(unknownEvent, 'evt_future'), secret, {
         now: nowSeconds,
@@ -230,7 +292,7 @@ describe('webhook receiver helpers', () => {
       const event = constructWebhookEvent(candidate, headersFor(candidate, 'evt_test'), secret, {
         now: nowSeconds,
       });
-      assert.equal(event.eventType, 'webhook.test');
+      assert.equal(event.type, 'webhook.test');
     }
   });
 });
