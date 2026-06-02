@@ -4,6 +4,7 @@ export const WEBHOOK_ID_HEADER = 'x-shodai-webhook-id';
 export const WEBHOOK_TIMESTAMP_HEADER = 'x-shodai-webhook-timestamp';
 export const WEBHOOK_SIGNATURE_HEADER = 'x-shodai-webhook-signature';
 export const DEFAULT_WEBHOOK_TOLERANCE_SECONDS = 300;
+export const WEBHOOK_API_VERSION = '2026-06-01';
 
 export type WebhookRawBody = string | ArrayBuffer | Uint8Array;
 
@@ -38,29 +39,40 @@ export class WebhookVerificationError extends Error {
   }
 }
 
-export type WebhookTestEvent = {
-  eventId: string;
-  eventType: 'webhook.test';
-  timestamp: string;
+export type WebhookEventType = 'agreement.transitioned' | 'webhook.test';
+
+export type WebhookEventEnvelope<TType extends WebhookEventType, TData extends object> = {
+  id: string;
+  type: TType;
+  apiVersion: typeof WEBHOOK_API_VERSION;
+  createdAt: string;
+  data: TData;
 };
 
-export type AgreementTransitionedWebhookEvent = {
-  eventId: string;
-  eventType: 'agreement.transitioned';
+export type WebhookTestData = Record<string, never>;
+
+export type WebhookTestEvent = WebhookEventEnvelope<'webhook.test', WebhookTestData>;
+
+export type AgreementTransitionedWebhookData = {
   agreementId: string;
   agreementName?: string;
-  templateId?: string;
-  fromState?: string;
-  toState?: string;
-  inputId?: string;
-  timestamp: string;
+  templateId: string;
+  fromState: string;
+  toState: string;
+  inputId: string;
 };
 
+export type AgreementTransitionedWebhookEvent = WebhookEventEnvelope<
+  'agreement.transitioned',
+  AgreementTransitionedWebhookData
+>;
+
 export type UnknownWebhookEvent<TEventType extends string = string> = {
-  eventId?: string;
-  eventType: TEventType;
-  timestamp?: string;
-  [key: string]: unknown;
+  id?: string;
+  type: TEventType;
+  apiVersion?: string;
+  createdAt?: string;
+  data?: unknown;
 };
 
 export type ShodaiWebhookEvent =
@@ -91,10 +103,10 @@ export function constructWebhookEvent(
   try {
     const parsed = JSON.parse(rawBodyToString(rawBody));
     const event = parseWebhookEvent(parsed);
-    if (event.eventId !== headerId) {
+    if (event.id !== headerId) {
       throw new WebhookVerificationError(
         'webhook_id_mismatch',
-        'Webhook id header must match the signed payload eventId.',
+        'Webhook id header must match the signed payload id.',
         { header: WEBHOOK_ID_HEADER },
       );
     }
@@ -193,43 +205,54 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new WebhookVerificationError(
       'invalid_payload',
-      'Webhook payload must be a JSON object with an eventType.',
+      'Webhook payload must be a JSON event envelope.',
     );
   }
 
   const payload = value as Record<string, unknown>;
-  if (payload.eventType === 'webhook.test') {
-    return {
-      eventId: requirePayloadString(payload, 'eventId'),
-      eventType: 'webhook.test',
-      timestamp: requirePayloadString(payload, 'timestamp'),
-    };
-  }
+  const id = requirePayloadString(payload, 'id');
+  const type = requirePayloadString(payload, 'type');
+  const apiVersion = requirePayloadString(payload, 'apiVersion');
+  const createdAt = requirePayloadString(payload, 'createdAt');
+  const data = requirePayloadObject(payload, 'data');
 
-  if (payload.eventType === 'agreement.transitioned') {
-    return {
-      eventId: requirePayloadString(payload, 'eventId'),
-      eventType: 'agreement.transitioned',
-      agreementId: requirePayloadString(payload, 'agreementId'),
-      agreementName: optionalPayloadString(payload, 'agreementName'),
-      templateId: optionalPayloadString(payload, 'templateId'),
-      fromState: optionalPayloadString(payload, 'fromState'),
-      toState: optionalPayloadString(payload, 'toState'),
-      inputId: optionalPayloadString(payload, 'inputId'),
-      timestamp: requirePayloadString(payload, 'timestamp'),
-    };
-  }
-
-  if (typeof payload.eventType !== 'string') {
+  if (apiVersion !== WEBHOOK_API_VERSION) {
     throw new WebhookVerificationError(
       'invalid_payload',
-      'Webhook payload must be a JSON object with an eventType.',
+      `Unsupported webhook apiVersion: ${apiVersion}.`,
     );
+  }
+
+  if (type === 'webhook.test') {
+    return {
+      id,
+      type: 'webhook.test',
+      apiVersion: WEBHOOK_API_VERSION,
+      createdAt,
+      data: data as WebhookTestData,
+    };
+  }
+
+  if (type === 'agreement.transitioned') {
+    return {
+      id,
+      type: 'agreement.transitioned',
+      apiVersion: WEBHOOK_API_VERSION,
+      createdAt,
+      data: {
+        agreementId: requirePayloadString(data, 'agreementId'),
+        agreementName: optionalPayloadString(data, 'agreementName'),
+        templateId: requirePayloadString(data, 'templateId'),
+        fromState: requirePayloadString(data, 'fromState'),
+        toState: requirePayloadString(data, 'toState'),
+        inputId: requirePayloadString(data, 'inputId'),
+      },
+    };
   }
 
   throw new WebhookVerificationError(
     'invalid_payload',
-    `Unsupported webhook event type: ${payload.eventType}.`,
+    `Unsupported webhook event type: ${type}.`,
   );
 }
 
@@ -248,6 +271,14 @@ function optionalPayloadString(payload: Record<string, unknown>, field: string):
     throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be a string.`);
   }
   return value;
+}
+
+function requirePayloadObject(payload: Record<string, unknown>, field: string): Record<string, unknown> {
+  const value = payload[field];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be an object.`);
+  }
+  return value as Record<string, unknown>;
 }
 
 function getHeader(headers: WebhookHeaders, name: string): string | undefined {
