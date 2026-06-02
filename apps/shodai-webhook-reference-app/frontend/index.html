@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module">
+      import { Buffer } from 'buffer'
+      import process from 'process/browser'
+      window.Buffer = Buffer
+      window.process = process
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="canonical" href="https://app.shodai.network/agreements" />
+    <link rel="llms-txt" href="/llms.txt" />
+    <link rel="service-desc" type="text/markdown" href="/skill.md" title="Shodai Agreements app skill" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FYXLLRMJG0"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', 'G-FYXLLRMJG0');
+    </script>
+    <!-- Start of HubSpot Embed Code -->
+    <script type="text/javascript" id="hs-script-loader" async defer src="//js-na3.hs-scripts.com/343199187.js"></script>
+    <!-- End of HubSpot Embed Code -->
+    <title>Agreements</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
