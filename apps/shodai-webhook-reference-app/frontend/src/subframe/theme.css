@@ -1,0 +1,176 @@
+@theme {
+  /* Colors */
+  --color-brand-50: rgb(22 22 22);
+  --color-brand-100: rgb(33 33 33);
+  --color-brand-200: rgb(47 52 41);
+  --color-brand-300: rgb(87 90 81);
+  --color-brand-400: rgb(194 204 176);
+  --color-brand-500: rgb(218 229 197);
+  --color-brand-600: rgb(218 229 197);
+  --color-brand-700: rgb(218 229 197);
+  --color-brand-800: rgb(218 229 197);
+  --color-brand-900: rgb(218 229 197);
+  --color-neutral-0: rgb(0 0 0);
+  --color-neutral-25: rgb(0 0 0);
+  --color-neutral-50: rgb(0 0 0);
+  --color-neutral-100: rgb(22 22 22);
+  --color-neutral-200: rgb(33 33 33);
+  --color-neutral-300: rgb(47 52 41);
+  --color-neutral-400: rgb(87 90 81);
+  --color-neutral-500: rgb(150 148 148);
+  --color-neutral-600: rgb(194 204 176);
+  --color-neutral-700: rgb(218 229 197);
+  --color-neutral-800: rgb(218 229 197);
+  --color-neutral-900: rgb(218 229 197);
+  --color-neutral-950: rgb(0 0 0);
+  --color-error-50: rgb(33 0 0);
+  --color-error-100: rgb(54 0 0);
+  --color-error-200: rgb(82 16 16);
+  --color-error-300: rgb(124 28 28);
+  --color-error-400: rgb(176 42 42);
+  --color-error-500: rgb(239 68 68);
+  --color-error-600: rgb(248 113 113);
+  --color-error-700: rgb(254 202 202);
+  --color-error-800: rgb(254 226 226);
+  --color-error-900: rgb(254 242 242);
+  --color-warning-50: rgb(32 26 0);
+  --color-warning-100: rgb(54 43 0);
+  --color-warning-200: rgb(82 67 8);
+  --color-warning-300: rgb(133 110 18);
+  --color-warning-400: rgb(202 168 36);
+  --color-warning-500: rgb(234 197 68);
+  --color-warning-600: rgb(253 224 113);
+  --color-warning-700: rgb(254 240 138);
+  --color-warning-800: rgb(254 249 195);
+  --color-warning-900: rgb(254 252 232);
+  --color-success-50: rgb(12 32 19);
+  --color-success-100: rgb(17 54 29);
+  --color-success-200: rgb(22 83 45);
+  --color-success-300: rgb(21 128 61);
+  --color-success-400: rgb(22 163 74);
+  --color-success-500: rgb(34 197 94);
+  --color-success-600: rgb(134 239 172);
+  --color-success-700: rgb(187 247 208);
+  --color-success-800: rgb(220 252 231);
+  --color-success-900: rgb(240 253 244);
+  --color-brand-primary: rgb(218 229 197);
+  --color-default-font: rgb(218 229 197);
+  --color-subtext-color: rgb(150 148 148);
+  --color-neutral-border: rgb(33 33 33);
+  --color-white: rgb(0 0 0);
+  --color-default-background: rgb(0 0 0);
+
+  /* Fonts */
+  --text-caption: 11px;
+  --text-caption--font-weight: 400;
+  --text-caption--letter-spacing: 0em;
+  --text-caption--line-height: 16px;
+  --text-caption-bold: 11px;
+  --text-caption-bold--font-weight: 400;
+  --text-caption-bold--letter-spacing: 0em;
+  --text-caption-bold--line-height: 16px;
+  --text-body: 14px;
+  --text-body--font-weight: 400;
+  --text-body--letter-spacing: 0em;
+  --text-body--line-height: 20px;
+  --text-body-bold: 14px;
+  --text-body-bold--font-weight: 400;
+  --text-body-bold--letter-spacing: 0em;
+  --text-body-bold--line-height: 20px;
+  --text-heading-3: 16px;
+  --text-heading-3--font-weight: 400;
+  --text-heading-3--letter-spacing: 0em;
+  --text-heading-3--line-height: 22px;
+  --text-heading-2: 25px;
+  --text-heading-2--font-weight: 400;
+  --text-heading-2--letter-spacing: 0em;
+  --text-heading-2--line-height: 29px;
+  --text-heading-1: 35px;
+  --text-heading-1--font-weight: 400;
+  --text-heading-1--letter-spacing: 0em;
+  --text-heading-1--line-height: 41px;
+  --text-monospace-body: 14px;
+  --text-monospace-body--font-weight: 400;
+  --text-monospace-body--letter-spacing: 0.05em;
+  --text-monospace-body--line-height: 14px;
+
+  /* Font families */
+  --font-caption: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-caption-bold: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-body-bold: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-heading-3: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-heading-2: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-heading-1: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --font-monospace-body: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Box shadows */
+  --shadow-sm: none;
+  --shadow-default: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-overlay: none;
+  --shadow-brand-glow: none;
+
+  /* Border radiuses */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-DEFAULT: 0;
+  --radius-lg: 0;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --spacing-112: 28rem;
+  --spacing-144: 36rem;
+  --spacing-192: 48rem;
+  --spacing-256: 64rem;
+  --spacing-320: 80rem;
+}
+
+/* Container */
+@utility container {
+  padding-left: 16px;
+  padding-right: 16px;
+
+  @media (width >= theme(--breakpoint-sm)) {
+    padding-left: calc((100vw + 16px - 640px) / 2);
+    padding-right: calc((100vw + 16px - 640px) / 2);
+  }
+
+  @media (width >= theme(--breakpoint-md)) {
+    padding-left: calc((100vw + 16px - 768px) / 2);
+    padding-right: calc((100vw + 16px - 768px) / 2);
+  }
+
+  @media (width >= theme(--breakpoint-lg)) {
+    padding-left: calc((100vw + 16px - 1024px) / 2);
+    padding-right: calc((100vw + 16px - 1024px) / 2);
+  }
+
+  @media (width >= theme(--breakpoint-xl)) {
+    padding-left: calc((100vw + 16px - 1280px) / 2);
+    padding-right: calc((100vw + 16px - 1280px) / 2);
+  }
+
+  @media (width >= theme(--breakpoint-2xl)) {
+    padding-left: calc((100vw + 16px - 1536px) / 2);
+    padding-right: calc((100vw + 16px - 1536px) / 2);
+  }
+}
+
+@custom-variant mobile (@media (max-width: 767px));

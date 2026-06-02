@@ -1,0 +1,301 @@
+{
+  "metadata": {
+    "id": "did:example:purchase-order-auto-pay-actions-v1",
+    "templateId": "did:template:purchase-order-auto-pay-actions-v1",
+    "version": "1.0.0",
+    "createdAt": "2024-03-20T12:00:00Z",
+    "name": "Purchase Order (Auto Pay via Actions)",
+    "author": "Agreements Protocol",
+    "description": "Purchase order where payer signs first, then payee signs. Payment is executed as an on-chain action on the final signature transition."
+  },
+  "variables": {
+    "payerEthAddress": {
+      "type": "address",
+      "subType": "participant",
+      "name": "Payer Address",
+      "description": "Ethereum address of the paying party",
+      "validation": {
+        "required": true
+      }
+    },
+    "payeeEthAddress": {
+      "type": "address",
+      "subType": "participant",
+      "name": "Payee Address",
+      "description": "Ethereum address of the receiving party",
+      "validation": {
+        "required": true
+      }
+    },
+    "workTokenAddress": {
+      "type": "address",
+      "name": "Payment Token (ERC-20) Address",
+      "description": "ERC-20 token contract used for payment",
+      "validation": {
+        "required": true
+      }
+    },
+    "paymentAmount": {
+      "type": "uint256",
+      "name": "Payment Amount",
+      "description": "Amount of tokens to transfer upon final signature",
+      "validation": {
+        "required": true,
+        "min": 1
+      }
+    },
+    "tokenSymbol": {
+      "type": "string",
+      "name": "Token Symbol",
+      "description": "Symbol of the payment token (e.g., USDC, DAI)",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "payerName": {
+      "type": "string",
+      "name": "Payer Name",
+      "description": "Legal name of the paying party",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "payerSignature": {
+      "type": "string",
+      "subType": "signature",
+      "name": "Payer Signature",
+      "description": "Digital signature of the payer",
+      "validation": {
+        "required": true
+      }
+    },
+    "payeeName": {
+      "type": "string",
+      "name": "Payee Name",
+      "description": "Legal name of the receiving party",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "payeeSignature": {
+      "type": "string",
+      "subType": "signature",
+      "name": "Payee Signature",
+      "description": "Enter your name to create an electronic signature",
+      "validation": {
+        "required": true
+      }
+    },
+    "effectiveDate": {
+      "type": "dateTime",
+      "name": "Effective Date",
+      "description": "The date when this purchase order becomes effective",
+      "validation": {
+        "required": true
+      }
+    },
+    "scope": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Scope of Cooperation",
+      "description": "The scope of cooperation between the parties",
+      "validation": {
+        "required": true
+      }
+    },
+    "termDuration": {
+      "type": "string",
+      "name": "Term Duration",
+      "description": "The duration of the purchase order",
+      "validation": {
+        "required": true
+      }
+    }
+  },
+  "content": {
+    "type": "md",
+    "data": "# NON-BINDING REFERENCE AGREEMENT\n## IMPORTANT: DEMO ONLY - NO LEGAL EFFECT\n\n**THIS NON-BINDING REFERENCE AGREEMENT** is made effective upon the date of the final digital signature below, by and between:\n\n**${variables.payerName}** (\"Payer\")\n\n**${variables.payeeName}** (\"Payee\")\n\n## 0. DEMONSTRATION ONLY / NO INTENT TO CREATE LEGAL RELATIONS\n\nThis reference agreement demonstrates protocol mechanics only.\n\nThe parties do not intend to create legal relations or any legally enforceable obligations by signing or executing this document.\n\nNo court, arbitration, or other tribunal proceeding may be brought to enforce any term of this reference agreement.\n\n## 1. DEMO SCOPE\n\nAny request, response, approval, or payment action exchanged between the parties is optional and included only to demonstrate application and protocol behavior.\n\nNothing in this reference agreement creates:\n* any obligation to provide goods or services,\n* any duty to negotiate future terms,\n* any ongoing business, advisory, fiduciary, partnership, employment, or agency relationship.\n\n## 2. TOKEN TRANSFER DEMONSTRATION\n\n**2.1 Optional Demo Transfer**\n\nThe payer may choose to submit an optional token transfer solely to experience the protocol mechanics.\n\nThis transfer:\n* is not consideration for goods or services,\n* is not compensation,\n* does not create any obligation for the payee to provide anything of value.\n\n**2.2 Demo Amount**\n\nAn amount equal to:\n\n**${variables.paymentAmount} ${variables.tokenSymbol}**\n\nToken Contract:\n\n**${variables.workTokenAddress}**\n\n(the \"Demo Amount\").\n\n**2.3 On-Chain Transfer Mechanics**\n\nIf the payer elects to proceed:\n\n* (a) **Authorization.** The payer will approve the protocol smart contract to spend the Demo Amount from their wallet.\n* (b) **Execution.** Upon the relevant cryptographic signature, the protocol may execute a transferFrom transaction moving the Demo Amount directly to the payee wallet defined at signing (**${variables.payeeEthAddress}**).\n* (c) **No Escrow.** Funds are transferred immediately upon the relevant on-chain state transition and are not held in escrow.\n* (d) **Irreversibility Acknowledgement.** Blockchain transfers may be irreversible and subject to network or smart contract risks.\n\n## 3. DISCLAIMERS\n\n**3.1 No Legal, Tax, Financial, or Investment Advice**\n\nThis template is provided as reference-app sample content only and does not provide legal, tax, financial, investment, or professional advice.\n\n**3.2 As-Is Sample**\n\nThis template is provided \"as is\" with no warranties of any kind. Users should obtain appropriate professional advice before adapting any agreement for real-world use.\n\n**3.3 No Governing Law**\n\nBecause this reference agreement is not intended to have legal effect, it has no governing law.\n\nThe parties acknowledge that any execution mechanics or state transitions associated with this reference agreement occur on the Ethereum Virtual Machine.\n\n**IN WITNESS WHEREOF**, the parties have executed this reference agreement by their cryptographic signatures."
+  },
+  "execution": {
+    "states": {
+      "PENDING_TEMPLATE_VARIABLES": {
+        "name": "Pending Template Variables",
+        "description": "Payer needs to fill out the template variables."
+      },
+      "PENDING_PAYER_SIGNATURE": {
+        "name": "Pending Payer Signature",
+        "description": "Awaiting payer signature."
+      },
+      "PENDING_PAYEE_SIGNATURE": {
+        "name": "Pending Payee Signature",
+        "description": "Awaiting payee signature."
+      },
+      "AGREEMENT_TERMINATED_WITHOUT_PAYMENT": {
+        "name": "Agreement Terminated Without Payment",
+        "description": "Payee chose not to participate, so the agreement is terminated without payment."
+      },
+      "PAYMENT_COMPLETE": {
+        "name": "Payment Complete",
+        "description": "Both parties have signed and payment has been executed."
+      }
+    },
+    "initialize": {
+      "name": "Initialize Purchase Order",
+      "description": "Initialize with party addresses and payment parameters",
+      "initialState": "PENDING_TEMPLATE_VARIABLES",
+      "data": {
+        "payerEthAddress": "${variables.payerEthAddress}",
+        "payerName": "${variables.payerName}",
+        "payeeEthAddress": "${variables.payeeEthAddress}",
+        "payeeName": "${variables.payeeName}",
+        "workTokenAddress": "${variables.workTokenAddress}",
+        "paymentAmount": "${variables.paymentAmount}",
+        "tokenSymbol": "${variables.tokenSymbol}"
+      }
+    },
+    "inputs": {
+      "templateVariables": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Template Variable Submission",
+        "description": "Payer fills in terms, including scope, duration, and effective date.",
+        "data": {
+          "scope": "${variables.scope}",
+          "termDuration": "${variables.termDuration}",
+          "effectiveDate": "${variables.effectiveDate}"
+        },
+        "issuer": "${variables.payerEthAddress.value}"
+      },
+      "payerSigning": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Payer Signature",
+        "description": "Signature from payer accepting the purchase order terms.",
+        "data": {
+          "payerSignature": "${variables.payerSignature}"
+        },
+        "issuer": "${variables.payerEthAddress.value}"
+      },
+      "payeeSigning": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Payee Signature",
+        "description": "Signature from payee accepting the purchase order terms.",
+        "data": {
+          "payeeSignature": "${variables.payeeSignature}"
+        },
+        "issuer": "${variables.payeeEthAddress.value}"
+      },
+      "payeeRejection": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Payee Rejection",
+        "description": "Payee declines to participate in the purchase order.",
+        "data": {
+          "payeeRejectionReason": {
+            "type": "string",
+            "name": "Rejection Reason",
+            "description": "Reason why the payee is declining to participate",
+            "validation": {
+              "required": true
+            }
+          }
+        },
+        "issuer": "${variables.payeeEthAddress.value}"
+      }
+    },
+    "actions": [
+      {
+        "id": "payOnPayeeSignature",
+        "when": {
+          "from": "PENDING_PAYEE_SIGNATURE",
+          "input": "payeeSigning"
+        },
+        "call": {
+          "type": "evmCall",
+          "target": "${variables.workTokenAddress.value}",
+          "value": "0",
+          "abi": [
+            {
+              "type": "function",
+              "name": "transferFrom",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "name": "from",
+                  "type": "address"
+                },
+                {
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "name": "value",
+                  "type": "uint256"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "",
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "method": "transferFrom",
+          "args": [
+            "${variables.payerEthAddress.value}",
+            "${variables.payeeEthAddress.value}",
+            "${variables.paymentAmount.value}"
+          ]
+        },
+        "revertOnFailure": true
+      }
+    ],
+    "transitions": [
+      {
+        "from": "PENDING_TEMPLATE_VARIABLES",
+        "to": "PENDING_PAYER_SIGNATURE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "templateVariables"
+          }
+        ]
+      },
+      {
+        "from": "PENDING_PAYER_SIGNATURE",
+        "to": "PENDING_PAYEE_SIGNATURE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "payerSigning"
+          }
+        ]
+      },
+      {
+        "from": "PENDING_PAYEE_SIGNATURE",
+        "to": "PAYMENT_COMPLETE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "payeeSigning"
+          }
+        ]
+      },
+      {
+        "from": "PENDING_PAYEE_SIGNATURE",
+        "to": "AGREEMENT_TERMINATED_WITHOUT_PAYMENT",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "payeeRejection"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,1605 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { promises as fs } from 'node:fs';
+import { createServer } from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { MongoClient } from 'mongodb';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const appRoot = path.resolve(__dirname, '../..');
+const serviceToken = 'test-service-token';
+
+test('Nest backend fails fast when required production config is missing', async () => {
+  const port = 4590 + Math.floor(Math.random() * 200);
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      SHELL: process.env.SHELL,
+      NODE_ENV: 'production',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: '',
+      MONGO_DB_NAME: '',
+      DYNAMIC_ENVIRONMENT_ID: '',
+      VITE_DYNAMIC_ENVIRONMENT_ID: '',
+      DYNAMIC_API_TOKEN: '',
+      EXTERNAL_API_BASE_URL: '',
+      EXTERNAL_API_KEY: '',
+      SHODAI_WEBHOOK_SECRET: '',
+      FRONTEND_BASE_URL: '',
+      SERVICE_AUTH_TOKEN: '',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  const [code] = await once(child, 'exit');
+  assert.notEqual(code, 0, logs);
+  assert.match(logs, /Missing required standalone agreements config/);
+  assert.match(logs, /MONGO_URI/);
+  assert.match(logs, /DYNAMIC_ENVIRONMENT_ID/);
+  assert.match(logs, /EXTERNAL_API_KEY/);
+  assert.match(logs, /SHODAI_WEBHOOK_SECRET/);
+  assert.match(logs, /FRONTEND_BASE_URL/);
+});
+
+test('Nest backend refuses test-only mock external API configuration at runtime', async () => {
+  const port = 4590 + Math.floor(Math.random() * 200);
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      SHELL: process.env.SHELL,
+      NODE_ENV: 'production',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: 'mongodb://localhost:27017',
+      MONGO_DB_NAME: `standalone_agreements_runtime_config_${process.pid}_${port}`,
+      DYNAMIC_ENVIRONMENT_ID: 'runtime-dynamic-env',
+      DYNAMIC_API_TOKEN: 'runtime-dynamic-token',
+      EXTERNAL_API_BASE_URL: 'mock',
+      EXTERNAL_API_KEY: 'runtime-external-key',
+      SHODAI_WEBHOOK_SECRET: 'whsec_runtime',
+      FRONTEND_BASE_URL: 'http://localhost:5184/agreements/',
+      SERVICE_AUTH_TOKEN: serviceToken,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  const [code] = await once(child, 'exit');
+  assert.notEqual(code, 0, logs);
+  assert.match(logs, /EXTERNAL_API_BASE_URL=mock is only allowed under NODE_ENV=test/);
+});
+
+test('Nest backend rejects local or private external API base URLs during normal runtime', async () => {
+  const urls = [
+    'http://localhost:4005',
+    'http://127.0.0.1:4005',
+    'http://0.0.0.0:4005',
+    'http://10.0.0.5:4005',
+    'http://172.16.0.5:4005',
+    'http://192.168.1.5:4005',
+  ];
+
+  for (const externalApiBaseUrl of urls) {
+    const port = 4590 + Math.floor(Math.random() * 200);
+    const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+      cwd: appRoot,
+      env: {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        SHELL: process.env.SHELL,
+        NODE_ENV: 'production',
+        AGREEMENTS_BACKEND_PORT: String(port),
+        MONGO_URI: 'mongodb://localhost:27017',
+        MONGO_DB_NAME: `standalone_agreements_runtime_config_${process.pid}_${port}`,
+        DYNAMIC_ENVIRONMENT_ID: 'runtime-dynamic-env',
+        DYNAMIC_API_TOKEN: 'runtime-dynamic-token',
+        EXTERNAL_API_BASE_URL: externalApiBaseUrl,
+        EXTERNAL_API_KEY: 'runtime-external-key',
+        SHODAI_WEBHOOK_SECRET: 'whsec_runtime',
+        FRONTEND_BASE_URL: 'http://localhost:5184/agreements/',
+        SERVICE_AUTH_TOKEN: serviceToken,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let logs = '';
+    child.stdout.on('data', (chunk) => {
+      logs += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      logs += chunk.toString();
+    });
+
+    const [code] = await once(child, 'exit');
+    assert.notEqual(code, 0, `${externalApiBaseUrl}\n${logs}`);
+    assert.match(logs, /EXTERNAL_API_BASE_URL must target the real Shodai API outside NODE_ENV=test/, externalApiBaseUrl);
+  }
+});
+
+test('Nest backend rejects test-only Dynamic tokens during normal runtime', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const port = 4790 + Math.floor(Math.random() * 200);
+  const dbName = `standalone_agreements_runtime_auth_${process.pid}_${port}`;
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'production',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: mongoUri,
+      MONGO_DB_NAME: dbName,
+      DYNAMIC_ENVIRONMENT_ID: 'runtime-dynamic-env',
+      DYNAMIC_API_TOKEN: 'runtime-dynamic-token',
+      EXTERNAL_API_BASE_URL: 'https://external-api.example.test',
+      EXTERNAL_API_KEY: 'runtime-external-key',
+      SHODAI_WEBHOOK_SECRET: 'whsec_runtime',
+      FRONTEND_BASE_URL: 'http://localhost:5184/agreements/',
+      SERVICE_AUTH_TOKEN: serviceToken,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  try {
+    await waitForHealth(port, child, () => logs);
+    const runtimeDevToken = tokenFor({
+      userId: 'runtime-dev-token-user',
+      email: 'runtime-dev-token@example.com',
+      wallet: '0x1111111111111111111111111111111111111111',
+    });
+    const response = await fetch(`http://localhost:${port}/auth-api/auth/signin`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: runtimeDevToken }),
+    });
+    const responseBody = await readJsonResponse(response);
+    assert.equal(response.status, 200, JSON.stringify(responseBody));
+    assert.deepEqual(responseBody, {
+      success: false,
+      error: 'Development Dynamic tokens are disabled',
+    });
+
+    const protectedResponse = await fetch(`http://localhost:${port}/auth-api/auth/validate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${runtimeDevToken}` },
+    });
+    assert.equal(protectedResponse.status, 401, await protectedResponse.text());
+    assert.equal(await mongoClient.db(dbName).collection('platform_users').countDocuments(), 0);
+  } finally {
+    child.kill('SIGTERM');
+    await once(child, 'exit').catch(() => undefined);
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Legacy migration validates exports before writes, preserves IDs, and is idempotent', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_migration_test_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  const validDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-agreements-migration-valid-'));
+  const invalidDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-agreements-migration-invalid-'));
+  const malformedDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-agreements-migration-malformed-'));
+  const malformedJsonDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-agreements-migration-malformed-json-'));
+  const duplicateDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-agreements-migration-duplicate-'));
+  try {
+    const db = mongoClient.db(dbName);
+    await writeExport(validDir, migrationFixtureExport());
+
+    const valid = await runMigration(validDir, { dbName, dryRun: true });
+    assert.equal(valid.code, 0, valid.output);
+    const summary = JSON.parse(valid.stdout);
+    assert.equal(summary.dryRun, true);
+    assert.equal(summary.collections.template_access, 2);
+    assert.equal(summary.mappings.platform_users, 1);
+    assert.equal(await db.collection('platform_users').countDocuments(), 0);
+    assert.equal(await db.collection('migration_mappings').countDocuments(), 0);
+
+    const importResult = await runMigration(validDir, { dbName, dryRun: false });
+    assert.equal(importResult.code, 0, importResult.output);
+    const importSummary = JSON.parse(importResult.stdout);
+    assert.equal(importSummary.dryRun, false);
+    assert.equal(importSummary.mappingDocuments.latest, true);
+    assert.equal(await db.collection('platform_users').countDocuments(), 1);
+    assert.equal(await db.collection('user_identities').countDocuments(), 1);
+    assert.equal(await db.collection('user_contacts').countDocuments(), 1);
+    assert.equal(await db.collection('user_wallets').countDocuments(), 1);
+    assert.equal(await db.collection('agreements').countDocuments(), 1);
+    assert.equal(await db.collection('agreement_inputs').countDocuments(), 1);
+    assert.equal(await db.collection('template_access').countDocuments(), 2);
+    assert.equal(await db.collection('migration_mappings').countDocuments(), 2);
+    assert.equal(await db.collection('platform_users').countDocuments({ _id: { $exists: true }, id: 'user-1' }), 1);
+    const importedUser = await db.collection('platform_users').findOne({ id: 'user-1' });
+    assert.notDeepEqual(importedUser._id, { $oid: '64f000000000000000000001' });
+    assert.equal(importedUser.email, 'owner@example.com');
+    assert.deepEqual(await db.collection('template_access').findOne(
+      { kind: 'global-default' },
+      { projection: { _id: 0 } },
+    ), {
+      kind: 'global-default',
+      templateIds: ['did:template:mou-v1'],
+    });
+
+    const rerunResult = await runMigration(validDir, { dbName, dryRun: false });
+    assert.equal(rerunResult.code, 0, rerunResult.output);
+    assert.equal(await db.collection('platform_users').countDocuments(), 1);
+    assert.equal(await db.collection('template_access').countDocuments(), 2);
+    assert.equal(await db.collection('migration_mappings').countDocuments(), 2);
+    const mapping = await db.collection('migration_mappings').findOne({ id: importSummary.id }, { projection: { _id: 0 } });
+    assert.equal(mapping.preservedIds, true);
+    assert.equal(mapping.mappings.platform_users[0].sourceMongoId, '64f000000000000000000001');
+    assert.deepEqual(mapping.mappings.agreements[0].targetFilter, { id: 'agreement-1' });
+
+    await writeExport(invalidDir, {
+      users: [{ id: 'user-1' }],
+      user_contacts: [{ id: 'contact-1', userId: 'missing-user', type: 'email', valueNormalized: 'missing@example.com' }],
+      agreements: [{ id: 'agreement-1' }],
+      agreement_inputs: [{ id: 'input-1', agreementId: 'missing-agreement', inputId: 'sign' }],
+      template_access: [
+        { kind: 'global-default', platformUserId: 'user-1', templateIds: ['did:template:mou-v1'] },
+        { kind: 'user-whitelist', platformUserId: 'missing-user', templateIds: ['did:template:mou-v1'] },
+      ],
+    });
+
+    const invalidCountBefore = await db.collection('platform_users').countDocuments();
+    const invalid = await runMigration(invalidDir, { dbName, dryRun: false });
+    assert.notEqual(invalid.code, 0, invalid.output);
+    assert.match(invalid.output, /references missing platform user missing-user/);
+    assert.match(invalid.output, /references missing agreement missing-agreement/);
+    assert.match(invalid.output, /global-default must not include platformUserId/);
+    assert.equal(await db.collection('platform_users').countDocuments(), invalidCountBefore);
+
+    await fs.writeFile(path.join(malformedDir, 'users.json'), JSON.stringify([{ id: 'user-1' }, null], null, 2));
+    const malformed = await runMigration(malformedDir, { dbName, dryRun: false });
+    assert.notEqual(malformed.code, 0, malformed.output);
+    assert.match(malformed.output, /users\.json\[1\] must be an object/);
+    assert.equal(await db.collection('platform_users').countDocuments(), invalidCountBefore);
+
+    await fs.writeFile(path.join(malformedJsonDir, 'users.json'), '[{"id":"user-1"},');
+    const malformedJson = await runMigration(malformedJsonDir, { dbName, dryRun: false });
+    assert.notEqual(malformedJson.code, 0, malformedJson.output);
+    assert.match(malformedJson.output, /users\.json contains malformed JSON/);
+    assert.equal(await db.collection('platform_users').countDocuments(), invalidCountBefore);
+
+    await writeExport(duplicateDir, {
+      users: [{ id: 'user-1' }, { id: 'user-1' }],
+      template_access: [
+        { kind: 'global-default', templateIds: ['did:template:mou-v1'] },
+        { kind: 'global-default', templateIds: ['did:template:msa-v1'] },
+        { kind: 'user-whitelist', platformUserId: 'missing-user', templateIds: [42] },
+      ],
+    });
+    const duplicate = await runMigration(duplicateDir, { dbName, dryRun: false });
+    assert.notEqual(duplicate.code, 0, duplicate.output);
+    assert.match(duplicate.output, /platform_users contains duplicate domain key user-1/);
+    assert.match(duplicate.output, /template_access contains duplicate domain key global-default/);
+    assert.match(duplicate.output, /templateIds must contain non-empty strings/);
+    assert.equal(await db.collection('platform_users').countDocuments(), invalidCountBefore);
+  } finally {
+    await fs.rm(validDir, { recursive: true, force: true });
+    await fs.rm(invalidDir, { recursive: true, force: true });
+    await fs.rm(malformedDir, { recursive: true, force: true });
+    await fs.rm(malformedJsonDir, { recursive: true, force: true });
+    await fs.rm(duplicateDir, { recursive: true, force: true });
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Agreements API client emits the outbound external API contract used by the standalone bridge', async () => {
+  const { ApiClient } = await import(pathToFileURL(path.join(
+    appRoot,
+    'backend/node_modules/@cns-labs/agreements-api-client/dist/client.js',
+  )).href);
+  const calls = [];
+  const client = new ApiClient({
+    baseUrl: 'https://external-api.example.test',
+    apiKey: 'external-key',
+    fetch: async (url, init = {}) => {
+      calls.push({
+        url: String(url),
+        method: init.method,
+        headers: init.headers,
+        body: init.body ? JSON.parse(String(init.body)) : undefined,
+      });
+      if (String(url).endsWith('/deploy-with-permit')) {
+        return jsonResponse(201, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: init.body ? JSON.parse(String(init.body)).chainId : undefined, state: 'Active' }));
+      }
+      if (String(url).endsWith('/input')) {
+        return jsonResponse(201, successEnvelope({ agreementAddress: 'agr_1', inputId: 'submit', status: 'MINED' }));
+      }
+      if (String(url).endsWith('/agr_1')) {
+        return jsonResponse(200, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: 59141, state: 'Active' }));
+      }
+      if (String(url).endsWith('/state')) {
+        return jsonResponse(200, successEnvelope({ state: 'Active' }));
+      }
+      return jsonResponse(200, listEnvelope([]));
+    },
+  });
+
+  const deployResult = await client.deployWithPermit({ agreement: { metadata: { id: 'template-1' } }, displayName: 'SDK contract test', chainId: 59141, signer: '0x1111111111111111111111111111111111111111', deadline: 1, signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` } });
+  const inputResult = await client.submitAgreementInput('agr_1', { inputId: 'submit', values: { ok: true }, signer: '0x1111111111111111111111111111111111111111' });
+  const agreementResult = await client.getAgreement('agr_1');
+  const stateResult = await client.getAgreementState('agr_1');
+  const inputsPage = await client.listAgreementInputs('agr_1', { userId: 'platform-user-1' });
+
+  assert.deepEqual(calls.map((call) => [call.method, call.url]), [
+    ['POST', 'https://external-api.example.test/v0/agreements/deploy-with-permit'],
+    ['POST', 'https://external-api.example.test/v0/agreements/agr_1/input'],
+    ['GET', 'https://external-api.example.test/v0/agreements/agr_1'],
+    ['GET', 'https://external-api.example.test/v0/agreements/agr_1/state'],
+    ['GET', 'https://external-api.example.test/v0/agreements/agr_1/inputs?userId=platform-user-1'],
+  ]);
+  for (const call of calls) {
+    assert.equal(call.headers['X-API-Key'], 'external-key');
+    assert.equal(call.headers.Accept, 'application/json');
+  }
+  assert.equal(calls[0].headers['Content-Type'], 'application/json');
+  assert.equal(calls[1].headers['Content-Type'], 'application/json');
+  assert.equal(calls[0].body.chainId, 59141);
+  assert.equal(calls[0].body.signer, '0x1111111111111111111111111111111111111111');
+  assert.deepEqual(calls[1].body.values, { ok: true });
+  assert.equal(deployResult.id, 'agr_1');
+  assert.equal(inputResult.inputId, 'submit');
+  assert.equal(agreementResult.id, 'agr_1');
+  assert.equal(stateResult.state, 'Active');
+  assert.deepEqual(inputsPage.data, []);
+  assert.equal(inputsPage.pageInfo.nextCursor, null);
+});
+
+test('Nest backend persists template access through Mongo-backed admin module', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const port = 4390 + Math.floor(Math.random() * 200);
+  const dbName = `standalone_agreements_nest_test_${process.pid}_${port}`;
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: mongoUri,
+      MONGO_DB_NAME: dbName,
+      SERVICE_AUTH_TOKEN: serviceToken,
+      EXTERNAL_API_BASE_URL: 'mock',
+      SHODAI_WEBHOOK_SECRET: 'whsec_test',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  try {
+    await waitForHealth(port, child, () => logs);
+
+    const token = tokenFor({
+      userId: 'nest-mongo-smoke-user',
+      email: 'nest-mongo-smoke@example.com',
+      wallet: '0x1111111111111111111111111111111111111111',
+    });
+    const signinResponse = await fetch(`http://localhost:${port}/auth-api/auth/signin`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token, freshAuth: true }),
+    });
+    const signinBody = await readJsonResponse(signinResponse);
+    assert.equal(signinResponse.status, 200, JSON.stringify(signinBody));
+    assert.equal(signinBody.success, true);
+    assert.equal(signinBody.user.email, 'nest-mongo-smoke@example.com');
+    assert.ok(signinBody.platformUserId);
+
+    const emptyAvailableResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/templates/available`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const emptyAvailableBody = await readJsonResponse(emptyAvailableResponse);
+    assert.equal(emptyAvailableResponse.status, 200, JSON.stringify(emptyAvailableBody));
+    assert.deepEqual(emptyAvailableBody, {
+      defaultTemplateIds: [],
+      whitelistedTemplateIds: [],
+    });
+
+    const templatesResponse = await fetch(`http://localhost:${port}/agreements-api/templates`);
+    const templatesBody = await readJsonResponse(templatesResponse);
+    assert.equal(templatesResponse.status, 200, JSON.stringify(templatesBody));
+    assert.ok(templatesBody.some((template) => template.templateId === 'did:template:mou-v1'));
+
+    const templateResponse = await fetch(`http://localhost:${port}/agreements-api/templates/${encodeURIComponent('did:template:mou-v1')}`);
+    const templateBody = await readJsonResponse(templateResponse);
+    assert.equal(templateResponse.status, 200, JSON.stringify(templateBody));
+    assert.equal(templateBody.metadata.templateId, 'did:template:mou-v1');
+
+    const telemetryPingResponse = await fetch(`http://localhost:${port}/agreements-api/telemetry/ping`, {
+      headers: { 'x-correlation-id': 'nest-smoke-correlation' },
+    });
+    const telemetryPingBody = await readJsonResponse(telemetryPingResponse);
+    assert.equal(telemetryPingResponse.status, 200, JSON.stringify(telemetryPingBody));
+    assert.equal(telemetryPingBody.service, 'agreements-api');
+    assert.equal(telemetryPingBody.correlationId, 'nest-smoke-correlation');
+
+    const telemetrySmokeResponse = await fetch(`http://localhost:${port}/agreements-api/telemetry/smoke/full-stack?failAt=auth-api`);
+    const telemetrySmokeBody = await readJsonResponse(telemetrySmokeResponse);
+    assert.equal(telemetrySmokeResponse.status, 500, JSON.stringify(telemetrySmokeBody));
+
+    const unauthorizedDefaultsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/admin/template-access/defaults`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateIds: ['did:template:mou-v1'] }),
+    });
+    assert.equal(unauthorizedDefaultsResponse.status, 401, await unauthorizedDefaultsResponse.text());
+
+    const wrongServiceTokenResponse = await fetch(`http://localhost:${port}/auth-api/auth/users/get-or-create-with-wallet`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-service-token': 'wrong-service-token',
+      },
+      body: JSON.stringify({ email: 'blocked@example.com' }),
+    });
+    assert.equal(wrongServiceTokenResponse.status, 401, await wrongServiceTokenResponse.text());
+
+    const defaultsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/admin/template-access/defaults`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-service-token': serviceToken,
+      },
+      body: JSON.stringify({ templateIds: ['did:example:mou-v1'] }),
+    });
+    const defaultsBody = await readJsonResponse(defaultsResponse);
+    assert.equal(defaultsResponse.status, 200, JSON.stringify(defaultsBody));
+    assert.deepEqual(defaultsBody, {
+      kind: 'global-default',
+      templateIds: ['did:template:mou-v1'],
+    });
+
+    const whitelistResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/admin/template-access/${signinBody.platformUserId}`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-service-token': serviceToken,
+      },
+      body: JSON.stringify({ templateIds: ['did:example:service-retainer-manual-balance'] }),
+    });
+    const whitelistBody = await readJsonResponse(whitelistResponse);
+    assert.equal(whitelistResponse.status, 200, JSON.stringify(whitelistBody));
+    assert.deepEqual(whitelistBody.templateIds, ['did:template:service-retainer-manual-balance-v0-1']);
+
+    const availableResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/templates/available`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const availableBody = await readJsonResponse(availableResponse);
+    assert.equal(availableResponse.status, 200, JSON.stringify(availableBody));
+    assert.deepEqual(availableBody, {
+      defaultTemplateIds: ['did:template:mou-v1'],
+      whitelistedTemplateIds: ['did:template:service-retainer-manual-balance-v0-1'],
+    });
+
+    const missingAuthAvailableResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/templates/available`);
+    assert.equal(missingAuthAvailableResponse.status, 401, await missingAuthAvailableResponse.text());
+
+    const malformedAuthListResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      headers: { authorization: 'Bearer ' },
+    });
+    assert.equal(malformedAuthListResponse.status, 401, await malformedAuthListResponse.text());
+
+    const draftResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ agreement: templateBody, displayName: 'Nest Mongo draft' }),
+    });
+    const draftBody = await readJsonResponse(draftResponse);
+    assert.equal(draftResponse.status, 201, JSON.stringify(draftBody));
+    assert.equal(draftBody.status, 'Draft');
+    assert.equal(draftBody.displayName, 'Nest Mongo draft');
+
+    const serviceRetainerTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/templates/${encodeURIComponent('did:template:service-retainer-manual-balance-v0-1')}`);
+    const serviceRetainerTemplateBody = await readJsonResponse(serviceRetainerTemplateResponse);
+    assert.equal(serviceRetainerTemplateResponse.status, 200, JSON.stringify(serviceRetainerTemplateBody));
+    assert.equal(serviceRetainerTemplateBody.metadata.templateId, 'did:template:service-retainer-manual-balance-v0-1');
+
+    const serviceRetainerDraftResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ agreement: serviceRetainerTemplateBody, displayName: 'Manual balance retainer draft' }),
+    });
+    const serviceRetainerDraftBody = await readJsonResponse(serviceRetainerDraftResponse);
+    assert.equal(serviceRetainerDraftResponse.status, 201, JSON.stringify(serviceRetainerDraftBody));
+    assert.equal(serviceRetainerDraftBody.json.metadata.templateId, 'did:template:service-retainer-manual-balance-v0-1');
+
+    const unauthorizedTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/templates/${encodeURIComponent('did:template:purchase-order-auto-pay-actions-v1')}`);
+    const unauthorizedTemplateBody = await readJsonResponse(unauthorizedTemplateResponse);
+    assert.equal(unauthorizedTemplateResponse.status, 200, JSON.stringify(unauthorizedTemplateBody));
+    const unauthorizedDraftCountBefore = await mongoClient.db(dbName).collection('agreements').countDocuments();
+    const unauthorizedDraftResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ agreement: unauthorizedTemplateBody, displayName: 'Forbidden purchase order draft' }),
+    });
+    assert.equal(unauthorizedDraftResponse.status, 403, await unauthorizedDraftResponse.text());
+    assert.equal(await mongoClient.db(dbName).collection('agreements').countDocuments(), unauthorizedDraftCountBefore);
+
+    const missingTemplateMetadataCountBefore = await mongoClient.db(dbName).collection('agreements').countDocuments();
+    const missingTemplateMetadataResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        agreement: { ...templateBody, metadata: { ...templateBody.metadata, templateId: undefined } },
+        displayName: 'Missing template metadata draft',
+      }),
+    });
+    assert.equal(missingTemplateMetadataResponse.status, 400, await missingTemplateMetadataResponse.text());
+    assert.equal(await mongoClient.db(dbName).collection('agreements').countDocuments(), missingTemplateMetadataCountBefore);
+
+    const valuesResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/values`, {
+      method: 'PATCH',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ values: { effectiveDate: '2026-01-01T00:00:00.000Z' } }),
+    });
+    const valuesBody = await readJsonResponse(valuesResponse);
+    assert.equal(valuesResponse.status, 200, JSON.stringify(valuesBody));
+    assert.equal(valuesBody.variables.effectiveDate, '2026-01-01T00:00:00.000Z');
+
+    const participantsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/participants`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        participants: [{
+          variableKey: 'clientWalletAddress',
+          firstName: 'Pat',
+          lastName: 'Participant',
+          email: 'Participant@Example.com',
+          walletAddress: '0x2222222222222222222222222222222222222222',
+        }],
+      }),
+    });
+    const participantsBody = await readJsonResponse(participantsResponse);
+    assert.equal(participantsResponse.status, 200, JSON.stringify(participantsBody));
+    assert.deepEqual(participantsBody.participants, [{
+      variableKey: 'clientWalletAddress',
+      firstName: 'Pat',
+      lastName: 'Participant',
+      email: 'participant@example.com',
+      walletAddress: '0x2222222222222222222222222222222222222222',
+      status: 'accepted',
+    }]);
+
+    const participantToken = tokenFor({
+      userId: 'nest-mongo-participant-user',
+      email: 'participant@example.com',
+      wallet: '0x3333333333333333333333333333333333333333',
+    });
+    const participantGetResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}`, {
+      headers: { authorization: `Bearer ${participantToken}` },
+    });
+    const participantGetBody = await readJsonResponse(participantGetResponse);
+    assert.equal(participantGetResponse.status, 200, JSON.stringify(participantGetBody));
+    assert.equal(participantGetBody.id, draftBody.id);
+
+    const removedParticipantsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/participants`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ participants: [] }),
+    });
+    const removedParticipantsBody = await readJsonResponse(removedParticipantsResponse);
+    assert.equal(removedParticipantsResponse.status, 200, JSON.stringify(removedParticipantsBody));
+    assert.deepEqual(removedParticipantsBody.participants, []);
+    assert.equal(removedParticipantsBody.variables.clientWalletAddress, undefined);
+    assert.ok(!removedParticipantsBody.contributors.includes('0x2222222222222222222222222222222222222222'));
+
+    const removedParticipantGetResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}`, {
+      headers: { authorization: `Bearer ${participantToken}` },
+    });
+    assert.equal(removedParticipantGetResponse.status, 403, await removedParticipantGetResponse.text());
+
+    const restoredParticipantsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/participants`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        participants: [{
+          variableKey: 'clientWalletAddress',
+          firstName: 'Pat',
+          lastName: 'Participant',
+          email: 'Participant@Example.com',
+          walletAddress: '0x2222222222222222222222222222222222222222',
+        }],
+      }),
+    });
+    assert.equal(restoredParticipantsResponse.status, 200, await restoredParticipantsResponse.text());
+
+    const nonOwnerUpdateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/values`, {
+      method: 'PATCH',
+      headers: {
+        authorization: `Bearer ${participantToken}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ values: { effectiveDate: '2027-01-01T00:00:00.000Z' } }),
+    });
+    assert.equal(nonOwnerUpdateResponse.status, 403, await nonOwnerUpdateResponse.text());
+
+    const invalidParticipantResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/participants`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ participants: [{ variableKey: 'clientWalletAddress', email: 'not-an-email' }] }),
+    });
+    assert.equal(invalidParticipantResponse.status, 400, await invalidParticipantResponse.text());
+
+    const invalidObserversResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/observers`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ observers: ['bad-observer'] }),
+    });
+    assert.equal(invalidObserversResponse.status, 400, await invalidObserversResponse.text());
+
+    const observersResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/observers`, {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ observers: ['observer@example.com'] }),
+    });
+    const observersBody = await readJsonResponse(observersResponse);
+    assert.equal(observersResponse.status, 200, JSON.stringify(observersBody));
+    assert.deepEqual(observersBody.observers, ['observer@example.com']);
+
+    const observerToken = tokenFor({
+      userId: 'nest-mongo-observer-user',
+      email: 'observer@example.com',
+      wallet: '0x4444444444444444444444444444444444444444',
+    });
+    const observerGetResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}`, {
+      headers: { authorization: `Bearer ${observerToken}` },
+    });
+    const observerGetBody = await readJsonResponse(observerGetResponse);
+    assert.equal(observerGetResponse.status, 200, JSON.stringify(observerGetBody));
+    assert.equal(observerGetBody.id, draftBody.id);
+
+    const listResponse = await fetch(`http://localhost:${port}/agreements-api/agreements?status=Draft`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const listBody = await readJsonResponse(listResponse);
+    assert.equal(listResponse.status, 200, JSON.stringify(listBody));
+    assert.ok(listBody.some((agreement) => agreement.id === draftBody.id));
+
+    const deployResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/deploy-with-permit`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        signer: '0x1111111111111111111111111111111111111111',
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+      }),
+    });
+    const deployBody = await readJsonResponse(deployResponse);
+    assert.equal(deployResponse.status, 201, JSON.stringify(deployBody));
+    assert.equal(deployBody.status, 'Deployed');
+    assert.match(deployBody.address, /^0x[0-9a-f]{40}$/);
+
+    const inputResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'nestSmokeInput',
+        values: { note: 'hello' },
+        signer: '0x1111111111111111111111111111111111111111',
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'3'.repeat(64)}`, s: `0x${'4'.repeat(64)}` },
+      }),
+    });
+    const inputBody = await readJsonResponse(inputResponse);
+    assert.equal(inputResponse.status, 201, JSON.stringify(inputBody));
+    assert.equal(inputBody.status, 'MINED');
+
+    const stateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/state`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const stateBody = await readJsonResponse(stateResponse);
+    assert.equal(stateResponse.status, 200, JSON.stringify(stateBody));
+    assert.equal(stateBody.status, 'Deployed');
+
+    const inputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/inputs`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const inputsBody = await readJsonResponse(inputsResponse);
+    assert.equal(inputsResponse.status, 200, JSON.stringify(inputsBody));
+    assert.ok(inputsBody.some((input) => input.inputId === 'nestSmokeInput'));
+
+    const deployedDeleteResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(deployedDeleteResponse.status, 409, await deployedDeleteResponse.text());
+
+    const deletableDraftResponse = await fetch(`http://localhost:${port}/agreements-api/agreements`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ agreement: templateBody, displayName: 'Draft to delete' }),
+    });
+    const deletableDraftBody = await readJsonResponse(deletableDraftResponse);
+    assert.equal(deletableDraftResponse.status, 201, JSON.stringify(deletableDraftBody));
+
+    const nonOwnerDeleteResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deletableDraftBody.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${participantToken}` },
+    });
+    assert.equal(nonOwnerDeleteResponse.status, 403, await nonOwnerDeleteResponse.text());
+
+    const deleteResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deletableDraftBody.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const deleteBody = await readJsonResponse(deleteResponse);
+    assert.equal(deleteResponse.status, 200, JSON.stringify(deleteBody));
+    assert.deepEqual(deleteBody, { ok: true });
+
+    const deletedGetResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deletableDraftBody.id}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(deletedGetResponse.status, 404, await deletedGetResponse.text());
+
+    const persisted = await mongoClient.db(dbName).collection('template_access').findOne(
+      { kind: 'global-default' },
+      { projection: { _id: 0 } },
+    );
+    assert.deepEqual(persisted, {
+      kind: 'global-default',
+      templateIds: ['did:template:mou-v1'],
+    });
+    const platformUsers = await mongoClient.db(dbName).collection('platform_users').find({}, { projection: { _id: 0, id: 1 } }).toArray();
+    const platformUserIds = new Set(platformUsers.map((user) => user.id));
+    assert.equal(platformUsers.length, 3);
+
+    const dynamicIdentities = await mongoClient.db(dbName).collection('user_identities')
+      .find({ provider: 'dynamic' }, { projection: { _id: 0, provider: 1, subject: 1, userId: 1 } })
+      .toArray();
+    const expectedDynamicSubjects = [
+      'dynamic:nest-mongo-smoke-user',
+      'dynamic:nest-mongo-participant-user',
+      'dynamic:nest-mongo-observer-user',
+    ];
+    assert.deepEqual(dynamicIdentities.map((identity) => identity.subject).sort(), expectedDynamicSubjects.sort());
+    assert.equal(new Set(dynamicIdentities.map((identity) => identity.subject)).size, dynamicIdentities.length);
+    assert.ok(dynamicIdentities.every((identity) => platformUserIds.has(identity.userId)));
+    assert.equal(await mongoClient.db(dbName).collection('user_contacts').countDocuments(), 3);
+    const userWallets = await mongoClient.db(dbName).collection('user_wallets')
+      .find({}, { projection: { _id: 0, address: 1, userId: 1 } })
+      .toArray();
+    const expectedAuthenticatedWallets = [
+      '0x1111111111111111111111111111111111111111',
+      '0x3333333333333333333333333333333333333333',
+      '0x4444444444444444444444444444444444444444',
+    ];
+    const walletAddresses = userWallets.map((wallet) => wallet.address).filter(Boolean);
+    for (const address of expectedAuthenticatedWallets) {
+      assert.ok(walletAddresses.includes(address), `missing wallet ${address}`);
+    }
+    assert.equal(new Set(walletAddresses).size, walletAddresses.length);
+    assert.ok(userWallets.every((wallet) => platformUserIds.has(wallet.userId)));
+  } finally {
+    child.kill('SIGTERM');
+    await once(child, 'exit').catch(() => undefined);
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Standalone external bridge uses the real API client surface and mirrors/audits deployed execution', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const externalCalls = [];
+  let submittedInput = null;
+  let listInputsCalls = 0;
+  const externalServer = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const body = rawBody ? JSON.parse(rawBody) : undefined;
+    externalCalls.push({
+      method: req.method,
+      url: req.url,
+      apiKey: req.headers['x-api-key'],
+      body,
+    });
+
+    if (body?.metadata?.templateId === 'fail-template') {
+      writeJson(res, 400, errorEnvelope('bad_request', 'template rejected by external API', 'req_fake_fail'));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v0/agreements/validate-template') {
+      writeJson(res, 201, successEnvelope({
+        templateId: body?.metadata?.templateId || null,
+        participantVariableKeys: ['clientWalletAddress'],
+        inputIds: ['submitInvoice'],
+        stateIds: ['AWAITING_INPUT', 'COMPLETE'],
+        warnings: [],
+      }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v0/agreements/validate') {
+      writeJson(res, 201, successEnvelope({
+        templateId: body?.agreement?.metadata?.templateId || null,
+        participantVariableKeys: ['clientWalletAddress'],
+        participants: body?.participants || [],
+        observers: body?.observers || [],
+        variables: {
+          ...(body?.initValues || {}),
+          clientWalletAddress: body?.participants?.[0]?.walletAddress,
+        },
+        contributors: [body?.participants?.[0]?.walletAddress].filter(Boolean),
+        warnings: [],
+      }));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v0/agreements/deploy-with-permit') {
+      writeJson(res, 201, successEnvelope({
+        id: 'external-agreement-1',
+        address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        chainId: body?.chainId,
+        status: 'Deployed',
+        state: 'AWAITING_INPUT',
+        variables: {
+          ...(body?.initValues || {}),
+          clientWalletAddress: body?.participants?.[0]?.walletAddress,
+        },
+        participants: body?.participants || [],
+        observers: body?.observers || [],
+        onChain: { owner: body?.signer, source: 'fake-real-api' },
+        displayName: body?.displayName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-1/state') {
+      writeJson(res, 200, successEnvelope({ status: 'Deployed', state: submittedInput ? 'COMPLETE' : 'AWAITING_INPUT' }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge') {
+      listInputsCalls += 1;
+      writeJson(res, 200, listEnvelope(submittedInput ? [{ ...submittedInput, _id: `external-input-doc-${listInputsCalls}` }] : []));
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/v0/agreements/external-agreement-1/input') {
+      submittedInput = {
+        _id: 'external-input-doc-submit',
+        agreementAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        chainId: 59141,
+        inputId: body?.inputId,
+        userId: 'platform-user-bridge',
+        txHash: `0x${'5'.repeat(64)}`,
+        payload: '0x',
+        values: body?.values || {},
+        status: 'MINED',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      writeJson(res, 201, successEnvelope(submittedInput));
+      return;
+    }
+
+    writeJson(res, 404, { statusCode: 404, message: `No fake external route for ${req.method} ${req.url}` });
+  });
+  await new Promise((resolve) => externalServer.listen(0, '127.0.0.1', resolve));
+  const externalPort = externalServer.address().port;
+
+  const port = 4990 + Math.floor(Math.random() * 200);
+  const dbName = `standalone_agreements_external_bridge_${process.pid}_${port}`;
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: mongoUri,
+      MONGO_DB_NAME: dbName,
+      SERVICE_AUTH_TOKEN: serviceToken,
+      EXTERNAL_API_BASE_URL: `http://127.0.0.1:${externalPort}`,
+      EXTERNAL_API_KEY: 'bridge-external-key',
+      SHODAI_WEBHOOK_SECRET: 'whsec_bridge',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  try {
+    await waitForHealth(port, child, () => logs);
+
+    const owner = '0x1111111111111111111111111111111111111111';
+    const participant = '0x2222222222222222222222222222222222222222';
+    const token = tokenFor({
+      userId: 'bridge-user',
+      email: 'bridge@example.com',
+      wallet: owner,
+    });
+    const signinResponse = await fetch(`http://localhost:${port}/auth-api/auth/signin`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token, freshAuth: true }),
+    });
+    const signinBody = await readJsonResponse(signinResponse);
+    assert.equal(signinResponse.status, 200, JSON.stringify(signinBody));
+
+    const agreementJson = {
+      metadata: { templateId: 'did:template:bridge-v1' },
+      variables: {
+        clientWalletAddress: { type: 'address', subtype: 'participant' },
+      },
+      execution: {
+        initialState: 'AWAITING_INPUT',
+        inputs: { submitInvoice: {} },
+        states: { AWAITING_INPUT: {}, COMPLETE: {} },
+      },
+    };
+
+    const validateTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(agreementJson),
+    });
+    const validateTemplateBody = await readJsonResponse(validateTemplateResponse);
+    assert.equal(validateTemplateResponse.status, 201, JSON.stringify(validateTemplateBody));
+    assert.deepEqual(validateTemplateBody.inputIds, ['submitInvoice']);
+
+    const validateDeploymentResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        agreement: agreementJson,
+        chainId: 59141,
+        initValues: { invoiceTotal: '1000' },
+        participants: [{ variableKey: 'clientWalletAddress', walletAddress: participant, email: 'client@example.com' }],
+        observers: ['observer@example.com'],
+      }),
+    });
+    const validateDeploymentBody = await readJsonResponse(validateDeploymentResponse);
+    assert.equal(validateDeploymentResponse.status, 201, JSON.stringify(validateDeploymentBody));
+    assert.equal(validateDeploymentBody.variables.clientWalletAddress, participant);
+
+    const now = new Date().toISOString();
+    await mongoClient.db(dbName).collection('agreements').insertOne({
+      id: 'bridge-draft-1',
+      status: 'Draft',
+      chainId: 59141,
+      displayName: 'Bridge Draft',
+      owner,
+      contributors: [owner],
+      json: agreementJson,
+      variables: { invoiceTotal: '1000' },
+      participants: [{ variableKey: 'clientWalletAddress', walletAddress: participant, email: 'client@example.com', status: 'accepted' }],
+      observers: ['observer@example.com'],
+      createdAt: now,
+      updatedAt: now,
+    });
+    const deployResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/bridge-draft-1/deploy-with-permit`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+        docUri: 'ipfs://agreement/signed-doc-uri',
+      }),
+    });
+    const deployBody = await readJsonResponse(deployResponse);
+    assert.equal(deployResponse.status, 201, JSON.stringify(deployBody));
+    assert.equal(deployBody.externalAgreementId, 'external-agreement-1');
+    assert.equal(deployBody.address, '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    assert.equal(deployBody.chainId, 59141);
+    assert.equal(deployBody.docUri, 'ipfs://agreement/signed-doc-uri');
+    assert.equal(deployBody.state, 'AWAITING_INPUT');
+    assert.equal(deployBody.variables.clientWalletAddress, participant);
+
+    const stateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/bridge-draft-1/state`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const stateBody = await readJsonResponse(stateResponse);
+    assert.equal(stateResponse.status, 200, JSON.stringify(stateBody));
+    assert.equal(stateBody.state, 'AWAITING_INPUT');
+
+    const submitResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'submitInvoice',
+        values: { invoiceNumber: 'INV-1' },
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'3'.repeat(64)}`, s: `0x${'4'.repeat(64)}` },
+      }),
+    });
+    const submitBody = await readJsonResponse(submitResponse);
+    assert.equal(submitResponse.status, 201, JSON.stringify(submitBody));
+    assert.equal(submitBody.status, 'MINED');
+
+    const inputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/inputs?userId=platform-user-bridge`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const inputsBody = await readJsonResponse(inputsResponse);
+    assert.equal(inputsResponse.status, 200, JSON.stringify(inputsBody));
+    assert.deepEqual(inputsBody.map((entry) => entry.inputId), ['submitInvoice']);
+
+    const repeatedInputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/inputs?userId=platform-user-bridge`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const repeatedInputsBody = await readJsonResponse(repeatedInputsResponse);
+    assert.equal(repeatedInputsResponse.status, 200, JSON.stringify(repeatedInputsBody));
+    assert.deepEqual(repeatedInputsBody.map((entry) => entry.inputId), ['submitInvoice']);
+
+    const mirroredAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+      { id: 'bridge-draft-1' },
+      { projection: { _id: 0 } },
+    );
+    assert.equal(mirroredAgreement.state, 'COMPLETE');
+    assert.equal(mirroredAgreement.lastInputId, 'submitInvoice');
+    assert.equal(mirroredAgreement.variables.invoiceNumber, 'INV-1');
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoice' }), 1);
+
+    const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ metadata: { templateId: 'fail-template' } }),
+    });
+    const failingValidateBody = await readJsonResponse(failingValidateResponse);
+    assert.equal(failingValidateResponse.status, 400, JSON.stringify(failingValidateBody));
+    assert.equal(failingValidateBody.message, 'template rejected by external API');
+
+    assert.deepEqual(externalCalls.map((call) => [call.method, call.url]), [
+      ['POST', '/v0/agreements/validate-template'],
+      ['POST', '/v0/agreements/validate'],
+      ['POST', '/v0/agreements/validate'],
+      ['POST', '/v0/agreements/deploy-with-permit'],
+      ['GET', '/v0/agreements/external-agreement-1/state'],
+      ['POST', '/v0/agreements/external-agreement-1/input'],
+      ['GET', '/v0/agreements/external-agreement-1/state'],
+      ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge'],
+      ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge'],
+      ['POST', '/v0/agreements/validate-template'],
+    ]);
+    assert.equal(
+      externalCalls.find((call) => call.url === '/v0/agreements/deploy-with-permit')?.body?.docUri,
+      'ipfs://agreement/signed-doc-uri',
+    );
+    assert.equal(
+      externalCalls.find((call) => call.url === '/v0/agreements/deploy-with-permit')?.body?.chainId,
+      59141,
+    );
+    assert.ok(
+      externalCalls
+        .filter((call) => call.url === '/v0/agreements/validate')
+        .every((call) => call.body?.chainId === 59141),
+    );
+    assert.ok(externalCalls.every((call) => call.apiKey === 'bridge-external-key'));
+
+    const auditEvents = await mongoClient.db(dbName).collection('external_api_events').find(
+      {},
+      { projection: { _id: 0, operation: 1, ok: 1, error: 1, path: 1, mock: 1, agreementId: 1, externalAgreementId: 1 } },
+    ).sort({ createdAt: 1 }).toArray();
+    assert.equal(auditEvents.filter((event) => event.ok === true).length, 9);
+    assert.equal(auditEvents.filter((event) => event.error === 'template rejected by external API').length, 1);
+    assert.ok(auditEvents.every((event) => event.mock === false));
+    assert.ok(auditEvents.every((event) => !JSON.stringify(event).includes('bridge-external-key')));
+    assert.ok(auditEvents.some((event) =>
+      event.operation === 'deploy-with-permit' &&
+      event.agreementId === 'bridge-draft-1'
+    ));
+    assert.ok(auditEvents.some((event) =>
+      event.operation === 'submit-input' &&
+      event.agreementId === 'bridge-draft-1' &&
+      event.externalAgreementId === 'external-agreement-1'
+    ));
+    assert.ok(!logs.includes('MongoServerError'), logs);
+  } finally {
+    child.kill('SIGTERM');
+    await once(child, 'exit').catch(() => undefined);
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+    await new Promise((resolve) => externalServer.close(resolve));
+  }
+});
+
+test('Webhook receiver verifies deliveries and reconciles the local agreement mirror', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const webhookSecret = 'whsec_webhook_receiver_test';
+  const externalCalls = [];
+  const externalInputs = [{
+    _id: 'external-input-doc-webhook',
+    agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    chainId: 59141,
+    inputId: 'acceptFinal',
+    userId: 'platform-user-webhook',
+    txHash: `0x${'6'.repeat(64)}`,
+    payload: '0x',
+    values: {
+      finalSignature: 'Webhook reconciled final signature',
+    },
+    status: 'MINED',
+    createdAt: '2026-06-02T18:01:00.000Z',
+    updatedAt: '2026-06-02T18:01:00.000Z',
+  }];
+  const externalServer = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    externalCalls.push({
+      method: req.method,
+      url: req.url,
+      apiKey: req.headers['x-api-key'],
+    });
+
+    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1') {
+      writeJson(res, 200, successEnvelope({
+        id: 'external-agreement-webhook-1',
+        address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        chainId: 59141,
+        status: 'Deployed',
+        state: 'ACCEPTED',
+        variables: {
+          scope: 'Validate webhook reconciliation',
+        },
+        participants: [{ variableKey: 'clientWalletAddress', walletAddress: '0x2222222222222222222222222222222222222222', email: 'client@example.com' }],
+        observers: ['observer@example.com'],
+        onChain: { source: 'fake-webhook-api' },
+        displayName: 'Webhook Reconciled Agreement',
+        createdAt: '2026-06-02T18:00:00.000Z',
+        updatedAt: '2026-06-02T18:02:00.000Z',
+      }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1/state') {
+      writeJson(res, 200, successEnvelope({ status: 'Deployed', state: 'ACCEPTED' }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1/inputs') {
+      writeJson(res, 200, listEnvelope(externalInputs));
+      return;
+    }
+
+    writeJson(res, 404, { statusCode: 404, message: `No fake external route for ${req.method} ${req.url}` });
+  });
+  await new Promise((resolve) => externalServer.listen(0, '127.0.0.1', resolve));
+  const externalPort = externalServer.address().port;
+
+  const port = 5190 + Math.floor(Math.random() * 200);
+  const dbName = `standalone_agreements_webhook_receiver_${process.pid}_${port}`;
+  const child = spawn('pnpm', ['--filter', 'shodai-webhook-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: mongoUri,
+      MONGO_DB_NAME: dbName,
+      SERVICE_AUTH_TOKEN: serviceToken,
+      EXTERNAL_API_BASE_URL: `http://127.0.0.1:${externalPort}`,
+      EXTERNAL_API_KEY: 'webhook-external-key',
+      SHODAI_WEBHOOK_SECRET: webhookSecret,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  try {
+    await waitForHealth(port, child, () => logs);
+
+    const now = new Date().toISOString();
+    await mongoClient.db(dbName).collection('agreements').insertOne({
+      id: 'webhook-local-1',
+      externalAgreementId: 'external-agreement-webhook-1',
+      address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      status: 'Deployed',
+      chainId: 59141,
+      displayName: 'Webhook Local Agreement',
+      owner: '0x1111111111111111111111111111111111111111',
+      contributors: ['0x1111111111111111111111111111111111111111'],
+      json: { metadata: { templateId: 'did:template:webhook-v1' }, execution: { initialState: 'PENDING_ACCEPTANCE' } },
+      variables: { scope: 'Before webhook' },
+      participants: [],
+      observers: [],
+      state: 'PENDING_ACCEPTANCE',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const acceptedEvent = {
+      id: 'evt_webhook_reconcile_1',
+      type: 'agreement.transitioned',
+      apiVersion: '2026-06-01',
+      createdAt: '2026-06-02T18:02:00.000Z',
+      data: {
+        agreementId: 'external-agreement-webhook-1',
+        agreementName: 'Webhook Reconciled Agreement',
+        templateId: 'did:template:webhook-v1',
+        fromState: 'PENDING_ACCEPTANCE',
+        toState: 'ACCEPTED',
+        inputId: 'acceptFinal',
+      },
+    };
+    const acceptedRawBody = JSON.stringify(acceptedEvent);
+    const acceptedResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
+      method: 'POST',
+      headers: webhookHeaders(acceptedRawBody, acceptedEvent.id, webhookSecret),
+      body: acceptedRawBody,
+    });
+    assert.equal(acceptedResponse.status, 204, await acceptedResponse.text());
+
+    const reconciledAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+      { id: 'webhook-local-1' },
+      { projection: { _id: 0 } },
+    );
+    assert.equal(reconciledAgreement.state, 'ACCEPTED');
+    assert.equal(reconciledAgreement.lastWebhookEventId, acceptedEvent.id);
+    assert.equal(reconciledAgreement.lastWebhookEventAt, acceptedEvent.createdAt);
+    assert.equal(reconciledAgreement.lastInputId, 'acceptFinal');
+    assert.equal(reconciledAgreement.variables.scope, 'Validate webhook reconciliation');
+    assert.equal(reconciledAgreement.variables.finalSignature, 'Webhook reconciled final signature');
+    assert.equal(reconciledAgreement.onChain.source, 'fake-webhook-api');
+    assert.deepEqual(reconciledAgreement.observers, ['observer@example.com']);
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'acceptFinal' }), 1);
+
+    const processedEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: acceptedEvent.id },
+      { projection: { _id: 0, status: 1, processedAction: 1, reconciliation: 1 } },
+    );
+    assert.deepEqual(processedEvent, {
+      status: 'processed',
+      processedAction: 'reconciled_agreement_mirror',
+      reconciliation: {
+        state: 'ACCEPTED',
+        inputCount: 1,
+        latestInputId: 'acceptFinal',
+      },
+    });
+    assert.deepEqual(externalCalls.map((call) => [call.method, call.url]), [
+      ['GET', '/v0/agreements/external-agreement-webhook-1'],
+      ['GET', '/v0/agreements/external-agreement-webhook-1/state'],
+      ['GET', '/v0/agreements/external-agreement-webhook-1/inputs'],
+    ]);
+    assert.ok(externalCalls.every((call) => call.apiKey === 'webhook-external-key'));
+
+    const duplicateResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
+      method: 'POST',
+      headers: webhookHeaders(acceptedRawBody, acceptedEvent.id, webhookSecret),
+      body: acceptedRawBody,
+    });
+    assert.equal(duplicateResponse.status, 204, await duplicateResponse.text());
+    const duplicateEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: acceptedEvent.id },
+      { projection: { _id: 0, status: 1, duplicateDeliveryCount: 1 } },
+    );
+    assert.deepEqual(duplicateEvent, {
+      status: 'processed',
+      duplicateDeliveryCount: 1,
+    });
+    assert.equal(externalCalls.length, 3);
+
+    const staleEvent = {
+      ...acceptedEvent,
+      id: 'evt_webhook_stale_1',
+      createdAt: '2026-06-02T18:00:00.000Z',
+      data: {
+        ...acceptedEvent.data,
+        fromState: 'PENDING_PARTY_B_SIGNATURE',
+        toState: 'PENDING_ACCEPTANCE',
+        inputId: 'partyBSignature',
+      },
+    };
+    const staleRawBody = JSON.stringify(staleEvent);
+    const staleResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
+      method: 'POST',
+      headers: webhookHeaders(staleRawBody, staleEvent.id, webhookSecret),
+      body: staleRawBody,
+    });
+    assert.equal(staleResponse.status, 204, await staleResponse.text());
+    const staleStoredEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: staleEvent.id },
+      { projection: { _id: 0, status: 1, ignoredReason: 1 } },
+    );
+    assert.deepEqual(staleStoredEvent, {
+      status: 'ignored',
+      ignoredReason: 'stale_delivery',
+    });
+    const afterStaleAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+      { id: 'webhook-local-1' },
+      { projection: { _id: 0, state: 1, lastWebhookEventId: 1 } },
+    );
+    assert.deepEqual(afterStaleAgreement, {
+      state: 'ACCEPTED',
+      lastWebhookEventId: acceptedEvent.id,
+    });
+    assert.equal(externalCalls.length, 3);
+
+    const invalidResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
+      method: 'POST',
+      headers: {
+        ...webhookHeaders(acceptedRawBody, 'evt_bad_signature', webhookSecret),
+        'x-shodai-webhook-signature': 'sha256=bad',
+      },
+      body: acceptedRawBody,
+    });
+    assert.equal(invalidResponse.status, 400, await invalidResponse.text());
+    assert.equal(await mongoClient.db(dbName).collection('webhook_events').countDocuments({ eventId: 'evt_bad_signature' }), 0);
+  } finally {
+    child.kill('SIGTERM');
+    await once(child, 'exit').catch(() => undefined);
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+    await new Promise((resolve) => externalServer.close(resolve));
+  }
+});
+
+async function writeExport(dir, collections) {
+  const names = {
+    users: 'users.json',
+    user_identities: 'user_identities.json',
+    user_contacts: 'user_contacts.json',
+    user_wallets: 'user_wallets.json',
+    agreements: 'agreements.json',
+    agreement_inputs: 'inputs.json',
+    template_access: 'template_access.json',
+  };
+  for (const [key, value] of Object.entries(collections)) {
+    await fs.writeFile(path.join(dir, names[key]), JSON.stringify(value, null, 2));
+  }
+}
+
+function migrationFixtureExport() {
+  return {
+    users: [{ _id: { $oid: '64f000000000000000000001' }, id: 'user-1', email: 'owner@example.com' }],
+    user_identities: [{ _id: { $oid: '64f000000000000000000002' }, id: 'identity-1', userId: 'user-1', provider: 'dynamic', subject: 'dyn-user-1' }],
+    user_contacts: [{ _id: { $oid: '64f000000000000000000003' }, id: 'contact-1', userId: 'user-1', type: 'email', valueNormalized: 'owner@example.com' }],
+    user_wallets: [{ _id: { $oid: '64f000000000000000000004' }, id: 'wallet-1', userId: 'user-1', address: '0x1111111111111111111111111111111111111111' }],
+    agreements: [{ _id: { $oid: '64f000000000000000000005' }, id: 'agreement-1', owner: '0x1111111111111111111111111111111111111111' }],
+    agreement_inputs: [{ _id: { $oid: '64f000000000000000000006' }, id: 'input-1', agreementId: 'agreement-1', inputId: 'sign' }],
+    template_access: [
+      { _id: { $oid: '64f000000000000000000007' }, kind: 'global-default', templateIds: ['did:template:mou-v1'] },
+      { _id: { $oid: '64f000000000000000000008' }, id: 'access-1', kind: 'user-whitelist', platformUserId: 'user-1', templateIds: ['did:template:msa-v1'] },
+    ],
+  };
+}
+
+async function runMigration(inputDir, { dbName = 'standalone_agreements_migration_test', dryRun = true } = {}) {
+  const args = ['scripts/migrate-from-legacy-export.mjs', inputDir];
+  if (dryRun) args.push('--dry-run');
+  const child = spawn('node', args, {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      MONGO_URI: 'mongodb://localhost:27017',
+      MONGO_DB_NAME: dbName,
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.on('data', (chunk) => {
+    stdout += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk.toString();
+  });
+  const [code] = await once(child, 'exit');
+  return { code, stdout, stderr, output: `${stdout}${stderr}` };
+}
+
+function jsonResponse(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+function successEnvelope(data, requestId = 'req_test') {
+  return {
+    data,
+    meta: { apiVersion: 'v0', requestId },
+  };
+}
+
+function listEnvelope(data, requestId = 'req_test') {
+  return {
+    data,
+    pageInfo: { limit: 25, nextCursor: null },
+    meta: { apiVersion: 'v0', requestId },
+  };
+}
+
+function errorEnvelope(code, message, requestId = 'req_test_error', details) {
+  return {
+    error: {
+      code,
+      message,
+      details,
+      requestId,
+    },
+  };
+}
+
+function writeJson(res, status, body) {
+  res.writeHead(status, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(body));
+}
+
+function webhookHeaders(rawBody, eventId, secret, timestamp = String(Math.floor(Date.now() / 1000))) {
+  const signature = createHmac('sha256', secret)
+    .update(timestamp)
+    .update('.')
+    .update(rawBody)
+    .digest('hex');
+  return {
+    'content-type': 'application/json',
+    'x-shodai-webhook-id': eventId,
+    'x-shodai-webhook-timestamp': timestamp,
+    'x-shodai-webhook-signature': `sha256=${signature}`,
+  };
+}
+
+async function waitForHealth(port, child, getLogs) {
+  const started = Date.now();
+  while (Date.now() - started < 10000) {
+    if (child.exitCode !== null) {
+      throw new Error(`Nest backend exited early with ${child.exitCode}\n${getLogs()}`);
+    }
+    try {
+      const response = await fetch(`http://localhost:${port}/health`);
+      if (response.ok) return;
+    } catch {
+      // keep polling
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+
+  throw new Error(`Timed out waiting for Nest backend\n${getLogs()}`);
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function tokenFor({ userId, email, wallet }) {
+  return `agreements-dev:${Buffer.from(JSON.stringify({
+    userId,
+    email,
+    wallets: [{ address: wallet, chain: 'EVM', wallet_name: 'Agreements', wallet_provider: 'test' }],
+  })).toString('base64url')}`;
+}
