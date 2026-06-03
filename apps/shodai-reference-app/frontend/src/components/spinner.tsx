@@ -28,7 +28,7 @@ export interface SpinnerProps
 const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
   ({ className, size, spin = true, ...props }, ref) => {
     if (!spin) return null
-    
+
     return (
       <div
         ref={ref}
@@ -41,4 +41,3 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
 Spinner.displayName = "Spinner"
 
 export { Spinner, spinnerVariants }
-

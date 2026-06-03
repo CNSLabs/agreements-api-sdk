@@ -105,5 +105,3 @@ export function resolveIssuerAddresses(
 
   return addresses;
 }
-
-

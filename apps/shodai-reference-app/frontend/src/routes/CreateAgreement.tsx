@@ -237,7 +237,7 @@ const CreateAgreement: React.FC = () => {
               );
             })}
           </div>
-          )} 
+          )}
         </div>
     </div>
   );

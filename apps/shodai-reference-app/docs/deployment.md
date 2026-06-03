@@ -34,6 +34,12 @@ Build the frontend:
 pnpm frontend:build
 ```
 
+Build the frontend container from the SDK repo root:
+
+```sh
+docker build -f apps/shodai-reference-app/frontend/Dockerfile .
+```
+
 Serve `frontend/dist` at `/agreements/`.
 The repo includes `frontend/nginx.conf` as a concrete static-serving reference.
 

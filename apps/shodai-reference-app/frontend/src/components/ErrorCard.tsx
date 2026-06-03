@@ -21,17 +21,17 @@ const ErrorCard: React.FC<ErrorCardProps> = ({
   className = '',
 }) => {
   const [showDetails, setShowDetails] = React.useState(initialShowDetails);
-  
+
   const formattedDetails = React.useMemo(() => {
     if (!details) return null;
-    
+
     if (details instanceof Error) {
       return details.stack || details.toString();
     }
-    
+
     return details;
   }, [details]);
-  
+
   return (
     <div className={`rounded-lg border-2 border-error-600 bg-error-50 ${className}`}>
       <div className="flex flex-row items-center gap-2 p-4 border-b border-error-200">
@@ -40,10 +40,10 @@ const ErrorCard: React.FC<ErrorCardProps> = ({
         </svg>
         <h3 className="text-heading-3 font-heading-3 text-error-700">{title}</h3>
       </div>
-      
+
       <div className="p-4">
         <p className="text-body font-body text-default-font mb-4">{message}</p>
-        
+
         {formattedDetails && (
           <div className="mt-4">
             <button
@@ -52,7 +52,7 @@ const ErrorCard: React.FC<ErrorCardProps> = ({
             >
               {showDetails ? 'Hide technical details' : 'Show technical details'}
             </button>
-            
+
             {showDetails && (
               <pre className="p-3 bg-neutral-100 rounded text-caption font-caption overflow-x-auto whitespace-pre-wrap max-h-[200px] overflow-y-auto text-default-font font-mono">
                 {formattedDetails}
@@ -61,11 +61,11 @@ const ErrorCard: React.FC<ErrorCardProps> = ({
           </div>
         )}
       </div>
-      
+
       {onRetry && (
         <div className="p-4 border-t border-error-200 bg-neutral-50">
-          <Button 
-            onClick={onRetry} 
+          <Button
+            onClick={onRetry}
             variant="destructive-secondary"
             size="small"
           >
@@ -78,4 +78,3 @@ const ErrorCard: React.FC<ErrorCardProps> = ({
 };
 
 export default ErrorCard;
-

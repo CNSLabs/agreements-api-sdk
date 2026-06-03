@@ -13,5 +13,3 @@ export function templateThumbUrl(templateId: string): string {
   const normalizedBase = base === "/" ? "/agreements/" : String(base).replace(/\/?$/, "/");
   return `${normalizedBase}template-assets/${templateAssetSlug(templateId)}.png`;
 }
-
-

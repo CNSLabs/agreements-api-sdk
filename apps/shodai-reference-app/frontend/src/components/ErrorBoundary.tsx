@@ -43,7 +43,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       });
       Sentry.captureException(error);
     });
-    
+
     this.setState({
       errorInfo
     });
@@ -70,7 +70,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       if (typeof this.props.fallback === 'function') {
         return this.props.fallback(this.state.error as Error);
       }
-      
+
       if (this.props.fallback) {
         return this.props.fallback;
       }

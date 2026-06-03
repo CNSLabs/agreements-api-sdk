@@ -71,10 +71,10 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
         if (!action || !action.conditions || !Array.isArray(action.conditions)) {
           return false;
         }
-        
+
         return action.conditions.some((condition: { input: any }) => {
           const input = condition?.input;
-          
+
           if (!input) {
             return false;
           }
@@ -84,7 +84,7 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
             resolveIssuerAddresses(input.issuer).some(
               (issuerAddress) => issuerAddress.toLowerCase() === userAddress.toLowerCase(),
             );
-          
+
           return isFieldInInput && isCorrectIssuer;
         }) || false;
       });
@@ -120,7 +120,7 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
         const variableName = props['data-name'];
         const variable = variables[variableName];
         const enabled = isFieldEnabled(variableName);
-        
+
         if (variable) {
           return (
             <Controller
@@ -150,7 +150,7 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
         const variable = variables[variableName];
         const enabled = isFieldEnabled(variableName);
         const isMarkdown = variable?.subType === 'markdown';
-        
+
         if (variable) {
           return (
             <Controller
@@ -189,7 +189,7 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
     } else if (content.type === 'mdast') {
       const processor = unified()
         .use(remarkStringify as any);
-      
+
       const result = processor.stringify(content.data as Root);
       markdownContent = typeof result === 'string' ? result : String(result);
     } else {
@@ -202,19 +202,19 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
         try {
           const parts = variablePath.split('.');
           const variableName = parts[0];
-          
+
           if (!variableName || !variables) {
             console.warn(`Missing variable name or variables object: ${match}`);
             return match;
           }
-          
+
           if (parts.length > 1) {
             const variable = variables[variableName];
             if (!variable) {
               console.warn(`Variable not found: ${variableName}`);
               return match;
             }
-            
+
             let nestedValue: any = variable;
             for (let i = 1; i < parts.length; i++) {
               if (nestedValue === null || nestedValue === undefined) {
@@ -236,10 +236,10 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
 
     return (
       <article className="prose max-w-none overflow-x-auto [&_table]:block [&_table]:overflow-x-auto [&_pre]:overflow-x-auto">
-        <ErrorBoundary 
+        <ErrorBoundary
           fallback={(error: Error) => <MarkdownErrorFallback error={error} />}
         >
-          <ReactMarkdown 
+          <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={components}
             rehypePlugins={[rehypeRaw]}
@@ -259,4 +259,3 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
 };
 
 export default MarkdownDocumentView;
-

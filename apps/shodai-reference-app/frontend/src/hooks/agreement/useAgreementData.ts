@@ -55,15 +55,15 @@ export function formatPaymentAmount(
     } else {
       return value;
     }
-    
+
     const divisor = BigInt(1_000_000);
     const wholePart = numValue / divisor;
     const remainder = numValue % divisor;
-    
+
     if (remainder === BigInt(0)) {
       return wholePart.toString();
     }
-    
+
     // Format with up to 6 decimal places, removing trailing zeros
     const decimalPart = remainder.toString().padStart(6, "0").replace(/0+$/, "");
     return `${wholePart}.${decimalPart}`;
@@ -111,7 +111,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     const fetchId = id || "";
     if (!fetchId) return;
     const json = (await getAgreement(fetchId)) as AgreementRecordApi;
-    
+
     // Format paymentAmount values once here - all downstream code will use formatted values
     if (json?.variables) {
       const templateId = (json?.json as any)?.metadata?.templateId || (json?.json as any)?.metadata?.id;
@@ -121,14 +121,14 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
       });
       json.variables = formattedVariables;
     }
-    
+
     setRecord(json);
     setLoadError(null);
     if (json?.state) setCurrentState(json.state);
     if (json?.variables) {
       form.reset(json.variables);
     }
-    
+
     // Fetch participants for overview and modal
     if (json.participants && json.participants.length > 0) {
       setParticipants(json.participants);
@@ -175,7 +175,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     // agreementAddress changes when record loads (UUID -> contract address), which would cause a loop
     // id is stable and only changes when navigating to a different agreement
     const currentId = id || "";
-    
+
     if (!currentId) {
       setRecord(null);
       setCurrentState(null);
@@ -185,7 +185,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
 
     // Only reset state if this is a different agreement (not when address changes)
     const isDifferentAgreement = lastLoadedId.current !== null && lastLoadedId.current !== currentId;
-    
+
     if (isDifferentAgreement) {
       // New agreement - reset everything
       setLoadError(null);
@@ -195,7 +195,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
       // Reset the deploy modal flag when agreement ID changes (new agreement loaded)
       hasProcessedDeployModal.current = false;
     }
-    
+
     // Track this ID as loaded (prevents re-running when address changes)
     if (lastLoadedId.current !== currentId) {
       lastLoadedId.current = currentId;
@@ -211,12 +211,12 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     // Only process if we haven't already shown the modal and we have both the query param and record
     if (deployed === "true" && record && !hasProcessedDeployModal.current) {
       hasProcessedDeployModal.current = true;
-      
+
       // Remove the query param from URL immediately to prevent re-triggering
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("deployed");
       setSearchParams(newSearchParams, { replace: true });
-      
+
       // Try to fetch participants if available (only if not already set by refreshAgreement)
       if (record.participants && record.participants.length > 0) {
         setParticipants(record.participants);

@@ -71,7 +71,7 @@ export const AuthInitProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setToken(undefined);
         return;
       }
-      
+
       // Don't re-initialize if already loading or ready
       if (status === "ready" || status === "loading") {
         return;
