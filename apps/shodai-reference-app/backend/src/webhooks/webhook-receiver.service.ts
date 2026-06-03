@@ -40,8 +40,12 @@ export class WebhookReceiverService {
     });
 
     if (!inserted) {
-      await this.webhookEvents.recordDuplicateDelivery(event.id);
-      return;
+      const existing = await this.webhookEvents.findByEventId(event.id);
+      if (isTerminalDuplicate(existing)) {
+        await this.webhookEvents.recordDuplicateDelivery(event.id);
+        return;
+      }
+      await this.webhookEvents.recordRetryDelivery(event.id);
     }
 
     try {
@@ -117,4 +121,10 @@ function isStaleEvent(createdAt: string, lastWebhookEventAt: unknown): boolean {
   const eventTime = new Date(createdAt).getTime();
   const lastTime = new Date(lastWebhookEventAt).getTime();
   return Number.isFinite(eventTime) && Number.isFinite(lastTime) && eventTime < lastTime;
+}
+
+function isTerminalDuplicate(existing: Record<string, any> | null): boolean {
+  if (!existing) return false;
+  if (existing.status === 'processed') return true;
+  return existing.status === 'ignored' && existing.ignoredReason === 'stale_delivery';
 }

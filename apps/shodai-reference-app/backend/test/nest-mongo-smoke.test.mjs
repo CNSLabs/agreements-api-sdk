@@ -999,9 +999,39 @@ test('Reference app external bridge uses the real API client surface and mirrors
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge') {
+    if (req.method === 'GET' && req.url?.startsWith('/v0/agreements/external-agreement-1/inputs?')) {
       listInputsCalls += 1;
-      writeJson(res, 200, listEnvelope(submittedInput ? [{ ...submittedInput, _id: `external-input-doc-${listInputsCalls}` }] : []));
+      const url = new URL(req.url, 'http://external-api.example.test');
+      const cursor = url.searchParams.get('cursor');
+      if (url.searchParams.get('userId') !== 'platform-user-bridge') {
+        writeJson(res, 400, errorEnvelope('bad_request', 'unexpected userId'));
+        return;
+      }
+      if (!submittedInput) {
+        writeJson(res, 200, listEnvelope([]));
+        return;
+      }
+      if (!cursor) {
+        writeJson(res, 200, listEnvelope(
+          [{ ...submittedInput, _id: `external-input-doc-${listInputsCalls}` }],
+          'req_bridge_inputs_1',
+          { nextCursor: 'bridge-cursor-2' },
+        ));
+        return;
+      }
+      if (cursor === 'bridge-cursor-2') {
+        writeJson(res, 200, listEnvelope([{
+          ...submittedInput,
+          _id: `external-input-doc-follow-up-${listInputsCalls}`,
+          inputId: 'confirmPayment',
+          txHash: `0x${'7'.repeat(64)}`,
+          values: { paymentConfirmed: 'yes' },
+          createdAt: '2026-06-02T19:00:00.000Z',
+          updatedAt: '2026-06-02T19:00:00.000Z',
+        }]));
+        return;
+      }
+      writeJson(res, 400, errorEnvelope('bad_request', `unexpected cursor ${cursor}`));
       return;
     }
 
@@ -1175,14 +1205,14 @@ test('Reference app external bridge uses the real API client surface and mirrors
     });
     const inputsBody = await readJsonResponse(inputsResponse);
     assert.equal(inputsResponse.status, 200, JSON.stringify(inputsBody));
-    assert.deepEqual(inputsBody.map((entry) => entry.inputId), ['submitInvoice']);
+    assert.deepEqual(inputsBody.map((entry) => entry.inputId), ['submitInvoice', 'confirmPayment']);
 
     const repeatedInputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/inputs?userId=platform-user-bridge`, {
       headers: { authorization: `Bearer ${token}` },
     });
     const repeatedInputsBody = await readJsonResponse(repeatedInputsResponse);
     assert.equal(repeatedInputsResponse.status, 200, JSON.stringify(repeatedInputsBody));
-    assert.deepEqual(repeatedInputsBody.map((entry) => entry.inputId), ['submitInvoice']);
+    assert.deepEqual(repeatedInputsBody.map((entry) => entry.inputId), ['submitInvoice', 'confirmPayment']);
 
     const mirroredAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
       { id: 'bridge-draft-1' },
@@ -1192,6 +1222,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
     assert.equal(mirroredAgreement.lastInputId, 'submitInvoice');
     assert.equal(mirroredAgreement.variables.invoiceNumber, 'INV-1');
     assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoice' }), 1);
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'confirmPayment' }), 1);
 
     const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',
@@ -1211,7 +1242,9 @@ test('Reference app external bridge uses the real API client surface and mirrors
       ['POST', '/v0/agreements/external-agreement-1/input'],
       ['GET', '/v0/agreements/external-agreement-1/state'],
       ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge'],
+      ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge&cursor=bridge-cursor-2'],
       ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge'],
+      ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge&cursor=bridge-cursor-2'],
       ['POST', '/v0/agreements/validate-template'],
     ]);
     assert.equal(
@@ -1231,7 +1264,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
 
     const auditEvents = await mongoClient.db(dbName).collection('external_api_events').find(
       {},
-      { projection: { _id: 0, operation: 1, ok: 1, error: 1, path: 1, mock: 1, agreementId: 1, externalAgreementId: 1 } },
+      { projection: { _id: 0, operation: 1, ok: 1, error: 1, path: 1, mock: 1, agreementId: 1, externalAgreementId: 1, inputCount: 1, pageCount: 1 } },
     ).sort({ createdAt: 1 }).toArray();
     assert.equal(auditEvents.filter((event) => event.ok === true).length, 9);
     assert.equal(auditEvents.filter((event) => event.error === 'template rejected by external API').length, 1);
@@ -1246,6 +1279,9 @@ test('Reference app external bridge uses the real API client surface and mirrors
       event.agreementId === 'bridge-draft-1' &&
       event.externalAgreementId === 'external-agreement-1'
     ));
+    const listInputAuditEvents = auditEvents.filter((event) => event.operation === 'list-inputs');
+    assert.equal(listInputAuditEvents.length, 2);
+    assert.ok(listInputAuditEvents.every((event) => event.inputCount === 2 && event.pageCount === 2));
     assert.ok(!logs.includes('MongoServerError'), logs);
   } finally {
     child.kill('SIGTERM');
@@ -1256,7 +1292,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
   }
 });
 
-test('Webhook receiver verifies deliveries and reconciles the local agreement mirror', async (t) => {
+test('Webhook receiver verifies deliveries, retries recoverable events, and reconciles full input history', async (t) => {
   const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
   const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
   try {
@@ -1268,21 +1304,92 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
 
   const webhookSecret = 'whsec_webhook_receiver_test';
   const externalCalls = [];
-  const externalInputs = [{
-    _id: 'external-input-doc-webhook',
-    agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-    chainId: 59141,
-    inputId: 'acceptFinal',
-    userId: 'platform-user-webhook',
-    txHash: `0x${'6'.repeat(64)}`,
-    payload: '0x',
-    values: {
-      finalSignature: 'Webhook reconciled final signature',
+  let failedAgreementReadAttempts = 0;
+  const externalRecords = {
+    'external-agreement-webhook-1': {
+      id: 'external-agreement-webhook-1',
+      address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      state: 'ACCEPTED',
+      displayName: 'Webhook Reconciled Agreement',
+      variables: { scope: 'Validate webhook reconciliation' },
+      observers: ['observer@example.com'],
+      onChain: { source: 'fake-webhook-api' },
     },
-    status: 'MINED',
-    createdAt: '2026-06-02T18:01:00.000Z',
-    updatedAt: '2026-06-02T18:01:00.000Z',
-  }];
+    'external-agreement-race-1': {
+      id: 'external-agreement-race-1',
+      address: '0xcccccccccccccccccccccccccccccccccccccccc',
+      state: 'ACCEPTED',
+      displayName: 'Webhook Race Agreement',
+      variables: { scope: 'Race retry reconciliation' },
+      observers: ['race-observer@example.com'],
+      onChain: { source: 'fake-race-api' },
+    },
+    'external-agreement-fail-1': {
+      id: 'external-agreement-fail-1',
+      address: '0xdddddddddddddddddddddddddddddddddddddddd',
+      state: 'ACCEPTED',
+      displayName: 'Webhook Failed Retry Agreement',
+      variables: { scope: 'Failed retry reconciliation' },
+      observers: ['fail-observer@example.com'],
+      onChain: { source: 'fake-fail-api' },
+    },
+  };
+  const externalInputsByAgreement = {
+    'external-agreement-webhook-1': [
+      {
+        _id: 'external-input-doc-webhook-party-b',
+        agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        chainId: 59141,
+        inputId: 'partyBSignature',
+        userId: 'platform-user-webhook',
+        txHash: `0x${'6'.repeat(64)}`,
+        payload: '0x',
+        values: { partyBSignature: 'Webhook reconciled party B signature' },
+        status: 'MINED',
+        createdAt: '2026-06-02T18:01:00.000Z',
+        updatedAt: '2026-06-02T18:01:00.000Z',
+      },
+      {
+        _id: 'external-input-doc-webhook-final',
+        agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        chainId: 59141,
+        inputId: 'acceptFinal',
+        userId: 'platform-user-webhook',
+        txHash: `0x${'8'.repeat(64)}`,
+        payload: '0x',
+        values: { finalSignature: 'Webhook reconciled final signature' },
+        status: 'MINED',
+        createdAt: '2026-06-02T18:02:00.000Z',
+        updatedAt: '2026-06-02T18:02:00.000Z',
+      },
+    ],
+    'external-agreement-race-1': [{
+      _id: 'external-input-doc-race',
+      agreementAddress: '0xcccccccccccccccccccccccccccccccccccccccc',
+      chainId: 59141,
+      inputId: 'raceAccept',
+      userId: 'platform-user-race',
+      txHash: `0x${'9'.repeat(64)}`,
+      payload: '0x',
+      values: { raceAccepted: true },
+      status: 'MINED',
+      createdAt: '2026-06-02T18:03:00.000Z',
+      updatedAt: '2026-06-02T18:03:00.000Z',
+    }],
+    'external-agreement-fail-1': [{
+      _id: 'external-input-doc-fail',
+      agreementAddress: '0xdddddddddddddddddddddddddddddddddddddddd',
+      chainId: 59141,
+      inputId: 'failAccept',
+      userId: 'platform-user-fail',
+      txHash: `0x${'a'.repeat(64)}`,
+      payload: '0x',
+      values: { failRecovered: true },
+      status: 'MINED',
+      createdAt: '2026-06-02T18:04:00.000Z',
+      updatedAt: '2026-06-02T18:04:00.000Z',
+    }],
+  };
   const externalServer = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -1292,33 +1399,60 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
       apiKey: req.headers['x-api-key'],
     });
 
-    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1') {
+    const agreementMatch = req.url?.match(/^\/v0\/agreements\/([^/?]+)$/);
+    if (req.method === 'GET' && agreementMatch) {
+      const externalAgreementId = decodeURIComponent(agreementMatch[1]);
+      if (externalAgreementId === 'external-agreement-fail-1' && failedAgreementReadAttempts === 0) {
+        failedAgreementReadAttempts += 1;
+        writeJson(res, 503, errorEnvelope('temporary_failure', 'temporary external outage'));
+        return;
+      }
+      const record = externalRecords[externalAgreementId];
+      if (!record) {
+        writeJson(res, 404, { statusCode: 404, message: `No fake external agreement ${externalAgreementId}` });
+        return;
+      }
       writeJson(res, 200, successEnvelope({
-        id: 'external-agreement-webhook-1',
-        address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        id: record.id,
+        address: record.address,
         chainId: 59141,
         status: 'Deployed',
-        state: 'ACCEPTED',
-        variables: {
-          scope: 'Validate webhook reconciliation',
-        },
+        state: record.state,
+        variables: record.variables,
         participants: [{ variableKey: 'clientWalletAddress', walletAddress: '0x2222222222222222222222222222222222222222', email: 'client@example.com' }],
-        observers: ['observer@example.com'],
-        onChain: { source: 'fake-webhook-api' },
-        displayName: 'Webhook Reconciled Agreement',
+        observers: record.observers,
+        onChain: record.onChain,
+        displayName: record.displayName,
         createdAt: '2026-06-02T18:00:00.000Z',
         updatedAt: '2026-06-02T18:02:00.000Z',
       }));
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1/state') {
-      writeJson(res, 200, successEnvelope({ status: 'Deployed', state: 'ACCEPTED' }));
+    const stateMatch = req.url?.match(/^\/v0\/agreements\/([^/?]+)\/state$/);
+    if (req.method === 'GET' && stateMatch) {
+      const externalAgreementId = decodeURIComponent(stateMatch[1]);
+      const record = externalRecords[externalAgreementId];
+      writeJson(res, 200, successEnvelope({ status: 'Deployed', state: record?.state || 'ACCEPTED' }));
       return;
     }
 
-    if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-webhook-1/inputs') {
-      writeJson(res, 200, listEnvelope(externalInputs));
+    const inputsMatch = req.url?.match(/^\/v0\/agreements\/([^/?]+)\/inputs(?:\?.*)?$/);
+    if (req.method === 'GET' && inputsMatch) {
+      const externalAgreementId = decodeURIComponent(inputsMatch[1]);
+      const url = new URL(req.url, 'http://external-api.example.test');
+      const cursor = url.searchParams.get('cursor');
+      const inputs = externalInputsByAgreement[externalAgreementId] || [];
+      const nextCursor = inputs.length > 1 ? `${externalAgreementId}-cursor-2` : null;
+      if (!cursor) {
+        writeJson(res, 200, listEnvelope(inputs.slice(0, 1), `req_inputs_${externalAgreementId}_1`, { nextCursor }));
+        return;
+      }
+      if (cursor === nextCursor) {
+        writeJson(res, 200, listEnvelope(inputs.slice(1), `req_inputs_${externalAgreementId}_2`));
+        return;
+      }
+      writeJson(res, 400, errorEnvelope('bad_request', `unexpected cursor ${cursor}`));
       return;
     }
 
@@ -1356,45 +1490,24 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
   try {
     await waitForHealth(port, child, () => logs);
 
-    const now = new Date().toISOString();
-    await mongoClient.db(dbName).collection('agreements').insertOne({
+    await insertWebhookAgreement(mongoClient.db(dbName), {
       id: 'webhook-local-1',
       externalAgreementId: 'external-agreement-webhook-1',
       address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-      status: 'Deployed',
-      chainId: 59141,
       displayName: 'Webhook Local Agreement',
-      owner: '0x1111111111111111111111111111111111111111',
-      contributors: ['0x1111111111111111111111111111111111111111'],
-      json: { metadata: { templateId: 'did:template:webhook-v1' }, execution: { initialState: 'PENDING_ACCEPTANCE' } },
       variables: { scope: 'Before webhook' },
-      participants: [],
-      observers: [],
-      state: 'PENDING_ACCEPTANCE',
-      createdAt: now,
-      updatedAt: now,
     });
 
-    const acceptedEvent = {
+    const acceptedEvent = transitionEvent({
       id: 'evt_webhook_reconcile_1',
-      type: 'agreement.transitioned',
-      apiVersion: '2026-06-01',
+      agreementId: 'external-agreement-webhook-1',
+      agreementName: 'Webhook Reconciled Agreement',
       createdAt: '2026-06-02T18:02:00.000Z',
-      data: {
-        agreementId: 'external-agreement-webhook-1',
-        agreementName: 'Webhook Reconciled Agreement',
-        templateId: 'did:template:webhook-v1',
-        fromState: 'PENDING_ACCEPTANCE',
-        toState: 'ACCEPTED',
-        inputId: 'acceptFinal',
-      },
-    };
-    const acceptedRawBody = JSON.stringify(acceptedEvent);
-    const acceptedResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
-      method: 'POST',
-      headers: webhookHeaders(acceptedRawBody, acceptedEvent.id, webhookSecret),
-      body: acceptedRawBody,
+      fromState: 'PENDING_ACCEPTANCE',
+      toState: 'ACCEPTED',
+      inputId: 'acceptFinal',
     });
+    const acceptedResponse = await sendWebhookEvent(port, acceptedEvent, webhookSecret);
     assert.equal(acceptedResponse.status, 204, await acceptedResponse.text());
 
     const reconciledAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
@@ -1405,11 +1518,13 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
     assert.equal(reconciledAgreement.lastWebhookEventId, acceptedEvent.id);
     assert.equal(reconciledAgreement.lastWebhookEventAt, acceptedEvent.createdAt);
     assert.equal(reconciledAgreement.lastInputId, 'acceptFinal');
+    assert.equal(reconciledAgreement.lastInputAt, '2026-06-02T18:02:00.000Z');
     assert.equal(reconciledAgreement.variables.scope, 'Validate webhook reconciliation');
+    assert.equal(reconciledAgreement.variables.partyBSignature, 'Webhook reconciled party B signature');
     assert.equal(reconciledAgreement.variables.finalSignature, 'Webhook reconciled final signature');
     assert.equal(reconciledAgreement.onChain.source, 'fake-webhook-api');
     assert.deepEqual(reconciledAgreement.observers, ['observer@example.com']);
-    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'acceptFinal' }), 1);
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ agreementId: 'webhook-local-1' }), 2);
 
     const processedEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
       { eventId: acceptedEvent.id },
@@ -1420,7 +1535,8 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
       processedAction: 'reconciled_agreement_mirror',
       reconciliation: {
         state: 'ACCEPTED',
-        inputCount: 1,
+        inputCount: 2,
+        inputPageCount: 2,
         latestInputId: 'acceptFinal',
       },
     });
@@ -1428,14 +1544,12 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
       ['GET', '/v0/agreements/external-agreement-webhook-1'],
       ['GET', '/v0/agreements/external-agreement-webhook-1/state'],
       ['GET', '/v0/agreements/external-agreement-webhook-1/inputs'],
+      ['GET', '/v0/agreements/external-agreement-webhook-1/inputs?cursor=external-agreement-webhook-1-cursor-2'],
     ]);
     assert.ok(externalCalls.every((call) => call.apiKey === 'webhook-external-key'));
+    const callsAfterAccepted = externalCalls.length;
 
-    const duplicateResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
-      method: 'POST',
-      headers: webhookHeaders(acceptedRawBody, acceptedEvent.id, webhookSecret),
-      body: acceptedRawBody,
-    });
+    const duplicateResponse = await sendWebhookEvent(port, acceptedEvent, webhookSecret);
     assert.equal(duplicateResponse.status, 204, await duplicateResponse.text());
     const duplicateEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
       { eventId: acceptedEvent.id },
@@ -1445,7 +1559,7 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
       status: 'processed',
       duplicateDeliveryCount: 1,
     });
-    assert.equal(externalCalls.length, 3);
+    assert.equal(externalCalls.length, callsAfterAccepted);
 
     const staleEvent = {
       ...acceptedEvent,
@@ -1458,12 +1572,7 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
         inputId: 'partyBSignature',
       },
     };
-    const staleRawBody = JSON.stringify(staleEvent);
-    const staleResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
-      method: 'POST',
-      headers: webhookHeaders(staleRawBody, staleEvent.id, webhookSecret),
-      body: staleRawBody,
-    });
+    const staleResponse = await sendWebhookEvent(port, staleEvent, webhookSecret);
     assert.equal(staleResponse.status, 204, await staleResponse.text());
     const staleStoredEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
       { eventId: staleEvent.id },
@@ -1481,8 +1590,112 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
       state: 'ACCEPTED',
       lastWebhookEventId: acceptedEvent.id,
     });
-    assert.equal(externalCalls.length, 3);
+    assert.equal(externalCalls.length, callsAfterAccepted);
+    const staleDuplicateResponse = await sendWebhookEvent(port, staleEvent, webhookSecret);
+    assert.equal(staleDuplicateResponse.status, 204, await staleDuplicateResponse.text());
+    const staleDuplicateEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: staleEvent.id },
+      { projection: { _id: 0, status: 1, ignoredReason: 1, duplicateDeliveryCount: 1 } },
+    );
+    assert.deepEqual(staleDuplicateEvent, {
+      status: 'ignored',
+      ignoredReason: 'stale_delivery',
+      duplicateDeliveryCount: 1,
+    });
+    assert.equal(externalCalls.length, callsAfterAccepted);
 
+    const raceEvent = transitionEvent({
+      id: 'evt_webhook_race_1',
+      agreementId: 'external-agreement-race-1',
+      agreementName: 'Webhook Race Agreement',
+      createdAt: '2026-06-02T18:03:00.000Z',
+      fromState: 'PENDING_ACCEPTANCE',
+      toState: 'ACCEPTED',
+      inputId: 'raceAccept',
+    });
+    const raceMissingResponse = await sendWebhookEvent(port, raceEvent, webhookSecret);
+    assert.equal(raceMissingResponse.status, 204, await raceMissingResponse.text());
+    const raceMissingEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: raceEvent.id },
+      { projection: { _id: 0, status: 1, ignoredReason: 1 } },
+    );
+    assert.deepEqual(raceMissingEvent, {
+      status: 'ignored',
+      ignoredReason: 'agreement_not_found',
+    });
+    assert.equal(externalCalls.length, callsAfterAccepted);
+
+    await insertWebhookAgreement(mongoClient.db(dbName), {
+      id: 'webhook-race-local-1',
+      externalAgreementId: 'external-agreement-race-1',
+      address: '0xcccccccccccccccccccccccccccccccccccccccc',
+      displayName: 'Webhook Race Local Agreement',
+      variables: { scope: 'Before race webhook' },
+    });
+    const raceRetryResponse = await sendWebhookEvent(port, raceEvent, webhookSecret);
+    assert.equal(raceRetryResponse.status, 204, await raceRetryResponse.text());
+    const raceRetryEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: raceEvent.id },
+      { projection: { _id: 0, status: 1, ignoredReason: 1, duplicateDeliveryCount: 1, retryDeliveryCount: 1, reconciliation: 1 } },
+    );
+    assert.equal(raceRetryEvent.status, 'processed');
+    assert.equal(raceRetryEvent.ignoredReason, undefined);
+    assert.equal(raceRetryEvent.duplicateDeliveryCount, 1);
+    assert.equal(raceRetryEvent.retryDeliveryCount, 1);
+    assert.equal(raceRetryEvent.reconciliation.inputCount, 1);
+    const raceAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+      { id: 'webhook-race-local-1' },
+      { projection: { _id: 0, state: 1, variables: 1, lastWebhookEventId: 1 } },
+    );
+    assert.equal(raceAgreement.state, 'ACCEPTED');
+    assert.equal(raceAgreement.variables.raceAccepted, true);
+    assert.equal(raceAgreement.lastWebhookEventId, raceEvent.id);
+
+    await insertWebhookAgreement(mongoClient.db(dbName), {
+      id: 'webhook-fail-local-1',
+      externalAgreementId: 'external-agreement-fail-1',
+      address: '0xdddddddddddddddddddddddddddddddddddddddd',
+      displayName: 'Webhook Failed Retry Local Agreement',
+      variables: { scope: 'Before failed webhook' },
+    });
+    const failedEvent = transitionEvent({
+      id: 'evt_webhook_failed_retry_1',
+      agreementId: 'external-agreement-fail-1',
+      agreementName: 'Webhook Failed Retry Agreement',
+      createdAt: '2026-06-02T18:04:00.000Z',
+      fromState: 'PENDING_ACCEPTANCE',
+      toState: 'ACCEPTED',
+      inputId: 'failAccept',
+    });
+    const failedFirstResponse = await sendWebhookEvent(port, failedEvent, webhookSecret);
+    assert.equal(failedFirstResponse.status, 503, await failedFirstResponse.text());
+    const failedStoredEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: failedEvent.id },
+      { projection: { _id: 0, status: 1, error: 1 } },
+    );
+    assert.equal(failedStoredEvent.status, 'failed');
+    assert.match(failedStoredEvent.error, /temporary external outage/);
+
+    const failedRetryResponse = await sendWebhookEvent(port, failedEvent, webhookSecret);
+    assert.equal(failedRetryResponse.status, 204, await failedRetryResponse.text());
+    const failedRetryEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+      { eventId: failedEvent.id },
+      { projection: { _id: 0, status: 1, error: 1, duplicateDeliveryCount: 1, retryDeliveryCount: 1, reconciliation: 1 } },
+    );
+    assert.equal(failedRetryEvent.status, 'processed');
+    assert.equal(failedRetryEvent.error, undefined);
+    assert.equal(failedRetryEvent.duplicateDeliveryCount, 1);
+    assert.equal(failedRetryEvent.retryDeliveryCount, 1);
+    assert.equal(failedRetryEvent.reconciliation.inputCount, 1);
+    const failedAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+      { id: 'webhook-fail-local-1' },
+      { projection: { _id: 0, state: 1, variables: 1, lastWebhookEventId: 1 } },
+    );
+    assert.equal(failedAgreement.state, 'ACCEPTED');
+    assert.equal(failedAgreement.variables.failRecovered, true);
+    assert.equal(failedAgreement.lastWebhookEventId, failedEvent.id);
+
+    const acceptedRawBody = JSON.stringify(acceptedEvent);
     const invalidResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
       method: 'POST',
       headers: {
@@ -1501,6 +1714,53 @@ test('Webhook receiver verifies deliveries and reconciles the local agreement mi
     await new Promise((resolve) => externalServer.close(resolve));
   }
 });
+
+async function insertWebhookAgreement(db, overrides) {
+  const now = new Date().toISOString();
+  await db.collection('agreements').insertOne({
+    id: overrides.id,
+    externalAgreementId: overrides.externalAgreementId,
+    address: overrides.address,
+    status: 'Deployed',
+    chainId: 59141,
+    displayName: overrides.displayName,
+    owner: '0x1111111111111111111111111111111111111111',
+    contributors: ['0x1111111111111111111111111111111111111111'],
+    json: { metadata: { templateId: 'did:template:webhook-v1' }, execution: { initialState: 'PENDING_ACCEPTANCE' } },
+    variables: overrides.variables || {},
+    participants: [],
+    observers: [],
+    state: 'PENDING_ACCEPTANCE',
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+function transitionEvent({ id, agreementId, agreementName, createdAt, fromState, toState, inputId }) {
+  return {
+    id,
+    type: 'agreement.transitioned',
+    apiVersion: '2026-06-01',
+    createdAt,
+    data: {
+      agreementId,
+      agreementName,
+      templateId: 'did:template:webhook-v1',
+      fromState,
+      toState,
+      inputId,
+    },
+  };
+}
+
+async function sendWebhookEvent(port, event, secret) {
+  const rawBody = JSON.stringify(event);
+  return fetch(`http://localhost:${port}/shodai/webhooks`, {
+    method: 'POST',
+    headers: webhookHeaders(rawBody, event.id, secret),
+    body: rawBody,
+  });
+}
 
 async function writeExport(dir, collections) {
   const names = {
@@ -1570,10 +1830,10 @@ function successEnvelope(data, requestId = 'req_test') {
   };
 }
 
-function listEnvelope(data, requestId = 'req_test') {
+function listEnvelope(data, requestId = 'req_test', pageInfo = {}) {
   return {
     data,
-    pageInfo: { limit: 25, nextCursor: null },
+    pageInfo: { limit: 25, nextCursor: null, ...pageInfo },
     meta: { apiVersion: 'v0', requestId },
   };
 }

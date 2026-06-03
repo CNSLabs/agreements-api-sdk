@@ -6,37 +6,26 @@ import { AgreementInputRepository } from '../database/repositories/agreement-inp
 import { ExternalApiEventRepository } from '../database/repositories/external-api-event.repository';
 import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields } from '../agreements/agreement-utils';
 import type { AgreementTransitionedWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
+import type { ApiClient, AgreementInputRecord } from '@cns-labs/agreements-api-client';
 
-const AGREEMENTS_API_BASE_PATH = '/v0';
+type AgreementsApiClientModule = typeof import('@cns-labs/agreements-api-client');
 
-function joinUrl(baseUrl: string, apiPath: string) {
-  const normalizedBase = baseUrl.trim().replace(/\/+$/, '');
-  const normalizedPath = apiPath.trim().startsWith('/') ? apiPath.trim() : `/${apiPath.trim()}`;
-  return `${normalizedBase}${normalizedPath}`;
-}
+const importAgreementsApiClientModule = new Function(
+  'specifier',
+  'return import(specifier)',
+) as (specifier: string) => Promise<AgreementsApiClientModule>;
 
-function externalApiErrorMessage(parsedBody: unknown, bodyText: string, status: number) {
-  if (parsedBody && typeof parsedBody === 'object' && 'message' in parsedBody) {
-    const message = (parsedBody as { message?: unknown }).message;
-    if (Array.isArray(message)) return message.join('\n');
-    if (typeof message === 'string' && message.trim()) return message;
-  }
-  if (parsedBody && typeof parsedBody === 'object' && 'error' in parsedBody) {
-    const message = (parsedBody as { error?: { message?: unknown } }).error?.message;
-    if (typeof message === 'string' && message.trim()) return message;
-  }
-  return bodyText.trim() || `Request failed with status ${status}`;
-}
-
-type ExternalApiClient = {
-  validateTemplate: (agreement: unknown) => Promise<any>;
-  validateDeployment: (body: unknown) => Promise<any>;
-  deployWithPermit: (body: unknown) => Promise<any>;
-  getAgreement: (agreementId: string) => Promise<any>;
-  getAgreementState: (agreementId: string) => Promise<any>;
-  listAgreementInputs: (agreementId: string, params?: { userId?: string }) => Promise<any>;
-  submitAgreementInput: (agreementId: string, body: unknown) => Promise<any>;
+type InputListingResult = {
+  inputs: AgreementInputRecord[];
+  pageCount: number;
 };
+
+function inputListingAuditMetadata(result: InputListingResult): Record<string, unknown> {
+  return {
+    inputCount: result.inputs.length,
+    pageCount: result.pageCount,
+  };
+}
 
 @Injectable()
 export class ExternalAgreementsService {
@@ -207,6 +196,7 @@ export class ExternalAgreementsService {
     let externalRecord: any = null;
     let externalState: any = null;
     let externalInputs: any[] = [];
+    let externalInputPageCount = 0;
 
     if (this.config.externalApiBaseUrl === 'mock') {
       externalState = { status: agreement.status || 'Deployed', state: event.data.toState };
@@ -227,9 +217,13 @@ export class ExternalAgreementsService {
       externalInputs = await this.externalApiCall(
         'webhook-list-inputs',
         `/v0/agreements/${encodeURIComponent(externalAgreementId)}/inputs`,
-        () => client.listAgreementInputs(externalAgreementId),
+        () => this.listAllExternalInputs(client, externalAgreementId),
         metadata,
-      );
+        inputListingAuditMetadata,
+      ).then((result) => {
+        externalInputPageCount = result.pageCount;
+        return result.inputs;
+      });
     }
 
     await Promise.all(externalInputs.map((input) => this.upsertInputMirror(input, agreement)));
@@ -267,6 +261,7 @@ export class ExternalAgreementsService {
     return {
       state: agreement.state,
       inputCount: externalInputs.length,
+      inputPageCount: externalInputPageCount,
       latestInputId: latestInput?.inputId || null,
     };
   }
@@ -295,9 +290,14 @@ export class ExternalAgreementsService {
       const externalInputs = await this.externalApiCall(
         'list-inputs',
         `/v0/agreements/${encodeURIComponent(agreement.externalAgreementId || agreement.id)}/inputs`,
-        async () => (await this.externalApiClient()).listAgreementInputs(agreement.externalAgreementId || agreement.id, userId ? { userId } : undefined),
+        async () => this.listAllExternalInputs(
+          await this.externalApiClient(),
+          agreement.externalAgreementId || agreement.id,
+          userId ? { userId } : undefined,
+        ),
         { agreementId: agreement.id, externalAgreementId: agreement.externalAgreementId || agreement.id },
-      );
+        inputListingAuditMetadata,
+      ).then((result) => result.inputs);
       await Promise.all(externalInputs.map((input) => this.upsertInputMirror(input, agreement)));
       return externalInputs;
     }
@@ -379,69 +379,37 @@ export class ExternalAgreementsService {
     if (!normalizedSigner || !wallets.includes(normalizedSigner)) throw new UnauthorizedException('Authenticated wallet address is required');
   }
 
-  private async externalApiClient(): Promise<ExternalApiClient> {
+  private async externalApiClient(): Promise<ApiClient> {
     if (!this.config.externalApiBaseUrl || !this.config.externalApiKey) {
       throw new InternalServerErrorException('EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY are required for deployed agreement operations');
     }
-    return {
-      validateTemplate: (agreement: unknown) =>
-        this.externalApiRequest<any>('POST', `${AGREEMENTS_API_BASE_PATH}/agreements/validate-template`, agreement, 201),
-      validateDeployment: (body: unknown) =>
-        this.externalApiRequest<any>('POST', `${AGREEMENTS_API_BASE_PATH}/agreements/validate`, body, 201),
-      deployWithPermit: (body: unknown) =>
-        this.externalApiRequest<any>('POST', `${AGREEMENTS_API_BASE_PATH}/agreements/deploy-with-permit`, body, 201),
-      getAgreement: (agreementId: string) =>
-        this.externalApiRequest<any>('GET', `${AGREEMENTS_API_BASE_PATH}/agreements/${encodeURIComponent(agreementId)}`),
-      getAgreementState: (agreementId: string) =>
-        this.externalApiRequest<any>('GET', `${AGREEMENTS_API_BASE_PATH}/agreements/${encodeURIComponent(agreementId)}/state`),
-      listAgreementInputs: (agreementId: string, params?: { userId?: string }) => {
-        const query = params?.userId ? `?userId=${encodeURIComponent(params.userId)}` : '';
-        return this.externalApiRequest<any[]>('GET', `${AGREEMENTS_API_BASE_PATH}/agreements/${encodeURIComponent(agreementId)}/inputs${query}`);
-      },
-      submitAgreementInput: (agreementId: string, body: unknown) =>
-        this.externalApiRequest<any>('POST', `${AGREEMENTS_API_BASE_PATH}/agreements/${encodeURIComponent(agreementId)}/input`, body, 201),
-    };
+    const { ApiClient } = await importAgreementsApiClientModule('@cns-labs/agreements-api-client');
+    return new ApiClient({
+      baseUrl: this.config.externalApiBaseUrl,
+      apiKey: this.config.externalApiKey,
+    });
   }
 
-  private async externalApiRequest<T>(method: string, apiPath: string, body?: unknown, okStatus = 200): Promise<T> {
-    const response = await fetch(joinUrl(this.config.externalApiBaseUrl, apiPath), {
-      method,
-      headers: {
-        Accept: 'application/json',
-        'X-API-Key': this.config.externalApiKey,
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    const bodyText = await response.text();
-    let parsedBody: unknown = null;
-    try {
-      parsedBody = bodyText ? JSON.parse(bodyText) : null;
-    } catch {
-      parsedBody = undefined;
-    }
-    const success = response.status === okStatus || (okStatus === 200 && response.status >= 200 && response.status < 300);
-    if (!success) {
-      const error = new Error(externalApiErrorMessage(parsedBody, bodyText, response.status)) as Error & {
-        status?: number;
-        bodyText?: string;
-        parsedBody?: unknown;
-      };
-      error.status = response.status;
-      error.bodyText = bodyText;
-      error.parsedBody = parsedBody;
-      throw error;
-    }
-    const responseBody = parsedBody ?? bodyText;
-    if (
-      responseBody &&
-      typeof responseBody === 'object' &&
-      'data' in responseBody &&
-      !('error' in responseBody)
-    ) {
-      return (responseBody as { data: T }).data;
-    }
-    return responseBody as T;
+  private async listAllExternalInputs(
+    client: ApiClient,
+    agreementId: string,
+    params: { userId?: string } = {},
+  ): Promise<InputListingResult> {
+    const inputs: AgreementInputRecord[] = [];
+    let cursor: string | undefined;
+    let pageCount = 0;
+
+    do {
+      const page = await client.listAgreementInputs(agreementId, {
+        ...params,
+        ...(cursor ? { cursor } : {}),
+      });
+      pageCount += 1;
+      inputs.push(...(Array.isArray(page.data) ? page.data : []));
+      cursor = page.pageInfo?.nextCursor || undefined;
+    } while (cursor);
+
+    return { inputs, pageCount };
   }
 
   private async externalApiCall<T>(
@@ -449,6 +417,7 @@ export class ExternalAgreementsService {
     apiPath: string,
     call: () => Promise<T>,
     metadata: Record<string, unknown> = {},
+    resultMetadata: (result: T) => Record<string, unknown> = () => ({}),
   ): Promise<T> {
     const event = {
       id: randomUUID(),
@@ -461,7 +430,7 @@ export class ExternalAgreementsService {
     };
     try {
       const result = await call();
-      await this.externalEvents.insertOne({ ...event, ok: true });
+      await this.externalEvents.insertOne({ ...event, ...resultMetadata(result), ok: true });
       return result;
     } catch (error: any) {
       await this.externalEvents.insertOne({ ...event, error: error?.message || String(error) });
