@@ -19,6 +19,10 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     return result.upsertedCount === 1;
   }
 
+  async findByEventId(eventId: string): Promise<WebhookEventDocument | null> {
+    return this.findOne({ eventId });
+  }
+
   async markProcessed(eventId: string, patch: Record<string, unknown> = {}): Promise<void> {
     await this.updateOne(
       { eventId },
@@ -28,6 +32,11 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           status: 'processed',
           processedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        },
+        $unset: {
+          error: '',
+          ignoredReason: '',
+          retryStartedAt: '',
         },
       },
     );
@@ -46,6 +55,29 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     );
   }
 
+  async recordRetryDelivery(eventId: string): Promise<void> {
+    await this.updateOne(
+      { eventId },
+      {
+        $inc: {
+          duplicateDeliveryCount: 1,
+          retryDeliveryCount: 1,
+        },
+        $set: {
+          status: 'received',
+          retryStartedAt: new Date().toISOString(),
+          lastDuplicateAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        $unset: {
+          error: '',
+          ignoredReason: '',
+          processedAt: '',
+        },
+      },
+    );
+  }
+
   async markIgnored(eventId: string, reason: string, patch: Record<string, unknown> = {}): Promise<void> {
     await this.updateOne(
       { eventId },
@@ -56,6 +88,10 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           ignoredReason: reason,
           processedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        },
+        $unset: {
+          error: '',
+          retryStartedAt: '',
         },
       },
     );
@@ -70,6 +106,10 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           error: error instanceof Error ? error.message : String(error),
           processedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+        },
+        $unset: {
+          ignoredReason: '',
+          retryStartedAt: '',
         },
       },
     );
