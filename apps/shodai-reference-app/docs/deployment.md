@@ -25,6 +25,7 @@ Required backend environment:
 
 The backend must reach MongoDB and the real Shodai external API. Runtime `EXTERNAL_API_BASE_URL=mock` is test-only and is rejected outside tests.
 Webhook deliveries must reach `POST /shodai/webhooks` on the backend over HTTPS. Store only the subscription secret returned by Shodai in `SHODAI_WEBHOOK_SECRET`; it is used for signature verification and must not be bundled into the frontend.
+Webhook processing is asynchronous after signature verification and receipt persistence. Optional `SHODAI_WEBHOOK_PROCESSOR_*` environment values in `backend/.env.sample` tune polling, retry, and lease behavior.
 
 ## Frontend
 

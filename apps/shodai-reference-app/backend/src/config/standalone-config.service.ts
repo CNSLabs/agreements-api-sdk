@@ -22,6 +22,11 @@ export class StandaloneConfigService implements OnModuleInit {
   readonly externalApiEnvironment = this.resolveExternalApiEnvironment();
   readonly shodaiWebhookSecret = process.env.SHODAI_WEBHOOK_SECRET || '';
   readonly shodaiWebhookToleranceSeconds = this.resolveWebhookToleranceSeconds();
+  readonly webhookProcessorIntervalMs = positiveInteger(process.env.SHODAI_WEBHOOK_PROCESSOR_INTERVAL_MS, 1000);
+  readonly webhookProcessorMaxAttempts = positiveInteger(process.env.SHODAI_WEBHOOK_PROCESSOR_MAX_ATTEMPTS, 5);
+  readonly webhookProcessorRetryBaseMs = positiveInteger(process.env.SHODAI_WEBHOOK_PROCESSOR_RETRY_BASE_MS, 1000);
+  readonly webhookProcessorRetryMaxMs = positiveInteger(process.env.SHODAI_WEBHOOK_PROCESSOR_RETRY_MAX_MS, 15 * 60 * 1000);
+  readonly webhookProcessorLeaseMs = positiveInteger(process.env.SHODAI_WEBHOOK_PROCESSOR_LEASE_SECONDS, 120) * 1000;
   readonly frontendBaseUrl = process.env.FRONTEND_BASE_URL || (this.nodeEnv === 'test' ? 'http://localhost:5184/agreements/' : '');
   readonly serviceAuthToken = process.env.SERVICE_AUTH_TOKEN || '';
   readonly temporalSweepInterval = process.env.TEMPORAL_SWEEP_INTERVAL || '1 minute';
@@ -133,4 +138,9 @@ export class StandaloneConfigService implements OnModuleInit {
     const explicit = Number(raw);
     return Number.isFinite(explicit) && explicit >= 0 ? explicit : 300;
   }
+}
+
+function positiveInteger(raw: string | undefined, fallback: number): number {
+  const explicit = Number(raw || '');
+  return Number.isInteger(explicit) && explicit > 0 ? explicit : fallback;
 }
