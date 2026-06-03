@@ -1114,9 +1114,31 @@ test('Reference app external bridge uses the real API client surface and mirrors
       },
     };
 
-    const validateTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
+    const unauthenticatedValidateTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(agreementJson),
+    });
+    assert.equal(unauthenticatedValidateTemplateResponse.status, 401, await unauthenticatedValidateTemplateResponse.text());
+    assert.equal(externalCalls.length, 0);
+
+    const unauthenticatedValidateDeploymentResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        agreement: agreementJson,
+        chainId: 59141,
+        initValues: { invoiceTotal: '1000' },
+        participants: [{ variableKey: 'clientWalletAddress', walletAddress: participant, email: 'client@example.com' }],
+        observers: ['observer@example.com'],
+      }),
+    });
+    assert.equal(unauthenticatedValidateDeploymentResponse.status, 401, await unauthenticatedValidateDeploymentResponse.text());
+    assert.equal(externalCalls.length, 0);
+
+    const validateTemplateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify(agreementJson),
     });
     const validateTemplateBody = await readJsonResponse(validateTemplateResponse);
@@ -1125,7 +1147,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
 
     const validateDeploymentResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         agreement: agreementJson,
         chainId: 59141,
@@ -1226,7 +1248,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
 
     const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ metadata: { templateId: 'fail-template' } }),
     });
     const failingValidateBody = await readJsonResponse(failingValidateResponse);

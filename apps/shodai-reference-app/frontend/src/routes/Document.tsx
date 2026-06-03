@@ -88,7 +88,7 @@ const Document: React.FC = () => {
   // Convert template variables to DocumentVariable format
   const variables = React.useMemo(() => {
     if (!template?.variables) return {};
-    
+
     const converted: Record<string, DocumentVariable> = {};
     Object.entries(template.variables).forEach(([key, variable]: [string, any]) => {
       converted[key] = {
@@ -238,7 +238,7 @@ const Document: React.FC = () => {
   const handleSetActiveTabDocument = React.useCallback(() => {
     setActiveTab("document");
   }, []);
-  
+
   const handleSetActiveTabStateMachine = React.useCallback(() => {
     setActiveTab("stateMachine");
   }, []);

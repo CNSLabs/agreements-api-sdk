@@ -24,7 +24,7 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { address, isConnected } = useLogin();
   const { listAgreements } = useAgreementsApi();
-  
+
   // Track visible badge counts per agreement to prevent overflow
   const [visibleBadgeCounts, setVisibleBadgeCounts] = React.useState<Map<string, number>>(new Map());
   const badgeContainerRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
@@ -51,7 +51,7 @@ const Home: React.FC = () => {
       return (await listAgreements()) as AgreementListItem[];
     },
   });
-  
+
 
   const handleCreateAgreement = () => {
     navigate("/create");
@@ -163,31 +163,31 @@ const Home: React.FC = () => {
       setVisibleBadgeCounts(prev => {
         const newCounts = new Map(prev);
         let hasChanges = false;
-        
+
         badgeContainerRefs.current.forEach((container, agreementKey) => {
           const agreement = awaitingInputs.find(a => a.agreementAddress === agreementKey);
           if (!agreement || agreement.inputs.length === 0) return;
-          
+
           const children = Array.from(container.children) as HTMLElement[];
           if (children.length === 0) return;
-          
+
           // Calculate total width needed
           const containerWidth = container.offsetWidth;
           if (containerWidth === 0) return; // Not yet rendered
-          
+
           let totalWidth = 0;
           const gap = 8; // gap-2 = 8px
-          
+
           // Measure all badge elements (including the "+X" badge if present)
           children.forEach((badge, idx) => {
             if (idx > 0) totalWidth += gap;
             totalWidth += badge.offsetWidth;
           });
-          
+
           // Check if overflowing - add small buffer (10px) to prevent edge cases
           const isOverflowing = totalWidth > (containerWidth - 10) || container.scrollHeight > 50;
           const currentCount = newCounts.get(agreementKey) ?? 2;
-          
+
           if (isOverflowing && currentCount > 1) {
             // Reduce count to make room for "+X" badge
             const newCount = Math.max(1, currentCount - 1);
@@ -204,7 +204,7 @@ const Home: React.FC = () => {
             }
           }
         });
-        
+
         return hasChanges ? newCounts : prev;
       });
     };
@@ -428,7 +428,7 @@ const Home: React.FC = () => {
                   const shown = inputs.slice(0, visibleCount);
                   const more = inputs.length - shown.length;
                   const primaryInput = inputs[0]?.inputId;
-                  
+
                   return (
                     <Table.Row
                       key={row.agreementAddress}

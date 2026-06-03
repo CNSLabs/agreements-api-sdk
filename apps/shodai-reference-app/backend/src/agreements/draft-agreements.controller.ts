@@ -21,13 +21,15 @@ export class DraftAgreementsController {
 
   @Post('direct/validate-template')
   @HttpCode(HttpStatus.CREATED)
-  validateTemplate(@Body() body: unknown) {
+  async validateTemplate(@Headers('authorization') authorization: string, @Body() body: unknown) {
+    await this.requireUser(authorization);
     return this.external.validateAgreementTemplate(body);
   }
 
   @Post('direct/validate')
   @HttpCode(HttpStatus.CREATED)
-  validateDirect(@Body() body: unknown) {
+  async validateDirect(@Headers('authorization') authorization: string, @Body() body: unknown) {
+    await this.requireUser(authorization);
     return this.external.validateDirectAgreement(body);
   }
 

@@ -127,18 +127,18 @@ async function main() {
   const templateFilter = process.argv[2];
 
   let files = (await fs.readdir(templatesDir)).filter((f) => f.endsWith(".json"));
-  
+
   // If a template filter is provided, only process matching files
   if (templateFilter) {
     const filterLower = templateFilter.toLowerCase();
-    
+
     // First, try to match by filename
     let matchingFiles = files.filter((f) => {
       const nameLower = f.toLowerCase();
       // Match by filename (with or without .json extension)
       return nameLower.includes(filterLower) || nameLower === filterLower + ".json";
     });
-    
+
     // If no filename match, try matching by templateId inside the JSON
     if (matchingFiles.length === 0) {
       for (const f of files) {
@@ -155,9 +155,9 @@ async function main() {
         }
       }
     }
-    
+
     files = matchingFiles;
-    
+
     if (files.length === 0) {
       console.log(`No template files found matching "${templateFilter}".`);
       return;
@@ -219,4 +219,3 @@ main().catch((e) => {
   console.error(e);
   process.exitCode = 1;
 });
-

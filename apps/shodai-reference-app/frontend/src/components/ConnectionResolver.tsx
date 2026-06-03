@@ -30,4 +30,3 @@ const ConnectionResolver: React.FC<ConnectionResolverProps> = ({ children }) => 
 };
 
 export default ConnectionResolver;
-

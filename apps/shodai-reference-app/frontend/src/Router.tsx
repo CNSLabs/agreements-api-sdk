@@ -21,17 +21,17 @@ const Router: React.FC = () => {
       <>
         <Routes>
           {/* Root redirects to login if not connected, or home if connected */}
-          <Route 
-            index 
+          <Route
+            index
             element={
               isConnected ? (
                 <Navigate to="/home" replace />
               ) : (
                 <Navigate to="/login" replace />
               )
-            } 
+            }
           />
-          
+
           {/* Login page */}
           <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
           <Route path="/login/code" element={<ErrorBoundary><LoginCode /></ErrorBoundary>} />
