@@ -10,7 +10,7 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     super(mongo, 'webhook_events');
   }
 
-  async insertReceivedEvent(document: WebhookEventDocument): Promise<boolean> {
+  async insertWebhookEvent(document: WebhookEventDocument): Promise<boolean> {
     const result = await (await this.mongo.collection<WebhookEventDocument>('webhook_events')).updateOne(
       { eventId: document.eventId },
       { $setOnInsert: document },
@@ -21,6 +21,55 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
 
   async findByEventId(eventId: string): Promise<WebhookEventDocument | null> {
     return this.findOne({ eventId });
+  }
+
+  async claimNextDueEvent(params: {
+    now: string;
+    leaseCutoff: string;
+    lockToken: string;
+  }): Promise<WebhookEventDocument | null> {
+    const collection = await this.mongo.collection<WebhookEventDocument>('webhook_events');
+    return collection.findOneAndUpdate(
+      {
+        $or: [
+          {
+            status: { $in: ['queued', 'retry_scheduled'] },
+            $or: [
+              { nextAttemptAt: { $exists: false } },
+              { nextAttemptAt: { $lte: params.now } },
+            ],
+          },
+          {
+            status: 'processing',
+            lockedAt: { $lte: params.leaseCutoff },
+          },
+        ],
+      },
+      {
+        $set: {
+          status: 'processing',
+          lockedAt: params.now,
+          lockToken: params.lockToken,
+          lastAttemptAt: params.now,
+          updatedAt: params.now,
+        },
+        $inc: { attemptCount: 1 },
+        $unset: {
+          error: '',
+          ignoredReason: '',
+          retryReason: '',
+          retryScheduledAt: '',
+          nextAttemptAt: '',
+          processedAt: '',
+          deadLetteredAt: '',
+        },
+      },
+      {
+        sort: { nextAttemptAt: 1, receivedAt: 1 },
+        returnDocument: 'after',
+        projection: { _id: 0 },
+      },
+    );
   }
 
   async markProcessed(eventId: string, patch: Record<string, unknown> = {}): Promise<void> {
@@ -36,7 +85,13 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
         $unset: {
           error: '',
           ignoredReason: '',
+          retryReason: '',
           retryStartedAt: '',
+          retryScheduledAt: '',
+          nextAttemptAt: '',
+          lockedAt: '',
+          lockToken: '',
+          deadLetteredAt: '',
         },
       },
     );
@@ -55,24 +110,25 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     );
   }
 
-  async recordRetryDelivery(eventId: string): Promise<void> {
+  async markRetryScheduled(eventId: string, nextAttemptAt: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<void> {
     await this.updateOne(
       { eventId },
       {
-        $inc: {
-          duplicateDeliveryCount: 1,
-          retryDeliveryCount: 1,
-        },
         $set: {
-          status: 'received',
-          retryStartedAt: new Date().toISOString(),
-          lastDuplicateAt: new Date().toISOString(),
+          ...patch,
+          status: 'retry_scheduled',
+          retryReason: reason,
+          error: error instanceof Error ? error.message : String(error),
+          retryScheduledAt: new Date().toISOString(),
+          nextAttemptAt,
           updatedAt: new Date().toISOString(),
         },
         $unset: {
-          error: '',
           ignoredReason: '',
           processedAt: '',
+          lockedAt: '',
+          lockToken: '',
+          deadLetteredAt: '',
         },
       },
     );
@@ -91,25 +147,39 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
         },
         $unset: {
           error: '',
+          retryReason: '',
           retryStartedAt: '',
+          retryScheduledAt: '',
+          nextAttemptAt: '',
+          lockedAt: '',
+          lockToken: '',
+          deadLetteredAt: '',
         },
       },
     );
   }
 
-  async markFailed(eventId: string, error: unknown): Promise<void> {
+  async markDeadLetter(eventId: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<void> {
     await this.updateOne(
       { eventId },
       {
         $set: {
-          status: 'failed',
+          ...patch,
+          status: 'dead_letter',
+          deadLetterReason: reason,
           error: error instanceof Error ? error.message : String(error),
+          deadLetteredAt: new Date().toISOString(),
           processedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
         $unset: {
           ignoredReason: '',
+          retryReason: '',
           retryStartedAt: '',
+          retryScheduledAt: '',
+          nextAttemptAt: '',
+          lockedAt: '',
+          lockToken: '',
         },
       },
     );

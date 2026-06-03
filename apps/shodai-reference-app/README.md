@@ -111,9 +111,12 @@ POST /shodai/webhooks
 
 The receiver requires the exact raw request body plus the Shodai signature
 headers. After verification, `agreement.transitioned` deliveries are stored in
-Mongo, duplicates are ignored idempotently, stale out-of-order deliveries are
-recorded without changing the agreement, and current agreement state plus input
-history are reconciled from the Shodai external API into the local Mongo mirror.
+Mongo and acknowledged before processing. A background processor claims queued
+events, reconciles current agreement state plus paged input history from the
+Shodai external API into the local Mongo mirror, retries local race or transient
+API failures with backoff, and records terminal stale or dead-letter outcomes.
+Duplicate deliveries update delivery metadata without starting parallel
+reconciliation.
 
 For local testing against hosted Shodai, expose backend port `4199` through an
 HTTPS tunnel and configure the webhook subscription to point at:

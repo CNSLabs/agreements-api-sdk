@@ -1355,6 +1355,15 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       observers: ['fail-observer@example.com'],
       onChain: { source: 'fake-fail-api' },
     },
+    'external-agreement-dead-1': {
+      id: 'external-agreement-dead-1',
+      address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      state: 'ACCEPTED',
+      displayName: 'Webhook Dead Letter Agreement',
+      variables: { scope: 'Dead letter reconciliation' },
+      observers: ['dead-observer@example.com'],
+      onChain: { source: 'fake-dead-api' },
+    },
   };
   const externalInputsByAgreement = {
     'external-agreement-webhook-1': [
@@ -1411,6 +1420,19 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       createdAt: '2026-06-02T18:04:00.000Z',
       updatedAt: '2026-06-02T18:04:00.000Z',
     }],
+    'external-agreement-dead-1': [{
+      _id: 'external-input-doc-dead',
+      agreementAddress: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      chainId: 59141,
+      inputId: 'deadAccept',
+      userId: 'platform-user-dead',
+      txHash: `0x${'b'.repeat(64)}`,
+      payload: '0x',
+      values: { deadRecovered: true },
+      status: 'MINED',
+      createdAt: '2026-06-02T18:05:00.000Z',
+      updatedAt: '2026-06-02T18:05:00.000Z',
+    }],
   };
   const externalServer = createServer(async (req, res) => {
     const chunks = [];
@@ -1427,6 +1449,10 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       if (externalAgreementId === 'external-agreement-fail-1' && failedAgreementReadAttempts === 0) {
         failedAgreementReadAttempts += 1;
         writeJson(res, 503, errorEnvelope('temporary_failure', 'temporary external outage'));
+        return;
+      }
+      if (externalAgreementId === 'external-agreement-dead-1') {
+        writeJson(res, 503, errorEnvelope('permanent_test_failure', 'persistent external outage'));
         return;
       }
       const record = externalRecords[externalAgreementId];
@@ -1497,6 +1523,11 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       EXTERNAL_API_BASE_URL: `http://127.0.0.1:${externalPort}`,
       EXTERNAL_API_KEY: 'webhook-external-key',
       SHODAI_WEBHOOK_SECRET: webhookSecret,
+      SHODAI_WEBHOOK_PROCESSOR_INTERVAL_MS: '50',
+      SHODAI_WEBHOOK_PROCESSOR_MAX_ATTEMPTS: '2',
+      SHODAI_WEBHOOK_PROCESSOR_RETRY_BASE_MS: '500',
+      SHODAI_WEBHOOK_PROCESSOR_RETRY_MAX_MS: '500',
+      SHODAI_WEBHOOK_PROCESSOR_LEASE_SECONDS: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -1511,8 +1542,9 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
 
   try {
     await waitForHealth(port, child, () => logs);
+    const db = mongoClient.db(dbName);
 
-    await insertWebhookAgreement(mongoClient.db(dbName), {
+    await insertWebhookAgreement(db, {
       id: 'webhook-local-1',
       externalAgreementId: 'external-agreement-webhook-1',
       address: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
@@ -1531,8 +1563,26 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     });
     const acceptedResponse = await sendWebhookEvent(port, acceptedEvent, webhookSecret);
     assert.equal(acceptedResponse.status, 204, await acceptedResponse.text());
+    const queuedDuplicateResponse = await sendWebhookEvent(port, acceptedEvent, webhookSecret);
+    assert.equal(queuedDuplicateResponse.status, 204, await queuedDuplicateResponse.text());
 
-    const reconciledAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+    const processedEvent = await waitForWebhookEvent(db, acceptedEvent.id, (event) => event.status === 'processed', {
+      projection: { _id: 0, status: 1, processedAction: 1, reconciliation: 1, duplicateDeliveryCount: 1, attemptCount: 1 },
+    });
+    assert.deepEqual(processedEvent, {
+      status: 'processed',
+      processedAction: 'reconciled_agreement_mirror',
+      duplicateDeliveryCount: 1,
+      attemptCount: 1,
+      reconciliation: {
+        state: 'ACCEPTED',
+        inputCount: 2,
+        inputPageCount: 2,
+        latestInputId: 'acceptFinal',
+      },
+    });
+
+    const reconciledAgreement = await db.collection('agreements').findOne(
       { id: 'webhook-local-1' },
       { projection: { _id: 0 } },
     );
@@ -1546,22 +1596,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     assert.equal(reconciledAgreement.variables.finalSignature, 'Webhook reconciled final signature');
     assert.equal(reconciledAgreement.onChain.source, 'fake-webhook-api');
     assert.deepEqual(reconciledAgreement.observers, ['observer@example.com']);
-    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ agreementId: 'webhook-local-1' }), 2);
-
-    const processedEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: acceptedEvent.id },
-      { projection: { _id: 0, status: 1, processedAction: 1, reconciliation: 1 } },
-    );
-    assert.deepEqual(processedEvent, {
-      status: 'processed',
-      processedAction: 'reconciled_agreement_mirror',
-      reconciliation: {
-        state: 'ACCEPTED',
-        inputCount: 2,
-        inputPageCount: 2,
-        latestInputId: 'acceptFinal',
-      },
-    });
+    assert.equal(await db.collection('agreement_inputs').countDocuments({ agreementId: 'webhook-local-1' }), 2);
     assert.deepEqual(externalCalls.map((call) => [call.method, call.url]), [
       ['GET', '/v0/agreements/external-agreement-webhook-1'],
       ['GET', '/v0/agreements/external-agreement-webhook-1/state'],
@@ -1573,13 +1608,13 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
 
     const duplicateResponse = await sendWebhookEvent(port, acceptedEvent, webhookSecret);
     assert.equal(duplicateResponse.status, 204, await duplicateResponse.text());
-    const duplicateEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+    const duplicateEvent = await db.collection('webhook_events').findOne(
       { eventId: acceptedEvent.id },
       { projection: { _id: 0, status: 1, duplicateDeliveryCount: 1 } },
     );
     assert.deepEqual(duplicateEvent, {
       status: 'processed',
-      duplicateDeliveryCount: 1,
+      duplicateDeliveryCount: 2,
     });
     assert.equal(externalCalls.length, callsAfterAccepted);
 
@@ -1596,15 +1631,14 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     };
     const staleResponse = await sendWebhookEvent(port, staleEvent, webhookSecret);
     assert.equal(staleResponse.status, 204, await staleResponse.text());
-    const staleStoredEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: staleEvent.id },
-      { projection: { _id: 0, status: 1, ignoredReason: 1 } },
-    );
+    const staleStoredEvent = await waitForWebhookEvent(db, staleEvent.id, (event) => event.status === 'ignored', {
+      projection: { _id: 0, status: 1, ignoredReason: 1 },
+    });
     assert.deepEqual(staleStoredEvent, {
       status: 'ignored',
       ignoredReason: 'stale_delivery',
     });
-    const afterStaleAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+    const afterStaleAgreement = await db.collection('agreements').findOne(
       { id: 'webhook-local-1' },
       { projection: { _id: 0, state: 1, lastWebhookEventId: 1 } },
     );
@@ -1615,7 +1649,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     assert.equal(externalCalls.length, callsAfterAccepted);
     const staleDuplicateResponse = await sendWebhookEvent(port, staleEvent, webhookSecret);
     assert.equal(staleDuplicateResponse.status, 204, await staleDuplicateResponse.text());
-    const staleDuplicateEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
+    const staleDuplicateEvent = await db.collection('webhook_events').findOne(
       { eventId: staleEvent.id },
       { projection: { _id: 0, status: 1, ignoredReason: 1, duplicateDeliveryCount: 1 } },
     );
@@ -1637,35 +1671,31 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     });
     const raceMissingResponse = await sendWebhookEvent(port, raceEvent, webhookSecret);
     assert.equal(raceMissingResponse.status, 204, await raceMissingResponse.text());
-    const raceMissingEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: raceEvent.id },
-      { projection: { _id: 0, status: 1, ignoredReason: 1 } },
-    );
-    assert.deepEqual(raceMissingEvent, {
-      status: 'ignored',
-      ignoredReason: 'agreement_not_found',
+    const raceMissingEvent = await waitForWebhookEvent(db, raceEvent.id, (event) => event.status === 'retry_scheduled', {
+      projection: { _id: 0, status: 1, retryReason: 1, attemptCount: 1, nextAttemptAt: 1 },
     });
+    assert.equal(raceMissingEvent.status, 'retry_scheduled');
+    assert.equal(raceMissingEvent.retryReason, 'agreement_not_found');
+    assert.equal(raceMissingEvent.attemptCount, 1);
+    assert.ok(raceMissingEvent.nextAttemptAt);
     assert.equal(externalCalls.length, callsAfterAccepted);
 
-    await insertWebhookAgreement(mongoClient.db(dbName), {
+    await insertWebhookAgreement(db, {
       id: 'webhook-race-local-1',
       externalAgreementId: 'external-agreement-race-1',
       address: '0xcccccccccccccccccccccccccccccccccccccccc',
       displayName: 'Webhook Race Local Agreement',
       variables: { scope: 'Before race webhook' },
     });
-    const raceRetryResponse = await sendWebhookEvent(port, raceEvent, webhookSecret);
-    assert.equal(raceRetryResponse.status, 204, await raceRetryResponse.text());
-    const raceRetryEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: raceEvent.id },
-      { projection: { _id: 0, status: 1, ignoredReason: 1, duplicateDeliveryCount: 1, retryDeliveryCount: 1, reconciliation: 1 } },
-    );
+    const raceRetryEvent = await waitForWebhookEvent(db, raceEvent.id, (event) => event.status === 'processed', {
+      projection: { _id: 0, status: 1, retryReason: 1, duplicateDeliveryCount: 1, attemptCount: 1, reconciliation: 1 },
+    });
     assert.equal(raceRetryEvent.status, 'processed');
-    assert.equal(raceRetryEvent.ignoredReason, undefined);
-    assert.equal(raceRetryEvent.duplicateDeliveryCount, 1);
-    assert.equal(raceRetryEvent.retryDeliveryCount, 1);
+    assert.equal(raceRetryEvent.retryReason, undefined);
+    assert.equal(raceRetryEvent.duplicateDeliveryCount, 0);
+    assert.equal(raceRetryEvent.attemptCount, 2);
     assert.equal(raceRetryEvent.reconciliation.inputCount, 1);
-    const raceAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+    const raceAgreement = await db.collection('agreements').findOne(
       { id: 'webhook-race-local-1' },
       { projection: { _id: 0, state: 1, variables: 1, lastWebhookEventId: 1 } },
     );
@@ -1673,7 +1703,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     assert.equal(raceAgreement.variables.raceAccepted, true);
     assert.equal(raceAgreement.lastWebhookEventId, raceEvent.id);
 
-    await insertWebhookAgreement(mongoClient.db(dbName), {
+    await insertWebhookAgreement(db, {
       id: 'webhook-fail-local-1',
       externalAgreementId: 'external-agreement-fail-1',
       address: '0xdddddddddddddddddddddddddddddddddddddddd',
@@ -1690,32 +1720,58 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       inputId: 'failAccept',
     });
     const failedFirstResponse = await sendWebhookEvent(port, failedEvent, webhookSecret);
-    assert.equal(failedFirstResponse.status, 503, await failedFirstResponse.text());
-    const failedStoredEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: failedEvent.id },
-      { projection: { _id: 0, status: 1, error: 1 } },
-    );
-    assert.equal(failedStoredEvent.status, 'failed');
+    assert.equal(failedFirstResponse.status, 204, await failedFirstResponse.text());
+    const failedStoredEvent = await waitForWebhookEvent(db, failedEvent.id, (event) => event.status === 'retry_scheduled', {
+      projection: { _id: 0, status: 1, retryReason: 1, error: 1, attemptCount: 1 },
+    });
+    assert.equal(failedStoredEvent.status, 'retry_scheduled');
+    assert.equal(failedStoredEvent.retryReason, 'reconciliation_failed');
+    assert.equal(failedStoredEvent.attemptCount, 1);
     assert.match(failedStoredEvent.error, /temporary external outage/);
 
-    const failedRetryResponse = await sendWebhookEvent(port, failedEvent, webhookSecret);
-    assert.equal(failedRetryResponse.status, 204, await failedRetryResponse.text());
-    const failedRetryEvent = await mongoClient.db(dbName).collection('webhook_events').findOne(
-      { eventId: failedEvent.id },
-      { projection: { _id: 0, status: 1, error: 1, duplicateDeliveryCount: 1, retryDeliveryCount: 1, reconciliation: 1 } },
-    );
+    const failedRetryEvent = await waitForWebhookEvent(db, failedEvent.id, (event) => event.status === 'processed', {
+      projection: { _id: 0, status: 1, error: 1, duplicateDeliveryCount: 1, attemptCount: 1, reconciliation: 1 },
+    });
     assert.equal(failedRetryEvent.status, 'processed');
     assert.equal(failedRetryEvent.error, undefined);
-    assert.equal(failedRetryEvent.duplicateDeliveryCount, 1);
-    assert.equal(failedRetryEvent.retryDeliveryCount, 1);
+    assert.equal(failedRetryEvent.duplicateDeliveryCount, 0);
+    assert.equal(failedRetryEvent.attemptCount, 2);
     assert.equal(failedRetryEvent.reconciliation.inputCount, 1);
-    const failedAgreement = await mongoClient.db(dbName).collection('agreements').findOne(
+    const failedAgreement = await db.collection('agreements').findOne(
       { id: 'webhook-fail-local-1' },
       { projection: { _id: 0, state: 1, variables: 1, lastWebhookEventId: 1 } },
     );
     assert.equal(failedAgreement.state, 'ACCEPTED');
     assert.equal(failedAgreement.variables.failRecovered, true);
     assert.equal(failedAgreement.lastWebhookEventId, failedEvent.id);
+
+    await insertWebhookAgreement(db, {
+      id: 'webhook-dead-local-1',
+      externalAgreementId: 'external-agreement-dead-1',
+      address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      displayName: 'Webhook Dead Letter Local Agreement',
+      variables: { scope: 'Before dead letter webhook' },
+    });
+    const deadEvent = transitionEvent({
+      id: 'evt_webhook_dead_letter_1',
+      agreementId: 'external-agreement-dead-1',
+      agreementName: 'Webhook Dead Letter Agreement',
+      createdAt: '2026-06-02T18:05:00.000Z',
+      fromState: 'PENDING_ACCEPTANCE',
+      toState: 'ACCEPTED',
+      inputId: 'deadAccept',
+    });
+    const deadResponse = await sendWebhookEvent(port, deadEvent, webhookSecret);
+    assert.equal(deadResponse.status, 204, await deadResponse.text());
+    const deadStoredEvent = await waitForWebhookEvent(db, deadEvent.id, (event) => event.status === 'dead_letter', {
+      projection: { _id: 0, status: 1, deadLetterReason: 1, error: 1, attemptCount: 1, maxAttempts: 1 },
+      timeoutMs: 5000,
+    });
+    assert.equal(deadStoredEvent.status, 'dead_letter');
+    assert.equal(deadStoredEvent.deadLetterReason, 'reconciliation_failed');
+    assert.equal(deadStoredEvent.attemptCount, 2);
+    assert.equal(deadStoredEvent.maxAttempts, 2);
+    assert.match(deadStoredEvent.error, /persistent external outage/);
 
     const acceptedRawBody = JSON.stringify(acceptedEvent);
     const invalidResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
@@ -1727,7 +1783,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       body: acceptedRawBody,
     });
     assert.equal(invalidResponse.status, 400, await invalidResponse.text());
-    assert.equal(await mongoClient.db(dbName).collection('webhook_events').countDocuments({ eventId: 'evt_bad_signature' }), 0);
+    assert.equal(await db.collection('webhook_events').countDocuments({ eventId: 'evt_bad_signature' }), 0);
   } finally {
     child.kill('SIGTERM');
     await once(child, 'exit').catch(() => undefined);
@@ -1736,6 +1792,21 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     await new Promise((resolve) => externalServer.close(resolve));
   }
 });
+
+async function waitForWebhookEvent(db, eventId, predicate, { projection = { _id: 0 }, timeoutMs = 3000 } = {}) {
+  const started = Date.now();
+  let lastEvent = null;
+  while (Date.now() - started < timeoutMs) {
+    lastEvent = await db.collection('webhook_events').findOne(
+      { eventId },
+      { projection },
+    );
+    if (lastEvent && predicate(lastEvent)) return lastEvent;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  throw new Error(`Timed out waiting for webhook event ${eventId}; last event: ${JSON.stringify(lastEvent)}`);
+}
 
 async function insertWebhookAgreement(db, overrides) {
   const now = new Date().toISOString();
