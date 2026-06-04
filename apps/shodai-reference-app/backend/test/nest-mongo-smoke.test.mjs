@@ -928,7 +928,9 @@ test('Reference app external bridge uses the real API client surface and mirrors
 
   const externalCalls = [];
   let submittedInput = null;
+  let inputSubmissionCount = 0;
   let listInputsCalls = 0;
+  let failNextStateRead = false;
   const externalServer = createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -995,6 +997,11 @@ test('Reference app external bridge uses the real API client surface and mirrors
     }
 
     if (req.method === 'GET' && req.url === '/v0/agreements/external-agreement-1/state') {
+      if (failNextStateRead) {
+        failNextStateRead = false;
+        writeJson(res, 503, errorEnvelope('service_unavailable', 'state read temporarily unavailable', 'req_state_fail'));
+        return;
+      }
       writeJson(res, 200, successEnvelope({ status: 'Deployed', state: submittedInput ? 'COMPLETE' : 'AWAITING_INPUT' }));
       return;
     }
@@ -1036,13 +1043,14 @@ test('Reference app external bridge uses the real API client surface and mirrors
     }
 
     if (req.method === 'POST' && req.url === '/v0/agreements/external-agreement-1/input') {
+      inputSubmissionCount += 1;
       submittedInput = {
-        _id: 'external-input-doc-submit',
+        _id: `external-input-doc-submit-${inputSubmissionCount}`,
         agreementAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         chainId: 59141,
         inputId: body?.inputId,
         userId: 'platform-user-bridge',
-        txHash: `0x${'5'.repeat(64)}`,
+        txHash: `0x${String(inputSubmissionCount).repeat(64)}`,
         payload: '0x',
         values: body?.values || {},
         status: 'MINED',
@@ -1169,7 +1177,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
       owner,
       contributors: [owner],
       json: agreementJson,
-      variables: { invoiceTotal: '1000' },
+      variables: { invoiceTotal: '1000', clientWalletAddress: participant },
       participants: [{ variableKey: 'clientWalletAddress', walletAddress: participant, email: 'client@example.com', status: 'accepted' }],
       observers: ['observer@example.com'],
       createdAt: now,
@@ -1186,6 +1194,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
         deadline: Math.floor(Date.now() / 1000) + 3600,
         signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
         docUri: 'ipfs://agreement/signed-doc-uri',
+        initValues: { invoiceTotal: '2000', signedOnly: 'yes' },
       }),
     });
     const deployBody = await readJsonResponse(deployResponse);
@@ -1197,6 +1206,8 @@ test('Reference app external bridge uses the real API client surface and mirrors
     assert.equal(deployBody.docUri, 'ipfs://agreement/signed-doc-uri');
     assert.equal(deployBody.state, 'AWAITING_INPUT');
     assert.equal(deployBody.variables.clientWalletAddress, participant);
+    assert.equal(deployBody.variables.invoiceTotal, '2000');
+    assert.equal(deployBody.variables.signedOnly, 'yes');
 
     const stateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/bridge-draft-1/state`, {
       headers: { authorization: `Bearer ${token}` },
@@ -1247,6 +1258,29 @@ test('Reference app external bridge uses the real API client surface and mirrors
     assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoice' }), 1);
     assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'confirmPayment' }), 1);
 
+    failNextStateRead = true;
+    const stateFailureSubmitResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'submitInvoiceAfterStateFailure',
+        values: { invoiceNumber: 'INV-STATE-FAIL' },
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'8'.repeat(64)}`, s: `0x${'9'.repeat(64)}` },
+      }),
+    });
+    const stateFailureSubmitBody = await readJsonResponse(stateFailureSubmitResponse);
+    assert.equal(stateFailureSubmitResponse.status, 201, `${JSON.stringify(stateFailureSubmitBody)}\n${logs}`);
+    assert.equal(stateFailureSubmitBody.status, 'MINED');
+    assert.equal(
+      await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoiceAfterStateFailure' }),
+      1,
+    );
+
     const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -1268,6 +1302,8 @@ test('Reference app external bridge uses the real API client surface and mirrors
       ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge&cursor=bridge-cursor-2'],
       ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge'],
       ['GET', '/v0/agreements/external-agreement-1/inputs?userId=platform-user-bridge&cursor=bridge-cursor-2'],
+      ['POST', '/v0/agreements/external-agreement-1/input'],
+      ['GET', '/v0/agreements/external-agreement-1/state'],
       ['POST', '/v0/agreements/validate-template'],
     ]);
     assert.equal(
@@ -1277,6 +1313,14 @@ test('Reference app external bridge uses the real API client surface and mirrors
     assert.equal(
       externalCalls.find((call) => call.url === '/v0/agreements/deploy-with-permit')?.body?.chainId,
       59141,
+    );
+    assert.deepEqual(
+      externalCalls.find((call) => call.url === '/v0/agreements/deploy-with-permit')?.body?.initValues,
+      {
+        invoiceTotal: '2000',
+        clientWalletAddress: participant,
+        signedOnly: 'yes',
+      },
     );
     assert.ok(
       externalCalls
@@ -1289,8 +1333,13 @@ test('Reference app external bridge uses the real API client surface and mirrors
       {},
       { projection: { _id: 0, operation: 1, ok: 1, error: 1, path: 1, mock: 1, agreementId: 1, externalAgreementId: 1, inputCount: 1, pageCount: 1 } },
     ).sort({ createdAt: 1 }).toArray();
-    assert.equal(auditEvents.filter((event) => event.ok === true).length, 9);
+    assert.equal(auditEvents.filter((event) => event.ok === true).length, 10);
     assert.equal(auditEvents.filter((event) => event.error === 'template rejected by external API').length, 1);
+    assert.ok(auditEvents.some((event) =>
+      event.operation === 'read-state-after-input' &&
+      event.agreementId === 'bridge-draft-1' &&
+      event.error
+    ));
     assert.ok(auditEvents.every((event) => event.mock === false));
     assert.ok(auditEvents.every((event) => !JSON.stringify(event).includes('bridge-external-key')));
     assert.ok(auditEvents.some((event) =>

@@ -261,8 +261,11 @@ export type UpdateWebhookRequest = {
 };
 
 export type WebhookTestResponse = {
-  ok: true;
+  ok: boolean;
   deliveryId: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'retry_pending';
+  responseStatus?: number;
+  error?: string;
 };
 
 export type AgreementsApiEnvironment = 'testnet' | 'production';

@@ -442,12 +442,14 @@ export function useDocumentDeploy({
 
         deployStage = "persist-draft-values";
         try {
-          await updateDraftValues(draftId, initObj);
-        } catch {
+          latestDraft = await updateDraftValues(draftId, initObj);
+          onDraftUpdated?.(latestDraft);
+        } catch (error: any) {
           diagnosticContext = {
             ...diagnosticContext,
             persistedDraftValues: false,
           };
+          throw new Error(error?.message || "Failed to save draft values before signing. Please try again.");
         }
 
         const chainId = draft?.chainId;
@@ -578,6 +580,7 @@ export function useDocumentDeploy({
           deadline,
           signature,
           docUri: params.docUri,
+          initValues: initObj,
         });
         const addr = record?.address || record?.id;
         if (!addr) throw new Error("API did not return an agreement address.");
