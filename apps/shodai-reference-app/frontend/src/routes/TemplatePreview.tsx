@@ -113,11 +113,11 @@ const TemplatePreview: React.FC = () => {
           setTemplateSource(null);
         }
         if (!allowed.has(templateId)) {
-          navigate("/templates", { replace: true });
+          navigate("/create", { replace: true });
         }
       })
       .catch(() => {
-        navigate("/templates", { replace: true });
+        navigate("/create", { replace: true });
       });
   }, [authStatus, templateId, getAvailableTemplateIds, navigate]);
 

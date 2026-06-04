@@ -7,6 +7,9 @@ interface ImportMetaEnv {
   readonly VITE_AUTH_API_URL: string;
   readonly VITE_AGREEMENTS_RPC_URL?: string;
   readonly [key: `VITE_AGREEMENTS_RPC_URL_${number}`]: string | undefined;
+  readonly VITE_MARKETING_TELEMETRY_ENABLED?: string;
+  readonly VITE_GA_MEASUREMENT_ID?: string;
+  readonly VITE_HUBSPOT_PORTAL_ID?: string;
   readonly VITE_SENTRY_ENABLED?: string;
   readonly VITE_SENTRY_DSN?: string;
   readonly VITE_SENTRY_ENVIRONMENT?: string;

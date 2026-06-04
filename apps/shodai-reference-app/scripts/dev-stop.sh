@@ -27,27 +27,46 @@ kill_pid_file() {
   fi
 
   pid="$(cat "$file" 2>/dev/null || true)"
-  if [ -n "$pid" ]; then
-    kill "$pid" 2>/dev/null || true
+  if [[ "$pid" =~ ^[0-9]+$ ]]; then
+    kill_pid_tree "$pid"
   fi
   rm -f "$file"
 }
 
-kill_port() {
-  local port="$1"
-  local pid
+kill_pid_tree() {
+  local pid="$1"
+  local child
 
-  while read -r pid; do
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null || true
+  while read -r child; do
+    if [[ "$child" =~ ^[0-9]+$ ]]; then
+      kill_pid_tree "$child"
     fi
-  done < <(lsof -ti ":$port" 2>/dev/null || true)
+  done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+  kill "$pid" 2>/dev/null || true
+}
+
+warn_port_listener() {
+  local port="$1"
+  local label="$2"
+  local listeners
+
+  if ! command -v lsof >/dev/null 2>&1; then
+    return
+  fi
+
+  listeners="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+  if [ -n "$listeners" ]; then
+    echo "Port $port still has a $label listener that was not started from this dev stack; leaving it running." >&2
+    echo "$listeners" >&2
+  fi
 }
 
 kill_pid_file "$RUNTIME_DIR/backend.pid"
 kill_pid_file "$RUNTIME_DIR/frontend.pid"
-kill_port "$BACKEND_PORT"
-kill_port "$FRONTEND_PORT"
+sleep 1
+warn_port_listener "$BACKEND_PORT" "backend"
+warn_port_listener "$FRONTEND_PORT" "frontend"
 
 if [ -f "$MONGO_STARTED_MARKER" ]; then
   if command -v docker >/dev/null 2>&1; then

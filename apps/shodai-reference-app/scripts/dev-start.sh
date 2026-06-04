@@ -124,12 +124,12 @@ else
 fi
 
 if port_has_listener "$BACKEND_PORT"; then
-  echo "Port $BACKEND_PORT is already in use. Run pnpm dev:stop or choose a different AGREEMENTS_BACKEND_PORT." >&2
+  echo "Port $BACKEND_PORT is already in use. Stop the listener or choose a different AGREEMENTS_BACKEND_PORT." >&2
   exit 1
 fi
 
 if port_has_listener "$FRONTEND_PORT"; then
-  echo "Port $FRONTEND_PORT is already in use. Run pnpm dev:stop or choose a different AGREEMENTS_FRONTEND_PORT." >&2
+  echo "Port $FRONTEND_PORT is already in use. Stop the listener or choose a different AGREEMENTS_FRONTEND_PORT." >&2
   exit 1
 fi
 

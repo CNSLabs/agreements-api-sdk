@@ -76,16 +76,18 @@ const Agreement: React.FC = () => {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const { getInputs } = useAgreementsApi();
+  const requestedInputId = searchParams.get("input");
 
   const [documentThumbFailed, setDocumentThumbFailed] = React.useState(false);
   const [shareCopied, setShareCopied] = React.useState(false);
   const [showDeploySuccessModal, setShowDeploySuccessModal] = React.useState(false);
   const contentScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const lastConsumedInputLinkRef = React.useRef<string | null>(null);
 
   const tab = React.useMemo<AgreementTabId | null>(() => {
-    if (!tabParam) return "overview";
+    if (!tabParam) return requestedInputId ? "actions" : "overview";
     return AGREEMENT_PATH_TO_TAB[tabParam as keyof typeof AGREEMENT_PATH_TO_TAB] ?? null;
-  }, [tabParam]);
+  }, [requestedInputId, tabParam]);
   const activeTab: AgreementTabId = tab ?? "overview";
 
   // Form setup (dynamic variable keys, so use a string-keyed record)
@@ -123,6 +125,8 @@ const Agreement: React.FC = () => {
     isTerminalState,
     blockExplorerUrl,
     agreementTemplateId,
+    deployApprovalWarning,
+    refreshAgreement,
     refreshState,
     hasProcessedDeployModal,
   } = useAgreementData({ form });
@@ -199,9 +203,57 @@ const Agreement: React.FC = () => {
     record,
     form: currentStateForm,
     variables,
+    refreshAgreement,
     refreshState,
     refreshInputs,
   });
+
+  React.useEffect(() => {
+    if (!requestedInputId || !routeAgreementId || !agreementJson || !currentState || !address) return;
+
+    const consumeKey = `${routeAgreementId}:${requestedInputId}`;
+    if (lastConsumedInputLinkRef.current === consumeKey) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("input");
+    const nextSearch = nextSearchParams.toString();
+
+    if (!performableInputIds.includes(requestedInputId)) {
+      lastConsumedInputLinkRef.current = consumeKey;
+      navigate(
+        {
+          pathname: `/agreement/${routeAgreementId}/current-state`,
+          search: nextSearch ? `?${nextSearch}` : "",
+        },
+        { replace: true }
+      );
+      return;
+    }
+
+    setActiveInputId(requestedInputId);
+    setActionError(null);
+    setActionErrorReport(null);
+    lastConsumedInputLinkRef.current = consumeKey;
+    navigate(
+      {
+        pathname: `/agreement/${routeAgreementId}/current-state`,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true }
+    );
+  }, [
+    agreementJson,
+    address,
+    currentState,
+    navigate,
+    performableInputIds,
+    requestedInputId,
+    routeAgreementId,
+    searchParams,
+    setActionError,
+    setActionErrorReport,
+    setActiveInputId,
+  ]);
 
   // Deploy success modal handling
   React.useEffect(() => {
@@ -624,7 +676,12 @@ const Agreement: React.FC = () => {
           if (!open) setShowDeploySuccessModal(false);
         }}
         title="Agreement Deployed"
-        message={<>Your agreement has been successfully deployed and is now active.</>}
+        message={
+          <>
+            Your agreement has been successfully deployed and is now active.
+            {deployApprovalWarning ? " Review the token approval warning below before relying on token-backed payment actions." : null}
+          </>
+        }
         footer={
           <Button
             variant="brand-primary"
@@ -638,6 +695,17 @@ const Agreement: React.FC = () => {
           </Button>
         }
       >
+        {deployApprovalWarning ? (
+          <DisplayCard
+            title="Token Approval Warning"
+            content={
+              <div className="flex flex-col items-start gap-2 px-4 py-4">
+                <span className="text-body font-body text-default-font">{deployApprovalWarning}</span>
+              </div>
+            }
+          />
+        ) : null}
+
         <DisplayCard
           title="Agreement Name"
           content={

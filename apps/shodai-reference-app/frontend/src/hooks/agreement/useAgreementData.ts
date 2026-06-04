@@ -89,6 +89,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
   const [currentState, setCurrentState] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [participants, setParticipants] = React.useState<ParticipantApi[]>([]);
+  const [deployApprovalWarning, setDeployApprovalWarning] = React.useState<string | null>(null);
 
   const agreementTemplateIdForQuery = React.useMemo(
     () => (record?.json as any)?.metadata?.templateId || (record?.json as any)?.metadata?.id || null,
@@ -178,6 +179,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     if (!currentId) {
       setRecord(null);
       setCurrentState(null);
+      setDeployApprovalWarning(null);
       lastLoadedId.current = null;
       return;
     }
@@ -191,6 +193,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
       setRecord(null);
       setCurrentState(null);
       setParticipants([]);
+      setDeployApprovalWarning(null);
       // Reset the deploy modal flag when agreement ID changes (new agreement loaded)
       hasProcessedDeployModal.current = false;
     }
@@ -207,13 +210,22 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
   // Handle deployment success modal
   React.useEffect(() => {
     const deployed = searchParams.get("deployed");
+    const approval = searchParams.get("approval");
+    const approvalReference = searchParams.get("approvalReference");
     // Only process if we haven't already shown the modal and we have both the query param and record
     if (deployed === "true" && record && !hasProcessedDeployModal.current) {
       hasProcessedDeployModal.current = true;
+      setDeployApprovalWarning(
+        approval === "erc20-failed"
+          ? `Token approval was not completed. The agreement is active, but token-backed payment actions may fail until approval is completed.${approvalReference ? ` Reference: ${approvalReference}` : ""}`
+          : null
+      );
 
       // Remove the query param from URL immediately to prevent re-triggering
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("deployed");
+      newSearchParams.delete("approval");
+      newSearchParams.delete("approvalReference");
       setSearchParams(newSearchParams, { replace: true });
 
       // Try to fetch participants if available (only if not already set by refreshAgreement)
@@ -283,6 +295,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     isTerminalState,
     blockExplorerUrl,
     agreementTemplateId,
+    deployApprovalWarning,
 
     // Actions
     refreshAgreement,

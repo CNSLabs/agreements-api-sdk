@@ -19,23 +19,26 @@ local operation.
 
 ## Setup
 
+Run these commands from the SDK repository root:
+
 ```sh
 pnpm install
-cp backend/.env.sample backend/.env
-cp frontend/.env.sample frontend/.env
+cp apps/shodai-reference-app/backend/.env.sample apps/shodai-reference-app/backend/.env
+cp apps/shodai-reference-app/frontend/.env.sample apps/shodai-reference-app/frontend/.env
 ```
 
 Fill both env files with real values before starting the app. Backend secrets
-belong in `backend/.env`; only browser-safe `VITE_` values belong in
-`frontend/.env`. Do not invent placeholder secrets for validation: runtime
+belong in `apps/shodai-reference-app/backend/.env`; only browser-safe `VITE_`
+values belong in `apps/shodai-reference-app/frontend/.env`. Do not invent placeholder secrets for validation: runtime
 startup fails closed when required Dynamic, external API, service auth,
 frontend URL, webhook, or Mongo config is missing.
 
 `EXTERNAL_API_BASE_URL` can use `https://test-api.shodai.network` for testnet
 validation. `EXTERNAL_API_KEY` is required and is never defaulted; provide it
-via your shell environment or `backend/.env`. To obtain a key, open
-`https://developers.shodai.network/portal`, sign in with Google, generate a
-testnet API key, and store it locally in `backend/.env`.
+via your shell environment or `apps/shodai-reference-app/backend/.env`. To
+obtain a key, open `https://developers.shodai.network/portal`, sign in with
+Google, generate a testnet API key, and store it locally in
+`apps/shodai-reference-app/backend/.env`.
 
 Create a webhook subscription in the Shodai developer portal or API with the
 delivery URL `https://<your-tunnel-host>/shodai/webhooks` and event type
@@ -80,11 +83,11 @@ Stop the local dev stack with:
 pnpm dev:stop
 ```
 
-You can still run the services separately from this app directory when debugging:
+You can still run the services separately from the SDK repository root when debugging:
 
 ```sh
-pnpm backend:start
-pnpm frontend:dev:no-prepare
+pnpm --filter shodai-reference-app backend:start
+pnpm --filter shodai-reference-app frontend:dev:no-prepare
 ```
 
 ## Validation Commands
@@ -120,17 +123,33 @@ reconciliation.
 
 The reference frontend ships with no marketing telemetry enabled. To opt in for
 your own deployment, set `VITE_MARKETING_TELEMETRY_ENABLED=true` with
-`VITE_GA_MEASUREMENT_ID` and/or `VITE_HUBSPOT_PORTAL_ID` in `frontend/.env`.
+`VITE_GA_MEASUREMENT_ID` and/or `VITE_HUBSPOT_PORTAL_ID` in
+`apps/shodai-reference-app/frontend/.env`.
 
-For local testing against hosted Shodai, expose backend port `4199` through an
-HTTPS tunnel and configure the webhook subscription to point at:
+For local testing against hosted Shodai, expose backend port `4199` through a
+public HTTPS tunnel. For example:
+
+```sh
+ngrok http 4199
+```
+
+or:
+
+```sh
+cloudflared tunnel --url http://localhost:4199
+```
+
+Configure the webhook subscription in Shodai to point at the tunnel host plus
+the receiver path:
 
 ```text
 https://<your-tunnel-host>/shodai/webhooks
 ```
 
-Keep the tunnel URL stable while testing. If the URL changes, update the webhook
-subscription before expecting new deliveries.
+Keep the tunnel URL stable while testing. If the URL changes, update the
+subscription URL before expecting new deliveries. Validate the tunnel by loading
+`https://<your-tunnel-host>/health`, then send a Shodai webhook test delivery
+and confirm the backend accepts it before exercising agreement lifecycle events.
 
 ## Deployment
 
