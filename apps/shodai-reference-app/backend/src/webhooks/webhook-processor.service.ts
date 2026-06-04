@@ -59,9 +59,10 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
   private async processClaimedEvent(document: Record<string, any>): Promise<void> {
     const event = document.payload as AgreementTransitionedWebhookEvent | undefined;
     if (!event || event.type !== 'agreement.transitioned') {
-      await this.webhookEvents.markIgnored(document.eventId, 'unsupported_event_type', {
+      const updated = await this.webhookEvents.markIgnored(document.eventId, document.lockToken, 'unsupported_event_type', {
         processedAction: 'ignored_unsupported_webhook_event',
       });
+      this.logLostLease(document, updated, 'ignore unsupported event');
       return;
     }
 
@@ -89,23 +90,41 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     }
 
     if (isStaleEvent(event.createdAt, agreement.lastWebhookEventAt)) {
-      await this.webhookEvents.markIgnored(event.id, 'stale_delivery', {
+      const updated = await this.webhookEvents.markIgnored(document.eventId, document.lockToken, 'stale_delivery', {
         agreementId: agreement.id,
         externalAgreementId,
         lastWebhookEventAt: agreement.lastWebhookEventAt,
         processedAction: 'ignored_stale_delivery',
       });
+      this.logLostLease(document, updated, 'ignore stale event');
       return;
     }
 
     try {
-      const reconciliation = await this.external.reconcileAgreementMirrorFromWebhook(agreement, event);
-      await this.webhookEvents.markProcessed(event.id, {
+      const reconciliation = await this.external.reconcileAgreementMirrorFromWebhook(agreement, event, {
+        isLeaseCurrent: () => this.webhookEvents.isProcessingLeaseCurrent(document.eventId, document.lockToken),
+      });
+      if (reconciliation.skippedReason === 'lease_lost') {
+        this.logLostLease(document, false, 'reconcile agreement mirror');
+        return;
+      }
+      if (reconciliation.skippedReason === 'stale_delivery') {
+        const updated = await this.webhookEvents.markIgnored(document.eventId, document.lockToken, 'stale_delivery', {
+          agreementId: agreement.id,
+          externalAgreementId,
+          lastWebhookEventAt: agreement.lastWebhookEventAt,
+          processedAction: 'ignored_stale_delivery',
+        });
+        this.logLostLease(document, updated, 'ignore stale event after reconciliation race');
+        return;
+      }
+      const updated = await this.webhookEvents.markProcessed(document.eventId, document.lockToken, {
         agreementId: agreement.id,
         externalAgreementId,
         processedAction: 'reconciled_agreement_mirror',
         reconciliation,
       });
+      this.logLostLease(document, updated, 'mark processed');
     } catch (error) {
       await this.retryOrDeadLetter(document, 'reconciliation_failed', error, {
         agreementId: agreement.id,
@@ -125,19 +144,21 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     const shouldRetry = reason === 'agreement_not_found' || !status || status >= 500 || status === 408 || status === 409 || status === 429;
 
     if (!shouldRetry || attemptCount >= this.config.webhookProcessorMaxAttempts) {
-      await this.webhookEvents.markDeadLetter(document.eventId, reason, error, {
+      const updated = await this.webhookEvents.markDeadLetter(document.eventId, document.lockToken, reason, error, {
         ...patch,
         attemptCount,
         maxAttempts: this.config.webhookProcessorMaxAttempts,
       });
+      this.logLostLease(document, updated, 'mark dead letter');
       if (reason !== 'agreement_not_found') {
         this.logger.warn(`Webhook event ${document.eventId} moved to dead_letter after ${attemptCount} attempt(s): ${errorMessage(error)}`);
       }
       return;
     }
 
-    await this.webhookEvents.markRetryScheduled(
+    const updated = await this.webhookEvents.markRetryScheduled(
       document.eventId,
+      document.lockToken,
       this.nextAttemptAt(attemptCount),
       reason,
       error,
@@ -147,6 +168,7 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
         maxAttempts: this.config.webhookProcessorMaxAttempts,
       },
     );
+    this.logLostLease(document, updated, 'schedule retry');
   }
 
   private nextAttemptAt(attemptCount: number): string {
@@ -155,6 +177,11 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
       this.config.webhookProcessorRetryBaseMs * (2 ** Math.max(0, attemptCount - 1)),
     );
     return new Date(Date.now() + delayMs).toISOString();
+  }
+
+  private logLostLease(document: Record<string, any>, updated: boolean, action: string): void {
+    if (updated) return;
+    this.logger.warn(`Webhook event ${document.eventId} lost processing lease before ${action}; another worker may own it.`);
   }
 }
 

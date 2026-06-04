@@ -4,6 +4,7 @@ export type AvailableActionsAgreement = {
   id?: string;
   address: string;
   chainId?: number;
+  onChainRef?: string;
   state?: string;
   variables?: Record<string, unknown>;
   updatedAt?: string | Date;
@@ -14,6 +15,7 @@ export type AvailableActionsAgreement = {
 
 export type AvailableActionItem = {
   agreementId: string;
+  agreementKey: string;
   agreementAddress: string;
   agreementName: string;
   agreementUpdatedAt?: string | Date;
@@ -70,6 +72,7 @@ export function computeAvailableActions(params: {
       const agreementId = (a as { id?: string }).id || a.address;
       items.push({
         agreementId,
+        agreementKey: agreementActionKey(a, agreementId),
         agreementAddress: a.address,
         agreementName,
         agreementUpdatedAt: a.updatedAt || a.createdAt,
@@ -85,4 +88,13 @@ export function computeAvailableActions(params: {
 
   items.sort((x, y) => toMillis(y.agreementUpdatedAt) - toMillis(x.agreementUpdatedAt));
   return items;
+}
+
+function agreementActionKey(agreement: AvailableActionsAgreement, agreementId: string): string {
+  const onChainRef = typeof agreement.onChainRef === "string" ? agreement.onChainRef.trim() : "";
+  if (onChainRef) return onChainRef.toLowerCase();
+  if (agreement.chainId && agreement.address) {
+    return `eip155:${agreement.chainId}:${agreement.address.toLowerCase()}`;
+  }
+  return agreementId;
 }

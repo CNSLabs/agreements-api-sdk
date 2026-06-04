@@ -20,6 +20,18 @@ type InputListingResult = {
   pageCount: number;
 };
 
+type WebhookReconciliationResult = {
+  state: unknown;
+  inputCount: number;
+  inputPageCount: number;
+  latestInputId: string | null;
+  skippedReason?: 'lease_lost' | 'stale_delivery';
+};
+
+type WebhookReconciliationOptions = {
+  isLeaseCurrent?: () => Promise<boolean>;
+};
+
 const DEPLOY_TRANSITION_INPUT_ID = '__deploy';
 
 function inputListingAuditMetadata(result: InputListingResult): Record<string, unknown> {
@@ -204,7 +216,11 @@ export class ExternalAgreementsService {
     return inputRecord;
   }
 
-  async reconcileAgreementMirrorFromWebhook(agreement: any, event: AgreementTransitionedWebhookEvent) {
+  async reconcileAgreementMirrorFromWebhook(
+    agreement: any,
+    event: AgreementTransitionedWebhookEvent,
+    options: WebhookReconciliationOptions = {},
+  ): Promise<WebhookReconciliationResult> {
     const externalAgreementId = event.data.agreementId;
     const metadata = { agreementId: agreement.id, externalAgreementId, webhookEventId: event.id };
     let externalRecord: any = null;
@@ -240,7 +256,6 @@ export class ExternalAgreementsService {
       });
     }
 
-    await Promise.all(externalInputs.map((input) => this.upsertInputMirror(input, agreement)));
     const sortedInputs = [...externalInputs].sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     const latestInput = sortedInputs.at(-1);
     const inputVariables = Object.assign({}, ...sortedInputs.map((input) => input.values || {}));
@@ -248,8 +263,19 @@ export class ExternalAgreementsService {
     const latestInputId = latestInput?.inputId || webhookInputId || agreement.lastInputId;
     const latestInputAt = latestInput?.createdAt || agreement.lastInputAt;
     const now = new Date().toISOString();
+    const result = {
+      state: externalState?.state || externalRecord?.state || event.data.toState || agreement.state,
+      inputCount: externalInputs.length,
+      inputPageCount: externalInputPageCount,
+      latestInputId: latestInput?.inputId || null,
+    };
 
-    Object.assign(agreement, {
+    if (options.isLeaseCurrent && !(await options.isLeaseCurrent())) {
+      return { ...result, skippedReason: 'lease_lost' };
+    }
+
+    const mirror = {
+      ...agreement,
       externalAgreementId: externalRecord?.id || externalAgreementId || agreement.externalAgreementId,
       address: externalRecord?.address || agreement.address,
       status: externalRecord?.status || externalState?.status || agreement.status || 'Deployed',
@@ -271,12 +297,16 @@ export class ExternalAgreementsService {
       lastWebhookEventAt: event.createdAt,
       lastWebhookEventType: event.type,
       updatedAt: now,
-    });
-    refreshDerivedFields(agreement);
-    await this.agreements.upsertOne({ id: agreement.id }, agreement);
+    };
+    refreshDerivedFields(mirror);
+    const updated = await this.agreements.updateWebhookMirrorIfFresh(agreement.id, event.createdAt, mirror);
+    if (!updated) {
+      return { ...result, skippedReason: 'stale_delivery' };
+    }
+    await Promise.all(externalInputs.map((input) => this.upsertInputMirror(input, mirror)));
 
     return {
-      state: agreement.state,
+      state: mirror.state,
       inputCount: externalInputs.length,
       inputPageCount: externalInputPageCount,
       latestInputId: latestInput?.inputId || null,
@@ -369,10 +399,33 @@ export class ExternalAgreementsService {
       createdAt: inputRecord.createdAt || new Date().toISOString(),
       updatedAt: inputRecord.updatedAt || new Date().toISOString(),
     };
-    const key = mirrored.txHash
-      ? { agreementId: agreement.id, chainId: mirrored.chainId, txHash: mirrored.txHash }
-      : { agreementId: agreement.id, chainId: mirrored.chainId, inputId: mirrored.inputId, createdAt: mirrored.createdAt };
-    await this.inputs.upsertOne(key, mirrored);
+    const txHash = typeof mirrored.txHash === 'string' && mirrored.txHash
+      ? mirrored.txHash.toLowerCase()
+      : null;
+    const dedupeKey = txHash
+      ? `tx:${txHash}`
+      : `input:${String(mirrored.inputId || '')}:${String(mirrored.createdAt || '')}`;
+    const legacyFilter = txHash
+      ? {
+        agreementId: agreement.id,
+        chainId: mirrored.chainId,
+        txHash: { $regex: `^${escapeRegex(txHash)}$`, $options: 'i' },
+      }
+      : {
+        agreementId: agreement.id,
+        chainId: mirrored.chainId,
+        inputId: mirrored.inputId,
+        createdAt: mirrored.createdAt,
+      };
+    await this.inputs.upsertInputMirror(
+      { agreementId: agreement.id, chainId: mirrored.chainId, dedupeKey },
+      {
+        ...mirrored,
+        txHash: txHash || mirrored.txHash,
+        dedupeKey,
+      },
+      legacyFilter,
+    );
   }
 
   private getParticipantVariableKeys(agreement: any) {
@@ -531,4 +584,8 @@ export class ExternalAgreementsService {
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

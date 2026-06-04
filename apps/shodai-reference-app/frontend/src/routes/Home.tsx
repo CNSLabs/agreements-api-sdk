@@ -105,6 +105,7 @@ const Home: React.FC = () => {
     const byAgreement = new Map<
       string,
       {
+        agreementKey: string;
         agreementId: string;
         agreementAddress: string;
         agreementName: string;
@@ -116,9 +117,11 @@ const Home: React.FC = () => {
     >();
 
     for (const x of items) {
-      const existing = byAgreement.get(x.agreementAddress);
+      const agreementKey = x.agreementKey;
+      const existing = byAgreement.get(agreementKey);
       if (!existing) {
-        byAgreement.set(x.agreementAddress, {
+        byAgreement.set(agreementKey, {
+          agreementKey,
           agreementId: x.agreementId,
           agreementAddress: x.agreementAddress,
           agreementName: x.agreementName,
@@ -151,9 +154,9 @@ const Home: React.FC = () => {
     setVisibleBadgeCounts(prev => {
       const merged = new Map(prev);
       awaitingInputs.forEach(agreement => {
-        if (!merged.has(agreement.agreementAddress)) {
+        if (!merged.has(agreement.agreementKey)) {
           // Start conservatively with 2 badges, will adjust based on available space
-          merged.set(agreement.agreementAddress, Math.min(2, agreement.inputs.length));
+          merged.set(agreement.agreementKey, Math.min(2, agreement.inputs.length));
         }
       });
       return merged;
@@ -165,7 +168,7 @@ const Home: React.FC = () => {
         let hasChanges = false;
 
         badgeContainerRefs.current.forEach((container, agreementKey) => {
-          const agreement = awaitingInputs.find(a => a.agreementAddress === agreementKey);
+          const agreement = awaitingInputs.find(a => a.agreementKey === agreementKey);
           if (!agreement || agreement.inputs.length === 0) return;
 
           const children = Array.from(container.children) as HTMLElement[];
@@ -423,7 +426,7 @@ const Home: React.FC = () => {
                 {/* Deployed agreements with available inputs */}
                 {awaitingInputs.slice(0, 5 - Math.min(drafts.length, 5)).map((row) => {
                   const inputs = row.inputs;
-                  const agreementKey = row.agreementAddress;
+                  const agreementKey = row.agreementKey;
                   const visibleCount = visibleBadgeCounts.get(agreementKey) ?? inputs.length;
                   const shown = inputs.slice(0, visibleCount);
                   const more = inputs.length - shown.length;
@@ -431,7 +434,7 @@ const Home: React.FC = () => {
 
                   return (
                     <Table.Row
-                      key={row.agreementAddress}
+                      key={agreementKey}
                       clickable
                       onClick={() => navigate(`/agreement/${row.agreementId}`)}
                     >

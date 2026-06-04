@@ -22,11 +22,15 @@ export type UseLoginReturn = {
 
 export function useLogin(): UseLoginReturn {
   const { address } = useAccount();
-  const { sdkHasLoaded, handleLogOut } = useDynamicContext();
+  const { sdkHasLoaded, handleLogOut, primaryWallet } = useDynamicContext();
   const { error, isProcessing, signInWithSocialAccount } = useSocialAccounts();
 
   const isLoggedIn = useIsLoggedIn();
   const { connectWithEmail, verifyOneTimePassword } = useConnectWithOtp();
+  const primaryWalletAddress = isEvmAddress(primaryWallet?.address)
+    ? primaryWallet.address
+    : undefined;
+  const resolvedAddress = address || primaryWalletAddress;
 
   const connectWithGoogle = useCallback(
     () => signInWithSocialAccount(ProviderEnum.Google),
@@ -42,10 +46,10 @@ export function useLogin(): UseLoginReturn {
 
   return useMemo(
     () => ({
-      isConnected: isLoggedIn,
-      isConnecting: isProcessing,
+      isConnected: Boolean(isLoggedIn && resolvedAddress),
+      isConnecting: isProcessing || Boolean(isLoggedIn && !resolvedAddress),
       connectError: error,
-      address,
+      address: resolvedAddress,
       connectWithGoogle,
       connectWithEmail,
       verifyOTP: verifyOneTimePassword,
@@ -57,7 +61,7 @@ export function useLogin(): UseLoginReturn {
       error,
       isLoggedIn,
       isProcessing,
-      address,
+      resolvedAddress,
       sdkHasLoaded,
       handleLogOut,
       connectWithEmail,
@@ -66,4 +70,8 @@ export function useLogin(): UseLoginReturn {
       getAuthTokenAsync,
     ]
   );
+}
+
+function isEvmAddress(value: unknown): value is `0x${string}` {
+  return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
 }
