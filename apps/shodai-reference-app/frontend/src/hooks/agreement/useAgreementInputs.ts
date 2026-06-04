@@ -47,6 +47,7 @@ export interface UseAgreementInputsParams {
     trigger: (name?: string | string[]) => Promise<boolean>;
   };
   variables: Record<string, DocumentVariable>;
+  refreshAgreement: () => Promise<void>;
   refreshState: () => Promise<void>;
   refreshInputs: () => Promise<void>;
 }
@@ -56,6 +57,7 @@ export function useAgreementInputs({
   currentState,
   record,
   form,
+  refreshAgreement,
   refreshState,
   refreshInputs,
 }: UseAgreementInputsParams) {
@@ -401,7 +403,7 @@ export function useAgreementInputs({
 
       // Refresh state and inputs after successful submission
       submitStage = "refresh-agreement-state";
-      const refreshResults = await Promise.allSettled([refreshState(), refreshInputs()]);
+      const refreshResults = await Promise.allSettled([refreshAgreement(), refreshState(), refreshInputs()]);
       const refreshFailures = refreshResults.filter((result) => result.status === "rejected");
       if (refreshFailures.length > 0) {
         console.warn("Submitted input succeeded, but post-submit refresh failed:", refreshFailures);
@@ -439,6 +441,7 @@ export function useAgreementInputs({
     record?.chainId,
     record?.id,
     record?.status,
+    refreshAgreement,
     refreshInputs,
     refreshState,
     resolveInputIssuerAddresses,

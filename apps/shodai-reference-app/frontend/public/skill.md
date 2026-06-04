@@ -1,15 +1,15 @@
 ---
-name: shodai-agreements-app
-description: Use when starting from app.shodai.network/agreements to explore the product workflow, inspect app-visible agreement behavior, or route technical/API tasks to the Shodai docs.
+name: shodai-reference-app
+description: Use when starting from a deployed Shodai Reference App to explore the product workflow, inspect app-visible agreement behavior, or route technical/API tasks to the Shodai docs.
 metadata:
   version: "1.0"
 ---
 
-# Shodai Agreements App Skill
+# Shodai Reference App Skill
 
-Use this skill when the user or agent starts from `https://app.shodai.network/agreements`.
+Use this skill when the user or agent starts from this deployment's `/agreements/` app.
 
-The Agreements app is the product workflow surface for templates, drafts, deployed agreements, signing, available actions, and agreement operation. Technical builder work belongs in the Shodai Developer Documentation at `https://docs.shodai.network`.
+The Shodai Reference App is the product workflow surface for templates, drafts, deployed agreements, signing, available actions, local persistence, and webhook reconciliation. Technical builder work belongs in the Shodai Developer Documentation at `https://docs.shodai.network`.
 
 ## Classify the task
 
@@ -26,7 +26,7 @@ Choose the user's primary need:
 
 For product UI exploration, stay in the app:
 
-- `https://app.shodai.network/agreements`
+- `/agreements/` on the current deployment origin
 
 For product/API behavior, load:
 

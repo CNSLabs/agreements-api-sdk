@@ -7,8 +7,8 @@ This file is a dependency license inventory for release review. It is not a subs
 Regenerate it after dependency changes:
 
 ```sh
-pnpm notices:generate
-pnpm notices:check
+pnpm --filter shodai-reference-app notices:generate
+pnpm --filter shodai-reference-app notices:check
 ```
 
 ## License Summary
@@ -18,6 +18,7 @@ pnpm notices:check
 | (Apache-2.0 AND BSD-3-Clause) | 1 |
 | (Apache-2.0 AND MIT) | 1 |
 | (MIT AND BSD-3-Clause) | 1 |
+| (MIT AND Zlib) | 1 |
 | (MIT OR Apache-2.0) | 1 |
 | (Unlicense OR Apache-2.0) | 1 |
 | 0BSD | 2 |
@@ -25,38 +26,42 @@ pnpm notices:check
 | BlueOak-1.0.0 | 6 |
 | BSD | 1 |
 | BSD-2-Clause | 11 |
-| BSD-3-Clause | 18 |
+| BSD-3-Clause | 29 |
 | CC-BY-4.0 | 1 |
 | CC0-1.0 | 1 |
 | FSL-1.1-MIT | 2 |
-| ISC | 64 |
+| ISC | 65 |
 | LGPL-3.0-only | 1 |
 | LGPL-3.0-or-later | 1 |
-| MIT | 873 |
+| MIT | 879 |
 | MIT AND ISC | 1 |
 | MPL-2.0 | 6 |
 | Python-2.0 | 1 |
-| Unknown | 9 |
+| Unknown | 13 |
 
 ## Licenses Requiring Human Review
 
 | Package | Versions | License | Homepage |
 | --- | --- | --- | --- |
-| @dynamic-labs-sdk/assert-package-version | 0.26.9 | Unknown |  |
-| @dynamic-labs-sdk/client | 0.26.9 | Unknown |  |
+| @dynamic-labs-sdk/assert-package-version | 1.6.0 | Unknown |  |
+| @dynamic-labs-sdk/client | 1.6.0 | Unknown |  |
 | @ethereumjs/rlp | 4.0.1 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/rlp#readme) |
 | @ethereumjs/tx | 4.2.0 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#readme) |
 | @ethereumjs/util | 8.1.0 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/util#readme) |
 | @evervault/wasm-attestation-bindings | 0.3.1 | Unknown |  |
 | @img/sharp-libvips-darwin-arm64 | 1.0.4 | LGPL-3.0-or-later | [link](https://sharp.pixelplumbing.com) |
+| @metamask/analytics | 0.5.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/analytics#readme) |
+| @metamask/connect-evm | 1.3.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/connect-evm#readme) |
+| @metamask/connect-multichain | 0.14.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/multichain#readme) |
 | @metamask/eth-json-rpc-provider | 1.0.1 | Unknown | [link](https://github.com/MetaMask/eth-json-rpc-provider#readme) |
-| @metamask/sdk | 0.33.0, 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
-| @metamask/sdk-communication-layer | 0.33.0, 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
+| @metamask/multichain-ui | 0.4.1 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/multichain-ui#readme) |
+| @metamask/sdk | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
+| @metamask/sdk-communication-layer | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/sdk-install-modal-web | 0.32.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
-| @sentry/cli | 2.58.5 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
-| @sentry/cli-darwin | 2.58.5 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
+| @sentry/cli | 2.58.6 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
+| @sentry/cli-darwin | 2.58.6 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
 | argparse | 2.0.1 | Python-2.0 | [link](https://github.com/nodeca/argparse#readme) |
-| caniuse-lite | 1.0.30001792 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
+| caniuse-lite | 1.0.30001790 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
 | eyes | 0.1.8 | Unknown |  |
 | lightningcss | 1.32.0 | MPL-2.0 | [link](https://github.com/parcel-bundler/lightningcss#readme) |
 | lightningcss-darwin-arm64 | 1.32.0 | MPL-2.0 | [link](https://github.com/parcel-bundler/lightningcss#readme) |
@@ -74,7 +79,7 @@ pnpm notices:check
 | @ably/msgpack-js | 0.4.1 | Apache-2.0 | [link](https://github.com/ably-forks/msgpack-js#readme) |
 | @adraffy/ens-normalize | 1.11.1 | MIT | [link](https://github.com/adraffy/ens-normalize.js#readme) |
 | @babel/code-frame | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-code-frame) |
-| @babel/compat-data | 7.29.3 | MIT | [link](https://github.com/babel/babel#readme) |
+| @babel/compat-data | 7.29.0 | MIT | [link](https://github.com/babel/babel#readme) |
 | @babel/core | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-core) |
 | @babel/generator | 7.29.1 | MIT | [link](https://babel.dev/docs/en/next/babel-generator) |
 | @babel/helper-compilation-targets | 7.28.6 | MIT | [link](https://github.com/babel/babel#readme) |
@@ -86,53 +91,53 @@ pnpm notices:check
 | @babel/helper-validator-identifier | 7.28.5 | MIT | [link](https://github.com/babel/babel#readme) |
 | @babel/helper-validator-option | 7.27.1 | MIT | [link](https://github.com/babel/babel#readme) |
 | @babel/helpers | 7.29.2 | MIT | [link](https://babel.dev/docs/en/next/babel-helpers) |
-| @babel/parser | 7.29.3 | MIT | [link](https://babel.dev/docs/en/next/babel-parser) |
+| @babel/parser | 7.29.2 | MIT | [link](https://babel.dev/docs/en/next/babel-parser) |
 | @babel/plugin-transform-react-jsx-self | 7.27.1 | MIT | [link](https://babel.dev/docs/en/next/babel-plugin-transform-react-jsx-self) |
 | @babel/plugin-transform-react-jsx-source | 7.27.1 | MIT | [link](https://babel.dev/docs/en/next/babel-plugin-transform-react-jsx-source) |
-| @babel/runtime | 7.29.2 | MIT | [link](https://babel.dev/docs/en/next/babel-runtime) |
+| @babel/runtime | 7.29.7 | MIT | [link](https://babel.dev/docs/en/next/babel-runtime) |
 | @babel/template | 7.28.6 | MIT | [link](https://babel.dev/docs/en/next/babel-template) |
 | @babel/traverse | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-traverse) |
 | @babel/types | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-types) |
 | @base-org/account | 1.1.1, 2.4.0 | Apache-2.0 | [link](https://github.com/base/account-sdk#readme) |
 | @borewit/text-codec | 0.2.2 | MIT | [link](https://github.com/Borewit/text-codec#readme) |
-| @cns-labs/agreements-api-client | 0.2.0 | Apache-2.0 | [link](https://github.com/CNSLabs/agreements-api-sdk/tree/main/packages/agreements-api-client#readme) |
-| @cns-labs/agreements-protocol-evm | 0.1.2 | Apache-2.0 |  |
-| @coinbase/cdp-sdk | 1.49.2 | MIT | [link](https://github.com/coinbase/cdp-sdk#readme) |
+| @cns-labs/agreements-protocol-evm | 0.1.3 | Apache-2.0 |  |
+| @coinbase/cdp-sdk | 1.51.0 | MIT | [link](https://github.com/coinbase/cdp-sdk#readme) |
 | @coinbase/wallet-sdk | 3.9.3, 4.3.7 | Apache-2.0 | [link](https://github.com/coinbase/coinbase-wallet-sdk#readme) |
 | @cspotcode/source-map-support | 0.8.1 | MIT | [link](https://github.com/cspotcode/node-source-map-support#readme) |
-| @date-fns/tz | 1.4.1 | MIT | [link](https://github.com/date-fns/tz#readme) |
-| @dynamic-labs-connectors/base-account-evm | 4.4.2 | MIT |  |
-| @dynamic-labs-sdk/assert-package-version | 0.26.9 | Unknown |  |
-| @dynamic-labs-sdk/client | 0.26.9 | Unknown |  |
-| @dynamic-labs-wallet/browser-wallet-client | 0.0.325, 0.0.337 | MIT |  |
-| @dynamic-labs-wallet/core | 0.0.325, 0.0.337 | MIT |  |
-| @dynamic-labs-wallet/forward-mpc-client | 0.9.0 | MIT | [link](https://github.com/dynamic-labs/forward-mpc-client#readme) |
+| @date-fns/tz | 1.5.0 | MIT | [link](https://github.com/date-fns/date-fns#readme) |
+| @dynamic-labs-connectors/base-account-evm | 4.6.7 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
+| @dynamic-labs-connectors/metamask-evm | 4.6.7 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
+| @dynamic-labs-sdk/assert-package-version | 1.6.0 | Unknown |  |
+| @dynamic-labs-sdk/client | 1.6.0 | Unknown |  |
+| @dynamic-labs-wallet/browser-wallet-client | 1.0.7, 1.0.13 | MIT |  |
+| @dynamic-labs-wallet/core | 1.0.7, 1.0.13 | MIT |  |
+| @dynamic-labs-wallet/forward-mpc-client | 0.10.1 | MIT | [link](https://github.com/dynamic-labs/forward-mpc-client#readme) |
 | @dynamic-labs-wallet/forward-mpc-shared | 0.7.0 | MIT |  |
-| @dynamic-labs-wallet/primitives | 0.0.337 | MIT |  |
-| @dynamic-labs/assert-package-version | 4.83.1 | MIT | [link](https://github.com/dynamic-labs/DynamicAuth/main/packages/assert-package-version#readme) |
-| @dynamic-labs/embedded-wallet | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/embedded-wallet-evm | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/ethereum | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/ethereum-core | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/iconic | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/locale | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/logger | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/message-transport | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/multi-wallet | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/rpc-providers | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/sdk-api-core | 0.0.900, 0.0.958, 0.0.964 | Apache-2.0 | [link](https://dynamic.xyz) |
-| @dynamic-labs/sdk-react-core | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/solana-core | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/store | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/sui-core | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/types | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/utils | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/waas | 4.83.1 | MIT |  |
-| @dynamic-labs/waas-evm | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wagmi-connector | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wallet-book | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wallet-connector-core | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/webauthn | 4.83.1 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs-wallet/primitives | 1.0.7, 1.0.13 | MIT |  |
+| @dynamic-labs/assert-package-version | 4.87.2 | MIT | [link](https://github.com/dynamic-labs/DynamicAuth/main/packages/assert-package-version#readme) |
+| @dynamic-labs/embedded-wallet | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/embedded-wallet-evm | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/ethereum | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/ethereum-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/iconic | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/locale | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/logger | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/message-transport | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/multi-wallet | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/rpc-providers | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/sdk-api-core | 0.0.984, 0.0.1015 | Apache-2.0 | [link](https://dynamic.xyz) |
+| @dynamic-labs/sdk-react-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/solana-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/store | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/sui-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/types | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/utils | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/waas | 4.87.2 | MIT |  |
+| @dynamic-labs/waas-evm | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wagmi-connector | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wallet-book | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wallet-connector-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/webauthn | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
 | @ecies/ciphers | 0.2.6 | MIT | [link](https://github.com/ecies/js-ciphers#readme) |
 | @esbuild-plugins/node-globals-polyfill | 0.2.3 | ISC | [link](https://github.com/remorses/esbuild-plugins#readme) |
 | @esbuild-plugins/node-modules-polyfill | 0.2.2 | ISC | [link](https://github.com/remorses/esbuild-plugins#readme) |
@@ -181,17 +186,24 @@ pnpm notices:check
 | @lit-labs/ssr-dom-shim | 1.6.0 | BSD-3-Clause | [link](https://github.com/lit/lit/tree/main/packages/labs/ssr-dom-shim) |
 | @lit/reactive-element | 2.1.2 | BSD-3-Clause | [link](https://lit.dev/) |
 | @lukeed/csprng | 1.1.0 | MIT | [link](https://github.com/lukeed/csprng#readme) |
+| @metamask/analytics | 0.5.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/analytics#readme) |
+| @metamask/connect-evm | 1.3.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/connect-evm#readme) |
+| @metamask/connect-multichain | 0.14.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/multichain#readme) |
 | @metamask/eth-json-rpc-provider | 1.0.1 | Unknown | [link](https://github.com/MetaMask/eth-json-rpc-provider#readme) |
 | @metamask/json-rpc-engine | 7.3.3, 8.0.2 | ISC | [link](https://github.com/MetaMask/core/tree/main/packages/json-rpc-engine#readme) |
 | @metamask/json-rpc-middleware-stream | 7.0.2 | ISC | [link](https://github.com/MetaMask/core/tree/main/packages/json-rpc-middleware-stream#readme) |
+| @metamask/mobile-wallet-protocol-core | 0.4.0 | MIT | [link](https://github.com/MetaMask/mobile-wallet-protocol/tree/main/packages/core#readme) |
+| @metamask/mobile-wallet-protocol-dapp-client | 0.3.0 | MIT | [link](https://github.com/MetaMask/mobile-wallet-protocol/tree/main/packages/dapp-client#readme) |
+| @metamask/multichain-api-client | 0.10.1 | ISC | [link](https://github.com/MetaMask/multichain-api-client#readme) |
+| @metamask/multichain-ui | 0.4.1 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/multichain-ui#readme) |
 | @metamask/object-multiplex | 2.1.0 | ISC | [link](https://github.com/MetaMask/object-multiplex#readme) |
 | @metamask/onboarding | 1.0.1 | MIT | [link](https://github.com/MetaMask/metamask-onboarding#readme) |
 | @metamask/providers | 16.1.0 | MIT | [link](https://github.com/MetaMask/providers#readme) |
-| @metamask/rpc-errors | 6.4.0, 7.0.2 | MIT | [link](https://github.com/MetaMask/rpc-errors#readme) |
+| @metamask/rpc-errors | 6.4.0, 7.0.2, 7.0.3 | MIT | [link](https://github.com/MetaMask/rpc-errors#readme) |
 | @metamask/safe-event-emitter | 2.0.0, 3.1.2 | ISC | [link](https://github.com/MetaMask/safe-event-emitter#readme) |
-| @metamask/sdk | 0.33.0, 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
+| @metamask/sdk | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/sdk-analytics | 0.0.5 | MIT |  |
-| @metamask/sdk-communication-layer | 0.33.0, 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
+| @metamask/sdk-communication-layer | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/sdk-install-modal-web | 0.32.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/superstruct | 3.2.1 | MIT | [link](https://github.com/MetaMask/superstruct#readme) |
 | @metamask/utils | 5.0.2, 8.5.0, 9.3.0, 11.11.0 | ISC | [link](https://github.com/MetaMask/utils#readme) |
@@ -201,10 +213,10 @@ pnpm notices:check
 | @mysten/sui | 1.45.2 | Apache-2.0 | [link](https://sdk.mystenlabs.com) |
 | @mysten/utils | 0.2.0 | Apache-2.0 | [link](https://github.com/MystenLabs/ts-sdks/tree/main/packages/utils#readme) |
 | @mysten/wallet-standard | 0.19.9 | Apache-2.0 |  |
-| @nestjs/common | 11.1.21 | MIT | [link](https://nestjs.com) |
+| @nestjs/common | 11.1.24 | MIT | [link](https://nestjs.com) |
 | @nestjs/config | 4.0.4 | MIT | [link](https://github.com/nestjs/config#readme) |
-| @nestjs/core | 11.1.21 | MIT | [link](https://nestjs.com) |
-| @nestjs/platform-express | 11.1.21 | MIT | [link](https://nestjs.com) |
+| @nestjs/core | 11.1.24 | MIT | [link](https://nestjs.com) |
+| @nestjs/platform-express | 11.1.24 | MIT | [link](https://nestjs.com) |
 | @noble/ciphers | 0.4.1, 1.2.1, 1.3.0 | MIT | [link](https://paulmillr.com/noble/) |
 | @noble/curves | 1.4.2, 1.8.0, 1.8.1, 1.9.0, 1.9.1, 1.9.2, 1.9.4, 1.9.7, 2.0.1 | MIT | [link](https://paulmillr.com/noble/) |
 | @noble/hashes | 1.4.0, 1.7.0, 1.7.1, 1.8.0, 2.0.1, 2.2.0 | MIT | [link](https://paulmillr.com/noble/) |
@@ -217,6 +229,16 @@ pnpm notices:check
 | @protobuf-ts/grpcweb-transport | 2.11.1 | Apache-2.0 | [link](https://github.com/timostamm/protobuf-ts) |
 | @protobuf-ts/runtime | 2.11.1 | (Apache-2.0 AND BSD-3-Clause) | [link](https://github.com/timostamm/protobuf-ts) |
 | @protobuf-ts/runtime-rpc | 2.11.1 | Apache-2.0 | [link](https://github.com/timostamm/protobuf-ts) |
+| @protobufjs/aspromise | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/base64 | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/codegen | 2.0.5 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/eventemitter | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/fetch | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/float | 1.0.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/inquire | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/path | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/pool | 1.1.0 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
+| @protobufjs/utf8 | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @radix-ui/number | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
 | @radix-ui/primitive | 1.1.3 | MIT | [link](https://radix-ui.com/primitives) |
 | @radix-ui/react-accordion | 1.2.12 | MIT | [link](https://radix-ui.com/primitives) |
@@ -274,25 +296,25 @@ pnpm notices:check
 | @reown/appkit-utils | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-wallet | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
 | @rolldown/pluginutils | 1.0.0-beta.27 | MIT | [link](https://github.com/rolldown/rolldown#readme) |
-| @rollup/pluginutils | 5.3.0 | MIT | [link](https://github.com/rollup/plugins/tree/master/packages/pluginutils#readme) |
-| @rollup/rollup-darwin-arm64 | 4.60.4 | MIT | [link](https://rollupjs.org/) |
+| @rollup/pluginutils | 5.4.0 | MIT | [link](https://github.com/rollup/plugins/tree/master/packages/pluginutils#readme) |
+| @rollup/rollup-darwin-arm64 | 4.60.2 | MIT | [link](https://rollupjs.org/) |
 | @safe-global/safe-apps-provider | 0.18.6 | MIT | [link](https://github.com/safe-global/safe-apps-sdk#readme) |
 | @safe-global/safe-apps-sdk | 9.1.0 | MIT | [link](https://github.com/safe-global/safe-apps-sdk#readme) |
 | @safe-global/safe-gateway-typescript-sdk | 3.23.1 | MIT | [link](https://github.com/safe-global/safe-gateway-typescript-sdk#readme) |
 | @scure/base | 1.1.9, 1.2.6 | MIT | [link](https://paulmillr.com/noble/#scure) |
 | @scure/bip32 | 1.4.0, 1.6.2, 1.7.0 | MIT | [link](https://paulmillr.com/noble/#scure) |
 | @scure/bip39 | 1.3.0, 1.5.4, 1.6.0 | MIT | [link](https://paulmillr.com/) |
-| @sentry-internal/browser-utils | 10.53.1 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser-utils) |
-| @sentry-internal/feedback | 10.53.1 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/feedback) |
-| @sentry-internal/replay | 10.53.1 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
-| @sentry-internal/replay-canvas | 10.53.1 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
+| @sentry-internal/browser-utils | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser-utils) |
+| @sentry-internal/feedback | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/feedback) |
+| @sentry-internal/replay | 10.56.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
+| @sentry-internal/replay-canvas | 10.56.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
 | @sentry/babel-plugin-component-annotate | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/babel-plugin-component-annotate) |
-| @sentry/browser | 10.53.1 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser) |
+| @sentry/browser | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser) |
 | @sentry/bundler-plugin-core | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/bundler-plugin-core) |
-| @sentry/cli | 2.58.5 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
-| @sentry/cli-darwin | 2.58.5 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
-| @sentry/core | 10.53.1 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/core) |
-| @sentry/react | 10.53.1 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/react) |
+| @sentry/cli | 2.58.6 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
+| @sentry/cli-darwin | 2.58.6 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
+| @sentry/core | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/core) |
+| @sentry/react | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/react) |
 | @sentry/vite-plugin | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/vite-plugin) |
 | @simplewebauthn/browser | 13.1.0 | MIT | [link](https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/browser#readme) |
 | @simplewebauthn/types | 12.0.0 | MIT | [link](https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/types#readme) |
@@ -358,15 +380,15 @@ pnpm notices:check
 | @svgr/core | 8.1.0 | MIT | [link](https://react-svgr.com) |
 | @svgr/hast-util-to-babel-ast | 8.0.0 | MIT | [link](https://react-svgr.com) |
 | @svgr/plugin-jsx | 8.1.0 | MIT | [link](https://react-svgr.com) |
-| @swc/helpers | 0.5.21 | Apache-2.0 | [link](https://swc.rs) |
+| @swc/helpers | 0.5.23 | Apache-2.0 | [link](https://swc.rs) |
 | @szmarczak/http-timer | 4.0.6 | MIT | [link](https://github.com/szmarczak/http-timer#readme) |
 | @tabby_ai/hijri-converter | 1.0.5 | MIT |  |
 | @tailwindcss/node | 4.3.0 | MIT | [link](https://tailwindcss.com) |
 | @tailwindcss/oxide | 4.3.0 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
 | @tailwindcss/oxide-darwin-arm64 | 4.3.0 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
 | @tailwindcss/vite | 4.3.0 | MIT | [link](https://tailwindcss.com) |
-| @tanstack/query-core | 5.100.10 | MIT | [link](https://tanstack.com/query) |
-| @tanstack/react-query | 5.100.10 | MIT | [link](https://tanstack.com/query) |
+| @tanstack/query-core | 5.101.0 | MIT | [link](https://tanstack.com/query) |
+| @tanstack/react-query | 5.101.0 | MIT | [link](https://tanstack.com/query) |
 | @thumbmarkjs/thumbmarkjs | 0.16.0 | MIT |  |
 | @tokenizer/inflate | 0.4.1 | MIT | [link](https://github.com/Borewit/tokenizer-inflate#readme) |
 | @tokenizer/token | 0.3.0 | MIT | [link](https://github.com/Borewit/tokenizer-token#readme) |
@@ -407,7 +429,7 @@ pnpm notices:check
 | @types/d3-transition | 3.0.9 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-transition) |
 | @types/d3-zoom | 3.0.8 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-zoom) |
 | @types/debug | 4.1.13 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/debug) |
-| @types/estree | 1.0.8, 1.0.9 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree) |
+| @types/estree | 1.0.8 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree) |
 | @types/estree-jsx | 1.0.5 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree-jsx) |
 | @types/express | 5.0.6 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/express) |
 | @types/express-serve-static-core | 5.1.1 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/express-serve-static-core) |
@@ -419,7 +441,7 @@ pnpm notices:check
 | @types/lodash | 4.17.24 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash) |
 | @types/mdast | 4.0.4 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdast) |
 | @types/ms | 2.1.0 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ms) |
-| @types/node | 12.20.55, 20.19.41, 22.19.19 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node) |
+| @types/node | 12.20.55, 20.19.39, 22.19.19 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node) |
 | @types/prop-types | 15.7.15 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/prop-types) |
 | @types/qs | 6.15.1 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/qs) |
 | @types/range-parser | 1.2.7 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/range-parser) |
@@ -434,28 +456,28 @@ pnpm notices:check
 | @types/webidl-conversions | 7.0.3 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/webidl-conversions) |
 | @types/whatwg-url | 11.0.5 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/whatwg-url) |
 | @types/ws | 7.4.7, 8.18.1 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ws) |
-| @typescript-eslint/eslint-plugin | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/eslint-plugin) |
-| @typescript-eslint/parser | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/parser) |
-| @typescript-eslint/project-service | 8.59.3 | MIT | [link](https://typescript-eslint.io) |
-| @typescript-eslint/scope-manager | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/scope-manager) |
-| @typescript-eslint/tsconfig-utils | 8.59.3 | MIT | [link](https://typescript-eslint.io) |
-| @typescript-eslint/type-utils | 8.59.3 | MIT | [link](https://typescript-eslint.io) |
-| @typescript-eslint/types | 8.59.3 | MIT | [link](https://typescript-eslint.io) |
-| @typescript-eslint/typescript-estree | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/typescript-estree) |
-| @typescript-eslint/utils | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/utils) |
-| @typescript-eslint/visitor-keys | 8.59.3 | MIT | [link](https://typescript-eslint.io) |
+| @typescript-eslint/eslint-plugin | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/eslint-plugin) |
+| @typescript-eslint/parser | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/parser) |
+| @typescript-eslint/project-service | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
+| @typescript-eslint/scope-manager | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/scope-manager) |
+| @typescript-eslint/tsconfig-utils | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
+| @typescript-eslint/type-utils | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
+| @typescript-eslint/types | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
+| @typescript-eslint/typescript-estree | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/typescript-estree) |
+| @typescript-eslint/utils | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/utils) |
+| @typescript-eslint/visitor-keys | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
 | @ungap/structured-clone | 1.3.1 | ISC | [link](https://github.com/ungap/structured-clone#readme) |
 | @vitejs/plugin-react | 4.7.0 | MIT | [link](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme) |
-| @vue/reactivity | 3.5.34 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/reactivity#readme) |
-| @vue/shared | 3.5.34 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/shared#readme) |
+| @vue/reactivity | 3.5.35 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/reactivity#readme) |
+| @vue/shared | 3.5.35 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/shared#readme) |
 | @wagmi/connectors | 6.2.0 | MIT | [link](https://github.com/wevm/wagmi#readme) |
 | @wagmi/core | 2.22.1 | MIT | [link](https://github.com/wevm/wagmi#readme) |
-| @wallet-standard/app | 1.1.0 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @wallet-standard/base | 1.1.0 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @wallet-standard/app | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @wallet-standard/base | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
 | @wallet-standard/core | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @wallet-standard/errors | 0.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @wallet-standard/features | 1.1.0 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @wallet-standard/wallet | 1.1.0 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @wallet-standard/errors | 0.1.2 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @wallet-standard/features | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @wallet-standard/wallet | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
 | @walletconnect/core | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/environment | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/ethereum-provider | 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
@@ -478,9 +500,9 @@ pnpm notices:check
 | @walletconnect/utils | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/window-getters | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/window-metadata | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @xyflow/react | 12.10.2 | MIT | [link](https://reactflow.dev) |
-| @xyflow/system | 0.0.76 | MIT | [link](https://github.com/xyflow/xyflow#readme) |
-| abitype | 1.0.6, 1.0.8, 1.2.3, 1.2.4 | MIT | [link](https://github.com/wevm/abitype#readme) |
+| @xyflow/react | 12.11.0 | MIT | [link](https://reactflow.dev) |
+| @xyflow/system | 0.0.77 | MIT | [link](https://github.com/xyflow/xyflow#readme) |
+| abitype | 1.0.6, 1.0.8, 1.2.3 | MIT | [link](https://github.com/wevm/abitype#readme) |
 | ably | 2.17.1 | Apache-2.0 | [link](https://github.com/ably/ably-js#readme) |
 | accepts | 2.0.0 | MIT | [link](https://github.com/jshttp/accepts#readme) |
 | acorn | 8.16.0 | MIT | [link](https://github.com/acornjs/acorn) |
@@ -496,17 +518,17 @@ pnpm notices:check
 | arg | 4.1.3 | MIT | [link](https://github.com/zeit/arg#readme) |
 | argparse | 2.0.1 | Python-2.0 | [link](https://github.com/nodeca/argparse#readme) |
 | aria-hidden | 1.2.6 | MIT | [link](https://github.com/theKashey/aria-hidden#readme) |
-| async-mutex | 0.2.6 | MIT | [link](https://github.com/DirtyHairy/async-mutex#readme) |
+| async-mutex | 0.2.6, 0.5.0 | MIT | [link](https://github.com/DirtyHairy/async-mutex#readme) |
 | asynckit | 0.4.0 | MIT | [link](https://github.com/alexindigo/asynckit#readme) |
 | atomic-sleep | 1.0.0 | MIT | [link](https://github.com/davidmarkclements/atomic-sleep#readme) |
 | available-typed-arrays | 1.0.7 | MIT | [link](https://github.com/inspect-js/available-typed-arrays#readme) |
-| axios | 1.15.0, 1.15.2, 1.16.0, 1.16.1 | MIT | [link](https://axios-http.com) |
+| axios | 1.15.2, 1.16.0, 1.17.0 | MIT | [link](https://axios-http.com) |
 | axios-retry | 4.5.0 | Apache-2.0 | [link](https://github.com/softonic/axios-retry) |
 | bail | 2.0.2 | MIT | [link](https://github.com/wooorm/bail#readme) |
 | balanced-match | 1.0.2, 4.0.4 | MIT | [link](https://github.com/juliangruber/balanced-match#readme) |
 | base-x | 3.0.11, 4.0.1, 5.0.1 | MIT | [link](https://github.com/cryptocoinjs/base-x) |
 | base64-js | 1.0.2, 1.5.1 | MIT | [link](https://github.com/beatgammit/base64-js) |
-| baseline-browser-mapping | 2.10.29 | Apache-2.0 | [link](https://github.com/web-platform-dx/baseline-browser-mapping#readme) |
+| baseline-browser-mapping | 2.10.21 | Apache-2.0 | [link](https://github.com/web-platform-dx/baseline-browser-mapping#readme) |
 | big.js | 6.2.2 | MIT | [link](https://github.com/MikeMcl/big.js#readme) |
 | bigint-buffer | 1.1.5 | Apache-2.0 | [link](https://github.com/no2chem/bigint-buffer#readme) |
 | bignumber.js | 9.3.1 | MIT | [link](https://github.com/MikeMcl/bignumber.js#readme) |
@@ -518,7 +540,7 @@ pnpm notices:check
 | bops | 1.0.1 | MIT | [link](https://github.com/chrisdickinson/bops#readme) |
 | borsh | 0.7.0 | Apache-2.0 | [link](https://github.com/near/borsh-js#readme) |
 | bowser | 2.14.1 | MIT | [link](https://github.com/bowser-js/bowser) |
-| brace-expansion | 1.1.14, 2.1.0, 5.0.6 | MIT | [link](https://github.com/juliangruber/brace-expansion#readme) |
+| brace-expansion | 1.1.14, 2.1.1, 5.0.5 | MIT | [link](https://github.com/juliangruber/brace-expansion#readme) |
 | braces | 3.0.3 | MIT | [link](https://github.com/micromatch/braces) |
 | browserslist | 4.28.2 | MIT | [link](https://github.com/browserslist/browserslist#readme) |
 | bs58 | 4.0.1, 5.0.0, 6.0.0 | MIT | [link](https://github.com/cryptocoinjs/bs58#readme) |
@@ -536,8 +558,9 @@ pnpm notices:check
 | call-bound | 1.0.4 | MIT | [link](https://github.com/ljharb/call-bound#readme) |
 | callsites | 3.1.0 | MIT | [link](https://github.com/sindresorhus/callsites#readme) |
 | camelcase | 5.3.1, 6.3.0 | MIT | [link](https://github.com/sindresorhus/camelcase#readme) |
-| caniuse-lite | 1.0.30001792 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
+| caniuse-lite | 1.0.30001790 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
 | ccount | 2.0.1 | MIT | [link](https://github.com/wooorm/ccount#readme) |
+| centrifuge | 5.6.0 | MIT | [link](https://github.com/centrifugal/centrifuge-js) |
 | chalk | 4.1.2, 5.6.2 | MIT | [link](https://github.com/chalk/chalk#readme) |
 | character-entities | 2.0.2 | MIT | [link](https://github.com/wooorm/character-entities#readme) |
 | character-entities-html4 | 2.1.0 | MIT | [link](https://github.com/wooorm/character-entities-html4#readme) |
@@ -595,7 +618,7 @@ pnpm notices:check
 | d3-timer | 3.0.1 | ISC | [link](https://d3js.org/d3-timer/) |
 | d3-transition | 3.0.1 | ISC | [link](https://d3js.org/d3-transition/) |
 | d3-zoom | 3.0.0 | ISC | [link](https://d3js.org/d3-zoom/) |
-| date-fns | 2.30.0, 4.1.0 | MIT | [link](https://github.com/date-fns/date-fns#readme) |
+| date-fns | 2.30.0, 4.4.0 | MIT | [link](https://github.com/date-fns/date-fns#readme) |
 | date-fns-jalali | 4.1.0-0 | MIT | [link](https://github.com/date-fns-jalali/date-fns-jalali#readme) |
 | dayjs | 1.11.13 | MIT | [link](https://day.js.org) |
 | debug | 4.3.4, 4.4.3 | MIT | [link](https://github.com/debug-js/debug#readme) |
@@ -628,21 +651,21 @@ pnpm notices:check
 | dunder-proto | 1.0.1 | MIT | [link](https://github.com/es-shims/dunder-proto#readme) |
 | duplexify | 4.1.3 | MIT | [link](https://github.com/mafintosh/duplexify) |
 | eastasianwidth | 0.2.0 | MIT | [link](https://github.com/komagata/eastasianwidth#readme) |
-| eciesjs | 0.4.18 | MIT | [link](https://github.com/ecies/js#readme) |
+| eciesjs | 0.4.17, 0.4.18 | MIT | [link](https://github.com/ecies/js#readme) |
 | ee-first | 1.1.1 | MIT | [link](https://github.com/jonathanong/ee-first#readme) |
-| electron-to-chromium | 1.5.356 | ISC | [link](https://github.com/Kilian/electron-to-chromium#readme) |
+| electron-to-chromium | 1.5.344 | ISC | [link](https://github.com/Kilian/electron-to-chromium#readme) |
 | emoji-regex | 8.0.0, 9.2.2 | MIT | [link](https://mths.be/emoji-regex) |
 | encode-utf8 | 1.0.3 | MIT | [link](https://github.com/LinusU/encode-utf8#readme) |
 | encodeurl | 2.0.0 | MIT | [link](https://github.com/pillarjs/encodeurl#readme) |
 | end-of-stream | 1.4.5 | MIT | [link](https://github.com/mafintosh/end-of-stream) |
-| engine.io-client | 6.6.4 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-client#readme) |
+| engine.io-client | 6.6.5 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-client#readme) |
 | engine.io-parser | 5.2.3 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-parser#readme) |
-| enhanced-resolve | 5.21.3 | MIT | [link](http://github.com/webpack/enhanced-resolve) |
+| enhanced-resolve | 5.22.2 | MIT | [link](http://github.com/webpack/enhanced-resolve) |
 | entities | 4.5.0, 6.0.1 | BSD-2-Clause | [link](https://github.com/fb55/entities#readme) |
 | error-ex | 1.3.4 | MIT | [link](https://github.com/qix-/node-error-ex#readme) |
 | es-define-property | 1.0.1 | MIT | [link](https://github.com/ljharb/es-define-property#readme) |
 | es-errors | 1.3.0 | MIT | [link](https://github.com/ljharb/es-errors#readme) |
-| es-object-atoms | 1.1.1 | MIT | [link](https://github.com/ljharb/es-object-atoms#readme) |
+| es-object-atoms | 1.1.2 | MIT | [link](https://github.com/ljharb/es-object-atoms#readme) |
 | es-set-tostringtag | 2.1.0 | MIT | [link](https://github.com/es-shims/es-set-tostringtag#readme) |
 | es-toolkit | 1.33.0, 1.39.3 | MIT | [link](https://es-toolkit.slash.page) |
 | es6-promise | 4.2.8 | MIT | [link](https://github.com/stefanpenner/es6-promise) |
@@ -671,7 +694,7 @@ pnpm notices:check
 | ethereum-blockies-base64 | 1.0.2 | MIT | [link](https://github.com/MyCryptoHQ/ethereum-blockies-base64#readme) |
 | ethereum-cryptography | 2.2.1 | MIT | [link](https://github.com/ethereum/js-ethereum-cryptography#readme) |
 | eventemitter2 | 6.4.9 | MIT | [link](https://github.com/hij1nx/EventEmitter2#readme) |
-| eventemitter3 | 4.0.7, 5.0.1, 5.0.4 | MIT | [link](https://github.com/primus/eventemitter3#readme) |
+| eventemitter3 | 4.0.7, 5.0.1 | MIT | [link](https://github.com/primus/eventemitter3#readme) |
 | events | 3.3.0 | MIT | [link](https://github.com/Gozala/events#readme) |
 | express | 5.2.1 | MIT | [link](https://expressjs.com/) |
 | extend | 3.0.2 | MIT | [link](https://github.com/justmoon/node-extend#readme) |
@@ -720,13 +743,13 @@ pnpm notices:check
 | got | 11.8.6 | MIT | [link](https://github.com/sindresorhus/got#readme) |
 | gql.tada | 1.9.2 | MIT | [link](https://gql-tada.0no.co/) |
 | graceful-fs | 4.2.11 | ISC | [link](https://github.com/isaacs/node-graceful-fs#readme) |
-| graphql | 16.14.0 | MIT | [link](https://github.com/graphql/graphql-js) |
+| graphql | 16.14.1 | MIT | [link](https://github.com/graphql/graphql-js) |
 | h3 | 1.15.11 | MIT | [link](https://github.com/h3js/h3#readme) |
 | has-flag | 4.0.0 | MIT | [link](https://github.com/sindresorhus/has-flag#readme) |
 | has-property-descriptors | 1.0.2 | MIT | [link](https://github.com/inspect-js/has-property-descriptors#readme) |
 | has-symbols | 1.1.0 | MIT | [link](https://github.com/ljharb/has-symbols#readme) |
 | has-tostringtag | 1.0.2 | MIT | [link](https://github.com/inspect-js/has-tostringtag#readme) |
-| hasown | 2.0.3 | MIT | [link](https://github.com/inspect-js/hasOwn#readme) |
+| hasown | 2.0.4 | MIT | [link](https://github.com/inspect-js/hasOwn#readme) |
 | hast-util-from-parse5 | 8.0.3 | MIT | [link](https://github.com/syntax-tree/hast-util-from-parse5#readme) |
 | hast-util-parse-selector | 4.0.0 | MIT | [link](https://github.com/syntax-tree/hast-util-parse-selector#readme) |
 | hast-util-raw | 9.1.0 | MIT | [link](https://github.com/syntax-tree/hast-util-raw#readme) |
@@ -736,7 +759,7 @@ pnpm notices:check
 | hast-util-whitespace | 3.0.0 | MIT | [link](https://github.com/syntax-tree/hast-util-whitespace#readme) |
 | hastscript | 9.0.1 | MIT | [link](https://github.com/syntax-tree/hastscript#readme) |
 | hoist-non-react-statics | 3.3.2 | BSD-3-Clause | [link](https://github.com/mridgway/hoist-non-react-statics#readme) |
-| hono | 4.12.18 | MIT | [link](https://hono.dev) |
+| hono | 4.12.23 | MIT | [link](https://hono.dev) |
 | hpke-js | 1.8.0 | MIT | [link](https://github.com/dajiaji/hpke-js#readme) |
 | html-parse-stringify | 3.0.1 | MIT | [link](https://github.com/henrikjoreteg/html-parse-stringify) |
 | html-url-attributes | 3.0.1 | MIT | [link](https://github.com/rehypejs/rehype-minify/tree/main#readme) |
@@ -748,7 +771,7 @@ pnpm notices:check
 | humanize-ms | 1.2.1 | MIT | [link](https://github.com/node-modules/humanize-ms#readme) |
 | i18next | 23.4.6 | MIT | [link](https://www.i18next.com) |
 | iconv-lite | 0.7.2 | MIT | [link](https://github.com/pillarjs/iconv-lite) |
-| idb-keyval | 6.2.1, 6.2.2 | Apache-2.0 | [link](https://github.com/jakearchibald/idb-keyval#readme) |
+| idb-keyval | 6.2.1, 6.2.5 | Apache-2.0 | [link](https://github.com/jakearchibald/idb-keyval#readme) |
 | ieee754 | 1.2.1 | BSD-3-Clause | [link](https://github.com/feross/ieee754#readme) |
 | ignore | 5.3.2, 7.0.5 | MIT | [link](https://github.com/kaelzhang/node-ignore#readme) |
 | import-fresh | 3.3.1 | MIT | [link](https://github.com/sindresorhus/import-fresh#readme) |
@@ -814,11 +837,12 @@ pnpm notices:check
 | lodash | 4.18.1 | MIT | [link](https://lodash.com/) |
 | lodash-es | 4.18.1 | MIT | [link](https://lodash.com/custom-builds) |
 | lodash.merge | 4.6.2 | MIT | [link](https://lodash.com/) |
+| long | 5.3.2 | Apache-2.0 | [link](https://github.com/dcodeIO/long.js#readme) |
 | longest-streak | 3.1.0 | MIT | [link](https://github.com/wooorm/longest-streak#readme) |
 | loose-envify | 1.4.0 | MIT | [link](https://github.com/zertosh/loose-envify) |
 | lower-case | 2.0.2 | MIT | [link](https://github.com/blakeembrey/change-case/tree/master/packages/lower-case#readme) |
 | lowercase-keys | 2.0.0 | MIT | [link](https://github.com/sindresorhus/lowercase-keys#readme) |
-| lru-cache | 11.3.6 | BlueOak-1.0.0 | [link](https://github.com/isaacs/node-lru-cache#readme) |
+| lru-cache | 11.5.1 | BlueOak-1.0.0 | [link](https://github.com/isaacs/node-lru-cache#readme) |
 | lru-cache | 5.1.1, 10.4.3 | ISC | [link](https://github.com/isaacs/node-lru-cache#readme) |
 | lucide-react | 0.513.0 | ISC | [link](https://lucide.dev) |
 | magic-string | 0.25.9, 0.30.8, 0.30.21 | MIT | [link](https://github.com/Rich-Harris/magic-string#readme) |
@@ -888,7 +912,7 @@ pnpm notices:check
 | multer | 2.1.1 | MIT | [link](https://github.com/expressjs/multer#readme) |
 | multiformats | 9.9.0 | (Apache-2.0 AND MIT) | [link](https://github.com/multiformats/js-multiformats#readme) |
 | nanoclone | 0.2.1 | MIT | [link](https://github.com/kelin2025/nanoclone#readme) |
-| nanoid | 3.3.12 | MIT | [link](https://github.com/ai/nanoid#readme) |
+| nanoid | 3.3.11 | MIT | [link](https://github.com/ai/nanoid#readme) |
 | natural-compare | 1.4.0 | MIT | [link](https://github.com/litejs/natural-compare-lite#readme) |
 | negotiator | 1.0.0 | MIT | [link](https://github.com/jshttp/negotiator#readme) |
 | no-case | 3.0.4 | MIT | [link](https://github.com/blakeembrey/change-case/tree/master/packages/no-case#readme) |
@@ -897,7 +921,7 @@ pnpm notices:check
 | node-fetch-native | 1.6.7 | MIT | [link](https://github.com/unjs/node-fetch-native#readme) |
 | node-gyp-build | 4.8.4 | MIT | [link](https://github.com/prebuild/node-gyp-build) |
 | node-mock-http | 1.0.4 | MIT | [link](https://github.com/unjs/node-mock-http#readme) |
-| node-releases | 2.0.44 | MIT | [link](https://github.com/chicoxyzzy/node-releases#readme) |
+| node-releases | 2.0.38 | MIT | [link](https://github.com/chicoxyzzy/node-releases#readme) |
 | normalize-path | 3.0.0 | MIT | [link](https://github.com/jonschlinkert/normalize-path) |
 | normalize-url | 6.1.0 | MIT | [link](https://github.com/sindresorhus/normalize-url#readme) |
 | obj-multiplex | 1.0.0 | ISC |  |
@@ -910,12 +934,13 @@ pnpm notices:check
 | openapi-fetch | 0.13.8 | MIT | [link](https://openapi-ts.dev) |
 | openapi-typescript-helpers | 0.0.15 | MIT | [link](https://openapi-ts.dev) |
 | optionator | 0.9.4 | MIT | [link](https://github.com/gkz/optionator) |
-| ox | 0.6.7, 0.6.9, 0.7.1, 0.9.17, 0.10.6, 0.14.20 | MIT | [link](https://wevm.dev) |
+| ox | 0.6.7, 0.6.9, 0.7.1, 0.9.17, 0.10.6, 0.14.29 | MIT | [link](https://wevm.dev) |
 | p-cancelable | 2.1.1 | MIT | [link](https://github.com/sindresorhus/p-cancelable#readme) |
 | p-limit | 2.3.0, 3.1.0 | MIT | [link](https://github.com/sindresorhus/p-limit#readme) |
 | p-locate | 4.1.0, 5.0.0 | MIT | [link](https://github.com/sindresorhus/p-locate#readme) |
 | p-try | 2.2.0 | MIT | [link](https://github.com/sindresorhus/p-try#readme) |
 | package-json-from-dist | 1.0.1 | BlueOak-1.0.0 | [link](https://github.com/isaacs/package-json-from-dist#readme) |
+| pako | 2.1.0 | (MIT AND Zlib) | [link](https://github.com/nodeca/pako#readme) |
 | parent-module | 1.0.1 | MIT | [link](https://github.com/sindresorhus/parent-module#readme) |
 | parse-entities | 4.0.2 | MIT | [link](https://github.com/wooorm/parse-entities#readme) |
 | parse-json | 5.2.0 | MIT | [link](https://github.com/sindresorhus/parse-json#readme) |
@@ -940,8 +965,8 @@ pnpm notices:check
 | porto | 0.2.35 | MIT | [link](https://ithaca.xyz) |
 | poseidon-lite | 0.2.1 | MIT | [link](https://github.com/vimwitch/poseidon-lite#readme) |
 | possible-typed-array-names | 1.1.0 | MIT | [link](https://github.com/ljharb/possible-typed-array-names#readme) |
-| postcss | 8.5.14 | MIT | [link](https://postcss.org/) |
-| preact | 10.24.2, 10.29.1 | MIT | [link](https://preactjs.com) |
+| postcss | 8.5.10 | MIT | [link](https://postcss.org/) |
+| preact | 10.24.2, 10.29.2 | MIT | [link](https://preactjs.com) |
 | prelude-ls | 1.2.1 | MIT | [link](http://preludels.com) |
 | process | 0.11.10 | MIT | [link](https://github.com/shtylman/node-process#readme) |
 | process-nextick-args | 2.0.1 | MIT | [link](https://github.com/calvinmetcalf/process-nextick-args) |
@@ -949,14 +974,17 @@ pnpm notices:check
 | progress | 2.0.3 | MIT | [link](https://github.com/visionmedia/node-progress#readme) |
 | prop-types | 15.8.1 | MIT | [link](https://facebook.github.io/react/) |
 | property-expr | 2.0.6 | MIT | [link](https://github.com/jquense/expr#readme) |
-| property-information | 7.1.0 | MIT | [link](https://github.com/wooorm/property-information#readme) |
+| property-information | 7.2.0 | MIT | [link](https://github.com/wooorm/property-information#readme) |
+| protobufjs | 7.6.2 | BSD-3-Clause | [link](https://protobufjs.github.io/protobuf.js/) |
 | proxy-addr | 2.0.7 | MIT | [link](https://github.com/jshttp/proxy-addr#readme) |
 | proxy-compare | 2.6.0 | MIT | [link](https://github.com/dai-shi/proxy-compare#readme) |
 | proxy-from-env | 1.1.0, 2.1.0 | MIT | [link](https://github.com/Rob--W/proxy-from-env#readme) |
 | pump | 3.0.4 | MIT | [link](https://github.com/mafintosh/pump#readme) |
 | punycode | 1.3.2, 2.3.1 | MIT | [link](https://mths.be/punycode) |
+| qr-code-styling | 1.9.2 | MIT | [link](https://qr-code-styling.com) |
 | qrcode | 1.5.1, 1.5.3 | MIT | [link](http://github.com/soldair/node-qrcode) |
-| qs | 6.15.1 | BSD-3-Clause | [link](https://github.com/ljharb/qs) |
+| qrcode-generator | 1.5.2 | MIT | [link](https://github.com/kazuhikoarase/qrcode-generator#readme) |
+| qs | 6.15.2 | BSD-3-Clause | [link](https://github.com/ljharb/qs) |
 | query-string | 7.1.3 | MIT | [link](https://github.com/sindresorhus/query-string#readme) |
 | querystring | 0.2.0 | MIT | [link](https://github.com/Gozala/querystring#readme) |
 | quick-format-unescaped | 4.0.4 | MIT | [link](https://github.com/davidmarkclements/quick-format#readme) |
@@ -970,7 +998,7 @@ pnpm notices:check
 | react-dom | 18.3.1 | MIT | [link](https://reactjs.org/) |
 | react-fast-compare | 2.0.4 | MIT | [link](https://github.com/FormidableLabs/react-fast-compare) |
 | react-focus-lock | 2.13.6 | MIT | [link](https://github.com/theKashey/react-focus-lock#readme) |
-| react-hook-form | 7.75.0 | MIT | [link](https://react-hook-form.com) |
+| react-hook-form | 7.77.0 | MIT | [link](https://react-hook-form.com) |
 | react-i18next | 13.5.0 | MIT | [link](https://github.com/i18next/react-i18next) |
 | react-international-phone | 4.5.0 | MIT | [link](https://react-international-phone-docs.vercel.app/) |
 | react-is | 16.13.1, 18.3.1 | MIT | [link](https://reactjs.org/) |
@@ -978,7 +1006,7 @@ pnpm notices:check
 | react-refresh | 0.17.0 | MIT | [link](https://react.dev/) |
 | react-remove-scroll | 2.7.2 | MIT | [link](https://github.com/theKashey/react-remove-scroll#readme) |
 | react-remove-scroll-bar | 2.3.8 | MIT | [link](https://github.com/theKashey/react-remove-scroll-bar#readme) |
-| react-router | 7.15.1 | MIT | [link](https://github.com/remix-run/react-router#readme) |
+| react-router | 7.17.0 | MIT | [link](https://github.com/remix-run/react-router#readme) |
 | react-smooth | 4.0.4 | MIT | [link](https://github.com/recharts/react-smooth#readme) |
 | react-style-singleton | 2.2.3 | MIT | [link](https://github.com/theKashey/react-style-singleton#readme) |
 | react-transition-group | 4.4.5 | BSD-3-Clause | [link](https://github.com/reactjs/react-transition-group#readme) |
@@ -1000,7 +1028,7 @@ pnpm notices:check
 | resolve-alpn | 1.2.1 | MIT | [link](https://github.com/szmarczak/resolve-alpn#readme) |
 | resolve-from | 4.0.0 | MIT | [link](https://github.com/sindresorhus/resolve-from#readme) |
 | responselike | 2.0.1 | MIT | [link](https://github.com/sindresorhus/responselike#readme) |
-| rollup | 4.60.4 | MIT | [link](https://rollupjs.org/) |
+| rollup | 4.60.2 | MIT | [link](https://rollupjs.org/) |
 | rollup-plugin-inject | 3.0.2 | MIT | [link](https://github.com/rollup/rollup-plugin-inject#readme) |
 | rollup-plugin-node-polyfills | 0.2.1 | MIT | [link](https://github.com/ionic-team/rollup-plugin-node-polyfills#readme) |
 | rollup-pluginutils | 2.8.2 | MIT | [link](https://github.com/rollup/rollup-pluginutils#readme) |
@@ -1012,7 +1040,7 @@ pnpm notices:check
 | safe-stable-stringify | 2.5.0 | MIT | [link](https://github.com/BridgeAR/safe-stable-stringify#readme) |
 | safer-buffer | 2.1.2 | MIT | [link](https://github.com/ChALkeR/safer-buffer#readme) |
 | scheduler | 0.23.2 | MIT | [link](https://reactjs.org/) |
-| semver | 6.3.1, 7.8.0 | ISC | [link](https://github.com/npm/node-semver#readme) |
+| semver | 6.3.1, 7.7.4 | ISC | [link](https://github.com/npm/node-semver#readme) |
 | send | 1.2.1 | MIT | [link](https://github.com/pillarjs/send#readme) |
 | serve-static | 2.2.1 | MIT | [link](https://github.com/expressjs/serve-static#readme) |
 | set-blocking | 2.0.0 | ISC | [link](https://github.com/yargs/set-blocking#readme) |
@@ -1091,14 +1119,14 @@ pnpm notices:check
 | typed-array-buffer | 1.0.3 | MIT | [link](https://github.com/inspect-js/typed-array-buffer#readme) |
 | typedarray | 0.0.6 | MIT | [link](https://github.com/substack/typedarray) |
 | typescript | 5.6.3, 5.9.3 | Apache-2.0 | [link](https://www.typescriptlang.org/) |
-| typescript-eslint | 8.59.3 | MIT | [link](https://typescript-eslint.io/packages/typescript-eslint) |
+| typescript-eslint | 8.59.0 | MIT | [link](https://typescript-eslint.io/packages/typescript-eslint) |
 | ufo | 1.6.4 | MIT | [link](https://github.com/unjs/ufo#readme) |
 | uid | 2.0.2 | MIT | [link](https://github.com/lukeed/uid#readme) |
 | uint8array-extras | 1.5.0 | MIT | [link](https://github.com/sindresorhus/uint8array-extras#readme) |
 | uint8arrays | 3.1.0, 3.1.1 | MIT | [link](https://github.com/achingbrain/uint8arrays) |
 | ulid | 2.4.0 | MIT | [link](https://github.com/ulid/javascript#readme) |
 | uncrypto | 0.1.3 | MIT | [link](https://github.com/unjs/uncrypto#readme) |
-| undici-types | 6.21.0, 7.25.0 | MIT | [link](https://undici.nodejs.org) |
+| undici-types | 6.21.0, 7.27.1 | MIT | [link](https://undici.nodejs.org) |
 | unified | 11.0.5 | MIT | [link](https://unifiedjs.com) |
 | unist-util-is | 6.0.1 | MIT | [link](https://github.com/syntax-tree/unist-util-is#readme) |
 | unist-util-position | 5.0.0 | MIT | [link](https://github.com/syntax-tree/unist-util-position#readme) |
@@ -1119,14 +1147,14 @@ pnpm notices:check
 | util-deprecate | 1.0.2 | MIT | [link](https://github.com/TooTallNate/util-deprecate) |
 | uuid | 8.3.2, 9.0.1, 11.1.0, 11.1.1, 14.0.0 | MIT | [link](https://github.com/uuidjs/uuid#readme) |
 | v8-compile-cache-lib | 3.0.1 | MIT | [link](https://github.com/cspotcode/v8-compile-cache-lib#readme) |
-| valibot | 1.4.0 | MIT | [link](https://valibot.dev) |
+| valibot | 1.4.1 | MIT | [link](https://valibot.dev) |
 | valtio | 1.13.2 | MIT | [link](https://github.com/pmndrs/valtio) |
 | vary | 1.1.2 | MIT | [link](https://github.com/jshttp/vary#readme) |
 | vfile | 6.0.3 | MIT | [link](https://github.com/vfile/vfile#readme) |
 | vfile-location | 5.0.3 | MIT | [link](https://github.com/vfile/vfile-location#readme) |
 | vfile-message | 4.0.3 | MIT | [link](https://github.com/vfile/vfile-message#readme) |
 | victory-vendor | 36.9.2 | MIT AND ISC | [link](https://commerce.nearform.com/open-source/victory) |
-| viem | 2.23.2, 2.31.0, 2.43.2, 2.49.2 | MIT | [link](https://viem.sh) |
+| viem | 2.23.2, 2.31.0, 2.43.2, 2.52.2 | MIT | [link](https://viem.sh) |
 | vite | 5.4.21 | MIT | [link](https://vite.dev) |
 | vite-plugin-svgr | 4.5.0 | MIT | [link](https://github.com/pd4d10/vite-plugin-svgr#readme) |
 | void-elements | 3.1.0 | MIT | [link](https://github.com/jadejs/void-elements) |
@@ -1134,16 +1162,16 @@ pnpm notices:check
 | web-namespaces | 2.0.1 | MIT | [link](https://github.com/wooorm/web-namespaces#readme) |
 | webextension-polyfill | 0.10.0 | MPL-2.0 | [link](https://github.com/mozilla/webextension-polyfill) |
 | webidl-conversions | 3.0.1, 7.0.0 | BSD-2-Clause | [link](https://github.com/jsdom/webidl-conversions#readme) |
-| webpack-sources | 3.4.1 | MIT | [link](https://github.com/webpack/webpack-sources#readme) |
+| webpack-sources | 3.5.0 | MIT | [link](https://github.com/webpack/webpack-sources#readme) |
 | webpack-virtual-modules | 0.5.0 | MIT | [link](https://github.com/sysgears/webpack-virtual-modules#readme) |
 | whatwg-url | 5.0.0, 14.2.0 | MIT | [link](https://github.com/jsdom/whatwg-url#readme) |
 | which | 2.0.2 | ISC | [link](https://github.com/isaacs/node-which#readme) |
 | which-module | 2.0.1 | ISC | [link](https://github.com/nexdrew/which-module#readme) |
-| which-typed-array | 1.1.20 | MIT | [link](https://github.com/inspect-js/which-typed-array#readme) |
+| which-typed-array | 1.1.21 | MIT | [link](https://github.com/inspect-js/which-typed-array#readme) |
 | word-wrap | 1.2.5 | MIT | [link](https://github.com/jonschlinkert/word-wrap) |
 | wrap-ansi | 6.2.0, 7.0.0 | MIT | [link](https://github.com/chalk/wrap-ansi#readme) |
 | wrappy | 1.0.2 | ISC | [link](https://github.com/npm/wrappy) |
-| ws | 7.5.10, 8.18.0, 8.18.2, 8.18.3, 8.20.1 | MIT | [link](https://github.com/websockets/ws) |
+| ws | 7.5.11, 8.18.0, 8.18.2, 8.18.3, 8.20.1, 8.21.0 | MIT | [link](https://github.com/websockets/ws) |
 | xmlhttprequest-ssl | 2.1.2 | MIT | [link](https://github.com/mjwwit/node-XMLHttpRequest#readme) |
 | xtend | 4.0.2 | MIT | [link](https://github.com/Raynos/xtend) |
 | y18n | 4.0.3 | ISC | [link](https://github.com/yargs/y18n) |
@@ -1154,5 +1182,5 @@ pnpm notices:check
 | yocto-queue | 0.1.0 | MIT | [link](https://github.com/sindresorhus/yocto-queue#readme) |
 | yup | 0.32.11 | MIT | [link](https://github.com/jquense/yup) |
 | zod | 3.22.4, 3.25.76, 4.0.5, 4.4.3 | MIT | [link](https://zod.dev) |
-| zustand | 4.5.7, 5.0.0, 5.0.3, 5.0.13 | MIT | [link](https://github.com/pmndrs/zustand) |
+| zustand | 4.5.7, 5.0.0, 5.0.3, 5.0.14 | MIT | [link](https://github.com/pmndrs/zustand) |
 | zwitch | 2.0.4 | MIT | [link](https://github.com/wooorm/zwitch#readme) |

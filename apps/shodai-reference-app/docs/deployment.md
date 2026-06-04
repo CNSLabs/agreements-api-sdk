@@ -7,7 +7,7 @@ This app is split into a Nest backend and a Vite React frontend. The frontend is
 Run the backend as a long-lived Node process:
 
 ```sh
-pnpm --filter shodai-reference-backend start
+pnpm --filter shodai-reference-app backend:start
 ```
 
 Required backend environment:
@@ -32,7 +32,7 @@ Webhook processing is asynchronous after signature verification and receipt pers
 Build the frontend:
 
 ```sh
-pnpm frontend:build
+pnpm --filter shodai-reference-app frontend:build
 ```
 
 Build the frontend container from the SDK repo root:
@@ -55,6 +55,18 @@ Optional Sentry values are listed in `frontend/.env.sample`. Marketing telemetry
 is disabled by default; only set `VITE_MARKETING_TELEMETRY_ENABLED=true` with
 your own `VITE_GA_MEASUREMENT_ID` and/or `VITE_HUBSPOT_PORTAL_ID` when a
 deployment intentionally opts in.
+
+When building the frontend container, pass build args for any browser-bundled
+values your deployment needs:
+
+```sh
+docker build -f apps/shodai-reference-app/frontend/Dockerfile \
+  --build-arg VITE_DYNAMIC_ENVIRONMENT_ID=<dynamic-env-id> \
+  --build-arg VITE_AGREEMENTS_API_BASE_URL=https://example.com \
+  --build-arg VITE_AUTH_API_URL=https://example.com/auth-api \
+  --build-arg VITE_AGREEMENTS_RPC_URL_59141=<linea-sepolia-rpc-url> \
+  .
+```
 
 ## Reverse Proxy
 
@@ -115,7 +127,7 @@ https://example.com/agreements/
 For a new environment, seed global template access once:
 
 ```sh
-MONGO_URI=<mongo-uri> MONGO_DB_NAME=<db-name> pnpm templates:seed-defaults
+MONGO_URI=<mongo-uri> MONGO_DB_NAME=<db-name> pnpm --filter shodai-reference-app templates:seed-defaults
 ```
 
 This writes the current vendored template IDs into the `template_access` collection as `kind: global-default`.

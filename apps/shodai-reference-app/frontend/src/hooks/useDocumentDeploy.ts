@@ -239,6 +239,13 @@ export type DeployConfirmDetails = {
   grantorAddress?: string;
 };
 
+type DeployAgreementResult = {
+  record: AgreementRecordApi;
+  erc20ApprovalWarning?: {
+    diagnosticId: string;
+  };
+};
+
 export interface UseDocumentDeployParams {
   draft: AgreementRecordApi | null;
   draftId: string | undefined;
@@ -334,7 +341,7 @@ export function useDocumentDeploy({
   }, [form, initKeys, getErc20ApprovalDetails]);
 
   const handleDeployAgreement = React.useCallback(
-    async (configure: DocumentConfigureViewModel): Promise<AgreementRecordApi> => {
+    async (configure: DocumentConfigureViewModel): Promise<DeployAgreementResult> => {
       let deployStage = "initial";
       let diagnosticContext: Record<string, unknown> = {
         draftId: draftId ?? null,
@@ -585,39 +592,55 @@ export function useDocumentDeploy({
         const addr = record?.address || record?.id;
         if (!addr) throw new Error("API did not return an agreement address.");
 
+        let erc20ApprovalWarning: DeployAgreementResult["erc20ApprovalWarning"];
         if (approvalDetails.needsErc20Approval) {
           deployStage = "approve-erc20";
-          const tokenAddress = approvalDetails.tokenAddress;
-          const grantorAddr = approvalDetails.grantorAddress;
-          const rawAmount = approvalDetails.paymentAmount;
+          try {
+            const tokenAddress = approvalDetails.tokenAddress;
+            const grantorAddr = approvalDetails.grantorAddress;
+            const rawAmount = approvalDetails.paymentAmount;
 
-          if (!tokenAddress || !grantorAddr || !rawAmount) {
-            // Missing approval details mean there is no client-side approval to submit.
-          } else if (!isAddress(tokenAddress)) {
-            // Invalid token metadata is ignored here and left to backend deploy validation.
-          } else if (!isAddress(grantorAddr)) {
-            // Invalid grantor metadata is ignored here and left to backend deploy validation.
-          } else if (signerAddress.toLowerCase() !== grantorAddr.toLowerCase()) {
-            // Only the grantor signs ERC20 approvals from the connected wallet.
-          } else {
-            let amount: bigint;
-            try {
-              amount = BigInt(rawAmount);
-            } catch {
-              throw new Error("paymentAmount must be an integer (uint256)");
+            if (!tokenAddress || !grantorAddr || !rawAmount) {
+              // Missing approval details mean there is no client-side approval to submit.
+            } else if (!isAddress(tokenAddress)) {
+              // Invalid token metadata is ignored here and left to backend deploy validation.
+            } else if (!isAddress(grantorAddr)) {
+              // Invalid grantor metadata is ignored here and left to backend deploy validation.
+            } else if (signerAddress.toLowerCase() !== grantorAddr.toLowerCase()) {
+              // Only the grantor signs ERC20 approvals from the connected wallet.
+            } else {
+              let amount: bigint;
+              try {
+                amount = BigInt(rawAmount);
+              } catch {
+                throw new Error("paymentAmount must be an integer (uint256)");
+              }
+              const approveHash = await (walletClient as any).writeContract({
+                account: (walletClient as any).account,
+                address: tokenAddress,
+                abi: ERC20_APPROVE_ABI,
+                functionName: "approve",
+                args: [addr, amount],
+              });
+              await (targetPublicClient as any).waitForTransactionReceipt({ hash: approveHash });
             }
-            const approveHash = await (walletClient as any).writeContract({
-              account: (walletClient as any).account,
-              address: tokenAddress,
-              abi: ERC20_APPROVE_ABI,
-              functionName: "approve",
-              args: [addr, amount],
+          } catch (approvalError) {
+            const approvalDiagnostic = captureDiagnostic({
+              flow: "agreement-deploy-erc20-approval",
+              stage: "approve-erc20",
+              context: {
+                ...diagnosticContext,
+                deployedAgreementId: record.id,
+                deployedAgreementAddress: record.address ?? null,
+              },
+              error: approvalError,
             });
-            await (targetPublicClient as any).waitForTransactionReceipt({ hash: approveHash });
+            console.warn("Agreement deployed, but ERC20 approval was not completed:", approvalError);
+            erc20ApprovalWarning = { diagnosticId: approvalDiagnostic.id };
           }
         }
 
-        return record;
+        return { record, erc20ApprovalWarning };
       } catch (error) {
         if (error && typeof error === "object") {
           (error as any).__diagnosticStage = deployStage;
@@ -629,6 +652,7 @@ export function useDocumentDeploy({
     [
       address,
       agreementJson,
+      captureDiagnostic,
       deployAgreementWithPermit,
       draft,
       draftId,
@@ -669,11 +693,16 @@ export function useDocumentDeploy({
         // Set deployment flag to prevent effects from running during re-render
         deploymentInProgressRef.current = true;
         deployStage = "create-permit-and-deploy";
-        const deployedRecord = await handleDeployAgreement(configure);
-        if (!deployedRecord) throw new Error("Agreement deployment failed");
+        const deployedResult = await handleDeployAgreement(configure);
+        if (!deployedResult?.record) throw new Error("Agreement deployment failed");
 
         deployStage = "navigate-to-agreement";
-        navigate(`/agreement/${deployedRecord.id}?deployed=true`);
+        const nextSearchParams = new URLSearchParams({ deployed: "true" });
+        if (deployedResult.erc20ApprovalWarning) {
+          nextSearchParams.set("approval", "erc20-failed");
+          nextSearchParams.set("approvalReference", deployedResult.erc20ApprovalWarning.diagnosticId);
+        }
+        navigate(`/agreement/${deployedResult.record.id}?${nextSearchParams.toString()}`);
       } catch (err: any) {
         const diagnosticReport = captureDiagnostic({
           flow: "agreement-deploy",

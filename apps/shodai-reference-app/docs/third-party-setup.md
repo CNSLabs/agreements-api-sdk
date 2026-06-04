@@ -2,6 +2,8 @@
 
 This repo runs the Shodai Reference App as a full-stack agreements implementation. It does not require any separate `auth-api`, `agreements-api`, nginx, notifications services, or local external API.
 
+Run commands in this guide from the SDK repository root unless a command says otherwise.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -44,8 +46,20 @@ Create a webhook subscription for agreement transition events and record:
 
 - `SHODAI_WEBHOOK_SECRET`
 
-For local delivery from hosted Shodai, expose backend port `4199` with an HTTPS
-tunnel. Configure the subscription URL as:
+For local delivery from hosted Shodai, expose backend port `4199` with a public
+HTTPS tunnel:
+
+```sh
+ngrok http 4199
+```
+
+or:
+
+```sh
+cloudflared tunnel --url http://localhost:4199
+```
+
+Configure the subscription URL as the tunnel host plus the receiver path:
 
 ```text
 https://<your-tunnel-host>/shodai/webhooks
@@ -53,7 +67,9 @@ https://<your-tunnel-host>/shodai/webhooks
 
 Keep the tunnel running while testing agreement lifecycle changes. If the tunnel
 host changes, update the webhook subscription URL before expecting more
-deliveries.
+deliveries. Validate basic reachability first with
+`https://<your-tunnel-host>/health`, then send a Shodai webhook test delivery
+before relying on transition deliveries.
 
 ### Chain RPC
 
@@ -69,15 +85,15 @@ environment. For RPC access, set:
 
 The repo intentionally uses two env files:
 
-- `backend/.env` contains server-only secrets and database config.
-- `frontend/.env` contains Vite-exposed browser config. Any `VITE_` value may be bundled into client-side JavaScript.
+- `apps/shodai-reference-app/backend/.env` contains server-only secrets and database config.
+- `apps/shodai-reference-app/frontend/.env` contains Vite-exposed browser config. Any `VITE_` value may be bundled into client-side JavaScript.
 - Marketing telemetry is disabled by default. Add `VITE_MARKETING_TELEMETRY_ENABLED=true` plus your own Google Analytics or HubSpot IDs only when you intentionally opt in.
 
 Create both files:
 
 ```sh
-cp backend/.env.sample backend/.env
-cp frontend/.env.sample frontend/.env
+cp apps/shodai-reference-app/backend/.env.sample apps/shodai-reference-app/backend/.env
+cp apps/shodai-reference-app/frontend/.env.sample apps/shodai-reference-app/frontend/.env
 ```
 
 Fill in real values. Do not put `EXTERNAL_API_KEY`, `DYNAMIC_API_TOKEN`, or `SERVICE_AUTH_TOKEN` in `frontend/.env`.
@@ -111,13 +127,13 @@ Fresh databases need template access rows before the Create Agreement page can s
 You can run the seed manually:
 
 ```sh
-pnpm templates:seed-defaults
+pnpm --filter shodai-reference-app templates:seed-defaults
 ```
 
 Preview what it will write:
 
 ```sh
-pnpm templates:seed-defaults -- --dry-run
+pnpm --filter shodai-reference-app templates:seed-defaults -- --dry-run
 ```
 
 Skip automatic seeding in `pnpm dev`:

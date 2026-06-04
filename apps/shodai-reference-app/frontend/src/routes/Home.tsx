@@ -68,7 +68,7 @@ const Home: React.FC = () => {
   const handleReviewAction = React.useCallback(
     (params: { agreementId: string; inputId: string }) => {
       const { agreementId, inputId } = params;
-      navigate(`/agreement/${agreementId}?input=${encodeURIComponent(inputId)}`);
+      navigate(`/agreement/${agreementId}/current-state?input=${encodeURIComponent(inputId)}`);
     },
     [navigate],
   );

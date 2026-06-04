@@ -4,8 +4,8 @@ Before making this repository public, run the dependency notice workflow:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm notices:generate
-pnpm notices:check
+pnpm --filter shodai-reference-app notices:generate
+pnpm --filter shodai-reference-app notices:check
 ```
 
 Review `THIRD_PARTY_NOTICES.md`, especially the "Licenses Requiring Human Review" section. The generated inventory is intended to make license review repeatable; it does not replace legal review or any third-party license text obligations that apply to distributed artifacts.
