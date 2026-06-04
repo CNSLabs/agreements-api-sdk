@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { promises as fs } from 'node:fs';
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -13,6 +14,8 @@ import { MongoClient } from 'mongodb';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, '../..');
 const serviceToken = 'test-service-token';
+const require = createRequire(import.meta.url);
+let backendSourceRegistered = false;
 
 test('Nest backend fails fast when required production config is missing', async () => {
   const port = 4590 + Math.floor(Math.random() * 200);
@@ -391,6 +394,293 @@ test('Agreements API client emits the outbound external API contract used by the
   assert.equal(stateResult.state, 'Active');
   assert.deepEqual(inputsPage.data, []);
   assert.equal(inputsPage.pageInfo.nextCursor, null);
+});
+
+test('Webhook event repository enforces processing lease ownership before completion', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_webhook_lease_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  try {
+    const { WebhookEventRepository } = requireBackendSource('database/repositories/webhook-event.repository.ts');
+    const db = mongoClient.db(dbName);
+    const repo = new WebhookEventRepository({ collection: async (name) => db.collection(name) });
+    const now = new Date().toISOString();
+
+    const cases = [
+      {
+        name: 'processed',
+        apply: (eventId, lockToken) => repo.markProcessed(eventId, lockToken, { processedAction: 'current_worker' }),
+        expected: { status: 'processed', processedAction: 'current_worker' },
+      },
+      {
+        name: 'retry',
+        apply: (eventId, lockToken) => repo.markRetryScheduled(eventId, lockToken, '2026-06-02T18:30:00.000Z', 'agreement_not_found', new Error('missing'), { processedAction: 'retry_worker' }),
+        expected: { status: 'retry_scheduled', processedAction: 'retry_worker', retryReason: 'agreement_not_found' },
+      },
+      {
+        name: 'ignored',
+        apply: (eventId, lockToken) => repo.markIgnored(eventId, lockToken, 'stale_delivery', { processedAction: 'ignore_worker' }),
+        expected: { status: 'ignored', processedAction: 'ignore_worker', ignoredReason: 'stale_delivery' },
+      },
+      {
+        name: 'dead',
+        apply: (eventId, lockToken) => repo.markDeadLetter(eventId, lockToken, 'reconciliation_failed', new Error('failed'), { processedAction: 'dead_worker' }),
+        expected: { status: 'dead_letter', processedAction: 'dead_worker', deadLetterReason: 'reconciliation_failed' },
+      },
+    ];
+
+    for (const entry of cases) {
+      const eventId = `evt_lease_guard_${entry.name}`;
+      await db.collection('webhook_events').insertOne({
+        eventId,
+        status: 'processing',
+        lockToken: 'current-lock-token',
+        lockedAt: now,
+        receivedAt: now,
+        updatedAt: now,
+        payload: { type: 'agreement.transitioned' },
+      });
+
+      assert.equal(await entry.apply(eventId, 'stale-lock-token'), false);
+      assert.deepEqual(await db.collection('webhook_events').findOne(
+        { eventId },
+        { projection: { _id: 0, status: 1, lockToken: 1, processedAction: 1 } },
+      ), {
+        status: 'processing',
+        lockToken: 'current-lock-token',
+      });
+
+      assert.equal(await entry.apply(eventId, 'current-lock-token'), true);
+      assert.deepEqual(await db.collection('webhook_events').findOne(
+        { eventId },
+        { projection: { _id: 0, status: 1, lockToken: 1, processedAction: 1, retryReason: 1, ignoredReason: 1, deadLetterReason: 1 } },
+      ), entry.expected);
+    }
+  } finally {
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Agreement input mirror upserts dedupe concurrently by agreement, chain, and stable key', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_input_dedupe_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  let collections = null;
+  try {
+    const { MongoCollectionsService } = requireBackendSource('database/mongo-collections.service.ts');
+    const { AgreementInputRepository } = requireBackendSource('database/repositories/agreement-input.repository.ts');
+    collections = new MongoCollectionsService({
+      mongoUri,
+      mongoDbName: dbName,
+      nodeEnv: 'test',
+    });
+    await collections.ensureIndexes();
+    const repo = new AgreementInputRepository(collections);
+    const key = { agreementId: 'agreement-dedupe-1', chainId: 59141, dedupeKey: `tx:0x${'1'.repeat(64)}` };
+    const now = new Date().toISOString();
+
+    await Promise.all(Array.from({ length: 8 }, (_, index) => repo.upsertInputMirror(key, {
+      ...key,
+      agreementAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      inputId: 'accept',
+      txHash: `0x${'1'.repeat(64)}`,
+      status: 'MINED',
+      values: { index },
+      createdAt: now,
+      updatedAt: new Date(Date.now() + index).toISOString(),
+    })));
+
+    const mirrored = await mongoClient.db(dbName).collection('agreement_inputs').find(
+      { agreementId: 'agreement-dedupe-1', chainId: 59141, dedupeKey: key.dedupeKey },
+      { projection: { _id: 0, agreementId: 1, chainId: 1, dedupeKey: 1 } },
+    ).toArray();
+    assert.deepEqual(mirrored, [key]);
+
+    const legacyTxHash = `0x${'A'.repeat(64)}`;
+    const normalizedLegacyTxHash = legacyTxHash.toLowerCase();
+    const legacyKey = { agreementId: 'agreement-dedupe-legacy', chainId: 59141, dedupeKey: `tx:${normalizedLegacyTxHash}` };
+    await mongoClient.db(dbName).collection('agreement_inputs').insertOne({
+      agreementId: legacyKey.agreementId,
+      chainId: legacyKey.chainId,
+      agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      inputId: 'legacyAccept',
+      txHash: legacyTxHash,
+      status: 'MINED',
+      values: { before: true },
+      createdAt: now,
+      updatedAt: now,
+    });
+    await repo.upsertInputMirror(
+      legacyKey,
+      {
+        ...legacyKey,
+        agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        inputId: 'legacyAccept',
+        txHash: normalizedLegacyTxHash,
+        status: 'MINED',
+        values: { after: true },
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        agreementId: legacyKey.agreementId,
+        chainId: legacyKey.chainId,
+        txHash: { $regex: `^${normalizedLegacyTxHash}$`, $options: 'i' },
+      },
+    );
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ agreementId: legacyKey.agreementId }), 1);
+    assert.deepEqual(await mongoClient.db(dbName).collection('agreement_inputs').findOne(
+      { agreementId: legacyKey.agreementId },
+      { projection: { _id: 0, agreementId: 1, chainId: 1, dedupeKey: 1, txHash: 1, values: 1 } },
+    ), {
+      ...legacyKey,
+      txHash: normalizedLegacyTxHash,
+      values: { after: true },
+    });
+  } finally {
+    await collections?.onModuleDestroy();
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Webhook reconciliation does not write local mirrors after lease loss', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_webhook_lease_side_effect_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  try {
+    const db = mongoClient.db(dbName);
+    const service = createMockExternalAgreementsService(db);
+    await insertWebhookAgreement(db, {
+      id: 'webhook-lease-side-effect-local-1',
+      externalAgreementId: 'external-agreement-lease-side-effect-1',
+      address: '0x1212121212121212121212121212121212121212',
+      displayName: 'Webhook Lease Side Effect Local Agreement',
+      variables: { scope: 'Before lease loss' },
+    });
+    const agreement = await db.collection('agreements').findOne(
+      { id: 'webhook-lease-side-effect-local-1' },
+      { projection: { _id: 0 } },
+    );
+
+    const result = await service.reconcileAgreementMirrorFromWebhook(
+      agreement,
+      transitionEvent({
+        id: 'evt_webhook_lease_side_effect_1',
+        agreementId: 'external-agreement-lease-side-effect-1',
+        agreementName: 'Webhook Lease Side Effect Agreement',
+        createdAt: '2026-06-02T18:10:00.000Z',
+        fromState: 'PENDING_ACCEPTANCE',
+        toState: 'ACCEPTED',
+        inputId: 'accept',
+      }),
+      { isLeaseCurrent: async () => false },
+    );
+    assert.equal(result.skippedReason, 'lease_lost');
+    assert.deepEqual(await db.collection('agreements').findOne(
+      { id: 'webhook-lease-side-effect-local-1' },
+      { projection: { _id: 0, state: 1, lastWebhookEventId: 1, lastWebhookEventAt: 1, variables: 1 } },
+    ), {
+      state: 'PENDING_ACCEPTANCE',
+      variables: { scope: 'Before lease loss' },
+    });
+    assert.equal(await db.collection('agreement_inputs').countDocuments({ agreementId: 'webhook-lease-side-effect-local-1' }), 0);
+  } finally {
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Webhook reconciliation keeps the newer mirror when an older event races after read', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_webhook_stale_race_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  try {
+    const db = mongoClient.db(dbName);
+    const service = createMockExternalAgreementsService(db);
+    await insertWebhookAgreement(db, {
+      id: 'webhook-stale-race-local-1',
+      externalAgreementId: 'external-agreement-stale-race-1',
+      address: '0x3434343434343434343434343434343434343434',
+      displayName: 'Webhook Stale Race Local Agreement',
+      variables: { scope: 'Before stale race' },
+    });
+    await db.collection('agreements').updateOne(
+      { id: 'webhook-stale-race-local-1' },
+      { $set: { lastWebhookEventAt: '2026-06-02T18:01:00.000Z', lastWebhookEventId: 'evt_webhook_old_read', state: 'PENDING_ACCEPTANCE' } },
+    );
+    const agreementReadBeforeNewerEvent = await db.collection('agreements').findOne(
+      { id: 'webhook-stale-race-local-1' },
+      { projection: { _id: 0 } },
+    );
+    await db.collection('agreements').updateOne(
+      { id: 'webhook-stale-race-local-1' },
+      {
+        $set: {
+          lastWebhookEventAt: '2026-06-02T18:05:00.000Z',
+          lastWebhookEventId: 'evt_webhook_newer_winner',
+          state: 'COMPLETE',
+          variables: { scope: 'Newer event won' },
+        },
+      },
+    );
+
+    const result = await service.reconcileAgreementMirrorFromWebhook(
+      agreementReadBeforeNewerEvent,
+      transitionEvent({
+        id: 'evt_webhook_stale_race_loser',
+        agreementId: 'external-agreement-stale-race-1',
+        agreementName: 'Webhook Stale Race Agreement',
+        createdAt: '2026-06-02T18:04:00.000Z',
+        fromState: 'PENDING_ACCEPTANCE',
+        toState: 'ACCEPTED',
+        inputId: 'accept',
+      }),
+      { isLeaseCurrent: async () => true },
+    );
+    assert.equal(result.skippedReason, 'stale_delivery');
+    assert.deepEqual(await db.collection('agreements').findOne(
+      { id: 'webhook-stale-race-local-1' },
+      { projection: { _id: 0, state: 1, lastWebhookEventId: 1, lastWebhookEventAt: 1, variables: 1 } },
+    ), {
+      state: 'COMPLETE',
+      lastWebhookEventId: 'evt_webhook_newer_winner',
+      lastWebhookEventAt: '2026-06-02T18:05:00.000Z',
+      variables: { scope: 'Newer event won' },
+    });
+  } finally {
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
 });
 
 test('Nest backend persists template access through Mongo-backed admin module', async (t) => {
@@ -2195,6 +2485,34 @@ async function sendWebhookEvent(port, event, secret) {
     headers: webhookHeaders(rawBody, event.id, secret),
     body: rawBody,
   });
+}
+
+function requireBackendSource(sourcePath) {
+  if (!backendSourceRegistered) {
+    require('reflect-metadata');
+    require('ts-node/register');
+    require('tsconfig-paths/register');
+    backendSourceRegistered = true;
+  }
+
+  return require(path.join(appRoot, 'backend/src', sourcePath));
+}
+
+function createMockExternalAgreementsService(db) {
+  const { ExternalAgreementsService } = requireBackendSource('external/external-agreements.service.ts');
+  const { AgreementRepository } = requireBackendSource('database/repositories/agreement.repository.ts');
+  const { AgreementInputRepository } = requireBackendSource('database/repositories/agreement-input.repository.ts');
+  const { ExternalApiEventRepository } = requireBackendSource('database/repositories/external-api-event.repository.ts');
+  const mongo = { collection: async (name) => db.collection(name) };
+  return new ExternalAgreementsService(
+    {
+      externalApiBaseUrl: 'mock',
+      defaultAgreementChainId: 59141,
+    },
+    new AgreementRepository(mongo),
+    new AgreementInputRepository(mongo),
+    new ExternalApiEventRepository(mongo),
+  );
 }
 
 async function writeExport(dir, collections) {

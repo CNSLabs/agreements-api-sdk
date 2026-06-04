@@ -53,6 +53,22 @@ export class AgreementRepository extends StandaloneRepository<Record<string, any
       ambiguous: matches.length > 1,
     };
   }
+
+  async updateWebhookMirrorIfFresh(id: string, eventCreatedAt: string, document: Record<string, any>): Promise<boolean> {
+    const { _id, ...setDocument } = document;
+    const result = await (await this.mongo.collection<Record<string, any>>('agreements')).updateOne(
+      {
+        id,
+        $or: [
+          { lastWebhookEventAt: { $exists: false } },
+          { lastWebhookEventAt: null },
+          { lastWebhookEventAt: { $lte: eventCreatedAt } },
+        ],
+      },
+      { $set: setDocument },
+    );
+    return result.matchedCount > 0;
+  }
 }
 
 function parseEip155AccountId(value: string): { chainId: number; address: string } | null {

@@ -3,6 +3,11 @@ import { MongoCollectionsService } from '../mongo-collections.service';
 import { StandaloneRepository } from '../standalone.repository';
 
 type WebhookEventDocument = Record<string, any>;
+type ProcessingLeaseFilter = {
+  eventId: string;
+  status: 'processing';
+  lockToken: string;
+};
 
 @Injectable()
 export class WebhookEventRepository extends StandaloneRepository<WebhookEventDocument> {
@@ -21,6 +26,10 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
 
   async findByEventId(eventId: string): Promise<WebhookEventDocument | null> {
     return this.findOne({ eventId });
+  }
+
+  async isProcessingLeaseCurrent(eventId: string, lockToken: string): Promise<boolean> {
+    return Boolean(await this.findOne(processingLeaseFilter(eventId, lockToken)));
   }
 
   async claimNextDueEvent(params: {
@@ -72,9 +81,9 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     );
   }
 
-  async markProcessed(eventId: string, patch: Record<string, unknown> = {}): Promise<void> {
-    await this.updateOne(
-      { eventId },
+  async markProcessed(eventId: string, lockToken: string, patch: Record<string, unknown> = {}): Promise<boolean> {
+    return (await this.updateOne(
+      processingLeaseFilter(eventId, lockToken),
       {
         $set: {
           ...patch,
@@ -94,7 +103,7 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           deadLetteredAt: '',
         },
       },
-    );
+    )) > 0;
   }
 
   async recordDuplicateDelivery(eventId: string): Promise<void> {
@@ -110,9 +119,9 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
     );
   }
 
-  async markRetryScheduled(eventId: string, nextAttemptAt: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<void> {
-    await this.updateOne(
-      { eventId },
+  async markRetryScheduled(eventId: string, lockToken: string, nextAttemptAt: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<boolean> {
+    return (await this.updateOne(
+      processingLeaseFilter(eventId, lockToken),
       {
         $set: {
           ...patch,
@@ -131,12 +140,12 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           deadLetteredAt: '',
         },
       },
-    );
+    )) > 0;
   }
 
-  async markIgnored(eventId: string, reason: string, patch: Record<string, unknown> = {}): Promise<void> {
-    await this.updateOne(
-      { eventId },
+  async markIgnored(eventId: string, lockToken: string, reason: string, patch: Record<string, unknown> = {}): Promise<boolean> {
+    return (await this.updateOne(
+      processingLeaseFilter(eventId, lockToken),
       {
         $set: {
           ...patch,
@@ -156,12 +165,12 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           deadLetteredAt: '',
         },
       },
-    );
+    )) > 0;
   }
 
-  async markDeadLetter(eventId: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<void> {
-    await this.updateOne(
-      { eventId },
+  async markDeadLetter(eventId: string, lockToken: string, reason: string, error: unknown, patch: Record<string, unknown> = {}): Promise<boolean> {
+    return (await this.updateOne(
+      processingLeaseFilter(eventId, lockToken),
       {
         $set: {
           ...patch,
@@ -182,6 +191,14 @@ export class WebhookEventRepository extends StandaloneRepository<WebhookEventDoc
           lockToken: '',
         },
       },
-    );
+    )) > 0;
   }
+}
+
+function processingLeaseFilter(eventId: string, lockToken: string): ProcessingLeaseFilter {
+  return {
+    eventId,
+    status: 'processing',
+    lockToken,
+  };
 }

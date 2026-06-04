@@ -53,6 +53,10 @@ export class MongoCollectionsService implements OnModuleDestroy, OnModuleInit {
       db.collection('agreement_inputs').createIndex({ agreementAddress: 1, createdAt: -1 }),
       db.collection('agreement_inputs').createIndex({ agreementId: 1, chainId: 1, txHash: 1 }),
       db.collection('agreement_inputs').createIndex({ chainId: 1, agreementAddress: 1, txHash: 1 }),
+      db.collection('agreement_inputs').createIndex(
+        { agreementId: 1, chainId: 1, dedupeKey: 1 },
+        { unique: true, partialFilterExpression: { dedupeKey: { $type: 'string' } } },
+      ),
       db.collection('external_api_events').createIndex({ createdAt: -1 }),
       db.collection('webhook_events').createIndex({ eventId: 1 }, { unique: true }),
       db.collection('webhook_events').createIndex({ agreementId: 1, createdAt: -1 }),
