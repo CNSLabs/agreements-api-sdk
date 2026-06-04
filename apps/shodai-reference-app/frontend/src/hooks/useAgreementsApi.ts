@@ -253,6 +253,7 @@ export function useAgreementsApi() {
         deadline: number;
         signature: PermitSignature;
         docUri?: string;
+        initValues?: Record<string, unknown>;
       },
     ) => {
       return apiCall(async () => {

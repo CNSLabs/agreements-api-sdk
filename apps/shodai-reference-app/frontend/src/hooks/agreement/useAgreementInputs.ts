@@ -248,14 +248,16 @@ export function useAgreementInputs({
       walletClientChainId: (walletClient as any)?.chain?.id ?? null,
       publicClientChainId: publicClient?.chain?.id ?? null,
     };
-    if (!agreementJson || !activeInputId) return;
-    if (!publicClient || !walletClient || !address) return;
 
     setIsWorking(true);
     actionSubmitInProgressRef.current = true;
+    setActionError(null);
     setActionErrorReport(null);
 
     try {
+      if (!agreementJson || !activeInputId) throw new Error("No active agreement input is available");
+      if (!publicClient || !walletClient || !address) throw new Error("Wallet connection is not ready");
+
       submitStage = "load-input-definition";
       const inputDef = (agreementJson as any)?.execution?.inputs?.[activeInputId];
       if (!inputDef) throw new Error("Input definition not found");

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { StandaloneConfigService } from '../config/standalone-config.service';
 import { AgreementRepository } from '../database/repositories/agreement.repository';
@@ -31,6 +31,8 @@ function inputListingAuditMetadata(result: InputListingResult): Record<string, u
 
 @Injectable()
 export class ExternalAgreementsService {
+  private readonly logger = new Logger(ExternalAgreementsService.name);
+
   constructor(
     private readonly config: StandaloneConfigService,
     private readonly agreements: AgreementRepository,
@@ -88,13 +90,14 @@ export class ExternalAgreementsService {
     if (agreement.status !== 'Draft') throw new ConflictException('Agreement is already deployed');
     this.assertPermitSignerAuthorized(body.signer, user);
     const signedDocUri = this.getPermitDocUri(body.docUri, agreement.docUri, agreement.json);
+    const initValues = this.getDeployInitValues(agreement, body);
 
     const directPayload = this.directAgreementPayload({
       agreement: agreement.json,
       chainId: this.getAgreementChainId(agreement),
       displayName: agreement.displayName,
       docUri: signedDocUri,
-      initValues: agreement.variables || {},
+      initValues,
       participants: (agreement.participants || []).map(({ status, ...entry }: any) => entry),
       observers: agreement.observers || [],
       signer: body.signer,
@@ -139,7 +142,7 @@ export class ExternalAgreementsService {
       docUri: externalRecord.docUri || directPayload.docUri,
       state: externalRecord.state || agreement.state || initialState(agreement.json),
       onChain: externalRecord.onChain || { owner: normalizeAddress(body.signer), mock: isMockExternal },
-      variables: externalRecord.variables || externalValidation?.variables || agreement.variables || {},
+      variables: externalRecord.variables || externalValidation?.variables || initValues,
       participants: externalRecord.participants || agreement.participants,
       observers: externalRecord.observers || agreement.observers || [],
       updatedAt: now,
@@ -167,25 +170,34 @@ export class ExternalAgreementsService {
       );
 
     const isMockExternal = this.config.externalApiBaseUrl === 'mock';
+    await this.upsertInputMirror(inputRecord, agreement);
+
     if (!isMockExternal) {
-      externalStateAfterInput = await this.externalApiCall(
-        'read-state-after-input',
-        `/v0/agreements/${encodeURIComponent(externalAgreementId)}/state`,
-        async () => (await this.externalApiClient()).getAgreementState(externalAgreementId),
-        { agreementId: agreement.id, externalAgreementId },
-      );
-      if (!externalStateAfterInput?.state) {
-        throw new InternalServerErrorException('External API state response did not include a state after input submission');
+      try {
+        externalStateAfterInput = await this.externalApiCall(
+          'read-state-after-input',
+          `/v0/agreements/${encodeURIComponent(externalAgreementId)}/state`,
+          async () => (await this.externalApiClient()).getAgreementState(externalAgreementId),
+          { agreementId: agreement.id, externalAgreementId },
+        );
+        if (!externalStateAfterInput?.state) {
+          throw new InternalServerErrorException('External API state response did not include a state after input submission');
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Input ${inputRecord.inputId || body.inputId} for agreement ${agreement.id} was submitted, but post-submit state refresh failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
     }
 
-    await this.upsertInputMirror(inputRecord, agreement);
     agreement.variables = { ...(agreement.variables || {}), ...(body.values || {}) };
     agreement.lastInputId = inputRecord.inputId;
     agreement.lastInputAt = inputRecord.createdAt;
     agreement.state = isMockExternal
       ? nextState(agreement.json, previousState, inputRecord.inputId) || previousState || initialState(agreement.json)
-      : externalStateAfterInput.state;
+      : externalStateAfterInput?.state || nextState(agreement.json, previousState, inputRecord.inputId) || previousState || agreement.state || initialState(agreement.json);
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);
     agreement.updatedAt = new Date().toISOString();
     await this.agreements.upsertOne({ id: agreement.id }, agreement);
@@ -333,6 +345,12 @@ export class ExternalAgreementsService {
       deadline: body?.deadline,
       signature: body?.signature,
     };
+  }
+
+  private getDeployInitValues(agreement: any, body: any): Record<string, unknown> {
+    const stored = isPlainRecord(agreement?.variables) ? agreement.variables : {};
+    const signed = isPlainRecord(body?.initValues) ? body.initValues : undefined;
+    return signed ? { ...stored, ...signed } : stored;
   }
 
   private async upsertInputMirror(inputRecord: any, agreement: any) {
@@ -509,4 +527,8 @@ export class ExternalAgreementsService {
     }
     return chainId;
   }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
