@@ -71,6 +71,7 @@ The repo intentionally uses two env files:
 
 - `backend/.env` contains server-only secrets and database config.
 - `frontend/.env` contains Vite-exposed browser config. Any `VITE_` value may be bundled into client-side JavaScript.
+- Marketing telemetry is disabled by default. Add `VITE_MARKETING_TELEMETRY_ENABLED=true` plus your own Google Analytics or HubSpot IDs only when you intentionally opt in.
 
 Create both files:
 

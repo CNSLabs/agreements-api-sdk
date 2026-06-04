@@ -25,9 +25,10 @@ export function useDocumentParticipants({
     Record<string, { firstName?: boolean; lastName?: boolean; email?: boolean }>
   >({});
   const [participantSaveStatus, setParticipantSaveStatus] = React.useState<SaveStatus>("idle");
+  const draftStatus = draft?.status;
 
   React.useEffect(() => {
-    if (!draftId || !draft || draft.status !== "Draft") return;
+    if (!draftId || draftStatus !== "Draft") return;
     let cancelled = false;
     getParticipants(draftId)
       .then((res) => {
@@ -48,7 +49,7 @@ export function useDocumentParticipants({
     return () => {
       cancelled = true;
     };
-  }, [draftId, draft?.status, getParticipants]);
+  }, [draftId, draftStatus, getParticipants]);
 
   React.useEffect(() => {
     if (!draftId) setTouchedParticipantFields({});

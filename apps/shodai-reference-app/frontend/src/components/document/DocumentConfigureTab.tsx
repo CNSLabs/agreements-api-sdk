@@ -19,7 +19,8 @@ import {
   useWalletDiagnostics,
 } from "@/hooks/useWalletDiagnostics";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
-import { ReadOnlyLongText, isReadOnlyLongTextVariable } from "@/components/agreement/readOnlyLongText";
+import { ReadOnlyLongText } from "@/components/agreement/readOnlyLongText";
+import { isReadOnlyLongTextVariable } from "@/components/agreement/readOnlyLongTextLogic";
 import { FeatherAlertCircle, FeatherBlocks, FeatherChevronUp, FeatherEye, FeatherFileInput, FeatherInfo, FeatherLayoutTemplate, FeatherList, FeatherMail, FeatherSliders, FeatherUsers, FeatherWorkflow, FeatherX } from "@subframe/core";
 import { ValidationErrorBanner } from "@/components/ValidationErrorBanner";
 import type { DocumentConfigureViewModel } from "@/hooks/useDocumentConfigure";
@@ -192,6 +193,7 @@ export function DocumentConfigureTab({
     configure.canClickDeploy,
     configure.isDraft,
     configure.initValuesMap,
+    configure.nonParticipantKeys.length,
     configure.participantKeys,
     configure.participantsMap,
     setDeployError,

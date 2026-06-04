@@ -243,7 +243,7 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
         agreementId: requirePayloadString(data, 'agreementId'),
         agreementName: optionalPayloadString(data, 'agreementName'),
         templateId: requirePayloadString(data, 'templateId'),
-        fromState: requirePayloadString(data, 'fromState'),
+        fromState: requirePayloadString(data, 'fromState', { allowEmpty: true }),
         toState: requirePayloadString(data, 'toState'),
         inputId: requirePayloadString(data, 'inputId'),
       },
@@ -256,9 +256,13 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
   );
 }
 
-function requirePayloadString(payload: Record<string, unknown>, field: string): string {
+function requirePayloadString(
+  payload: Record<string, unknown>,
+  field: string,
+  options: { allowEmpty?: boolean } = {},
+): string {
   const value = payload[field];
-  if (typeof value !== 'string' || !value.trim()) {
+  if (typeof value !== 'string' || (!options.allowEmpty && !value.trim())) {
     throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be a string.`);
   }
   return value;

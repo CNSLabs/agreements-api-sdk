@@ -7,6 +7,13 @@ export function normalizeAddress(value: string | undefined): string {
   return /^0x[0-9a-fA-F]{40}$/.test(raw) ? raw.toLowerCase() : '';
 }
 
+export function formatOnChainAgreementRef(chainId: unknown, address: unknown): string | undefined {
+  const normalizedAddress = normalizeAddress(String(address || ''));
+  const normalizedChainId = Number(chainId);
+  if (!normalizedAddress || !Number.isSafeInteger(normalizedChainId) || normalizedChainId <= 0) return undefined;
+  return `eip155:${normalizedChainId}:${normalizedAddress}`;
+}
+
 export function getTemplateId(agreement: any): string | null {
   return agreement?.metadata?.templateId || agreement?.metadata?.id || null;
 }
@@ -48,6 +55,8 @@ export function normalizeEmailList(values: unknown): string[] {
 }
 
 export function refreshDerivedFields(agreement: any, additional: string[] = []) {
+  const normalizedStoredAddress = normalizeAddress(agreement.address);
+  if (normalizedStoredAddress) agreement.address = normalizedStoredAddress;
   const contributors = new Set([normalizeAddress(agreement.owner), ...additional.map(normalizeAddress)].filter(Boolean));
   for (const value of Object.values(agreement.variables || {})) {
     if (typeof value === 'string' && value.toLowerCase().startsWith('0x')) contributors.add(normalizeAddress(value));
@@ -56,4 +65,10 @@ export function refreshDerivedFields(agreement: any, additional: string[] = []) 
     if (participant.walletAddress) contributors.add(normalizeAddress(participant.walletAddress));
   }
   agreement.contributors = [...contributors];
+  const onChainRef = formatOnChainAgreementRef(agreement.chainId, agreement.address);
+  if (onChainRef) {
+    agreement.onChainRef = onChainRef;
+  } else {
+    delete agreement.onChainRef;
+  }
 }

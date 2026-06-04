@@ -14,6 +14,8 @@ export type AgreementRecordApi = {
   id: string;
   /** On-chain clone address. Only present after deployment. */
   address?: string;
+  /** CAIP-10 deployed agreement reference. Only present after deployment. */
+  onChainRef?: string;
   /** Lifecycle status. */
   status: AgreementStatus;
   chainId?: number;

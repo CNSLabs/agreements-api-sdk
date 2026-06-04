@@ -220,7 +220,7 @@ const Agreement: React.FC = () => {
     // Avoid re-fetching on overview/actions if we already have data.
     if ((activeTab === "overview" || activeTab === "actions") && activityInputs.length > 0) return;
     refreshInputs().catch((e: any) => setActivityError(e?.message || "Failed to load activity"));
-  }, [activityInputs.length, activeTab, refreshInputs]);
+  }, [activityInputs.length, activeTab, refreshInputs, setActivityError]);
 
   // agreementJson loading is handled by useAgreementData
 
@@ -266,7 +266,7 @@ const Agreement: React.FC = () => {
       });
     }
     return "";
-  }, [agreementJson, record?.variables, agreementTemplateId]);
+  }, [agreementJson, record?.variables, agreementTemplateId, variables]);
 
   // Compute previous and next states for the Actions & Inputs widget
   const initialState = React.useMemo(
@@ -391,7 +391,7 @@ const Agreement: React.FC = () => {
     } catch (e) {
       console.error("Failed to generate document for PDF/print:", e);
     }
-  }, [agreementJson, record?.variables, record?.displayName]);
+  }, [agreementJson, record, variables]);
 
   const handleShare = async () => {
     try {

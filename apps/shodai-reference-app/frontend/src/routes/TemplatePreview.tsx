@@ -19,7 +19,7 @@ import {
   FeatherWorkflow,
 } from "@subframe/core";
 import { useAgreementsApi } from "@/hooks/useAgreementsApi";
-import { useAuthInit } from "@/components/AuthInitProvider";
+import { useAuthInit } from "@/components/AuthInitContext";
 import { getDefaultChainConfig, getSupportedChainConfigs } from "@/utils/chainConfig";
 
 type TemplateVariable = { name?: string };

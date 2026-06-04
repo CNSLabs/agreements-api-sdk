@@ -20,11 +20,13 @@ export function useDocumentAgreementName({
   setSaveStatus,
 }: UseDocumentAgreementNameParams) {
   const [agreementName, setAgreementName] = React.useState("");
+  const draftRecordId = draft?.id ?? null;
+  const draftDisplayName = draft?.displayName ?? "";
 
   React.useEffect(() => {
-    if (!draft) return;
-    setAgreementName(draft.displayName ?? "");
-  }, [draft?.id, draft?.displayName]);
+    if (!draftRecordId) return;
+    setAgreementName(draftDisplayName);
+  }, [draftRecordId, draftDisplayName]);
 
   const handleSaveAgreementName = React.useCallback(async () => {
     if (!draftId || !draft || draft.status !== "Draft") return;

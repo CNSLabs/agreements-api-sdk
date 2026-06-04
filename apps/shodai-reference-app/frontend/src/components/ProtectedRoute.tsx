@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useLogin } from '@/hooks/useLogin';
-import { useAuthInit } from "@/components/AuthInitProvider";
+import { useAuthInit } from "@/components/AuthInitContext";
 import Loading from "@/layout/Loading";
 import ErrorCard from "@/components/ErrorCard";
 

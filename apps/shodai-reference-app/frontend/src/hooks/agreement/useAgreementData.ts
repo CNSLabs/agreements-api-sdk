@@ -133,8 +133,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     if (json.participants && json.participants.length > 0) {
       setParticipants(json.participants);
     } else {
-      // Try to get participants from API - use address if available, otherwise UUID
-      const participantsId = json.address || fetchId;
+      const participantsId = json.id || fetchId;
       if (participantsId) {
         getParticipants(participantsId)
         .then((res) => {
@@ -221,9 +220,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
       if (record.participants && record.participants.length > 0) {
         setParticipants(record.participants);
       } else {
-        // Try to get participants from the API (works for Draft agreements)
-        // For deployed agreements, participants might be in variables
-        const participantsId = record.address || id || "";
+        const participantsId = record.id || id || "";
         if (participantsId) {
           getParticipants(participantsId)
           .then((res) => {
@@ -247,7 +244,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, record, record?.address, id, getParticipants]);
+  }, [searchParams, record, record?.id, id, getParticipants]);
 
   // Derived values
   const agreementJson = React.useMemo(() => record?.json || null, [record]);

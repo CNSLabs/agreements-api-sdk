@@ -2,7 +2,7 @@ import * as React from "react";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { hexToBytes, keccak256 } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
-import { useAuthInit } from "@/components/AuthInitProvider";
+import { useAuthInit } from "@/components/AuthInitContext";
 
 export type WalletDiagnosticReport = {
   id: string;

@@ -20,6 +20,8 @@ type InputListingResult = {
   pageCount: number;
 };
 
+const DEPLOY_TRANSITION_INPUT_ID = '__deploy';
+
 function inputListingAuditMetadata(result: InputListingResult): Record<string, unknown> {
   return {
     inputCount: result.inputs.length,
@@ -147,8 +149,8 @@ export class ExternalAgreementsService {
     return agreement;
   }
 
-  async submitInput(id: string, body: any, user: any) {
-    const agreement = await this.getReadableAgreement(id, user);
+  async submitInput(id: string, body: any, user: any, options: { chainId?: unknown } = {}) {
+    const agreement = await this.getReadableAgreement(id, user, options);
     if (agreement.status !== 'Deployed') throw new ConflictException('Cannot submit inputs to a Draft agreement. Deploy it first.');
     this.assertPermitSignerAuthorized(body.signer, user);
 
@@ -230,6 +232,9 @@ export class ExternalAgreementsService {
     const sortedInputs = [...externalInputs].sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     const latestInput = sortedInputs.at(-1);
     const inputVariables = Object.assign({}, ...sortedInputs.map((input) => input.values || {}));
+    const webhookInputId = event.data.inputId === DEPLOY_TRANSITION_INPUT_ID ? undefined : event.data.inputId;
+    const latestInputId = latestInput?.inputId || webhookInputId || agreement.lastInputId;
+    const latestInputAt = latestInput?.createdAt || agreement.lastInputAt;
     const now = new Date().toISOString();
 
     Object.assign(agreement, {
@@ -248,8 +253,8 @@ export class ExternalAgreementsService {
       },
       participants: externalRecord?.participants || agreement.participants || [],
       observers: externalRecord?.observers || agreement.observers || [],
-      lastInputId: event.data.inputId || latestInput?.inputId || agreement.lastInputId,
-      lastInputAt: latestInput?.createdAt || agreement.lastInputAt,
+      ...(latestInputId ? { lastInputId: latestInputId } : {}),
+      ...(latestInputAt ? { lastInputAt: latestInputAt } : {}),
       lastWebhookEventId: event.id,
       lastWebhookEventAt: event.createdAt,
       lastWebhookEventType: event.type,
@@ -266,8 +271,8 @@ export class ExternalAgreementsService {
     };
   }
 
-  async readState(id: string, user: any) {
-    const agreement = await this.getReadableAgreement(id, user);
+  async readState(id: string, user: any, options: { chainId?: unknown } = {}) {
+    const agreement = await this.getReadableAgreement(id, user, options);
     if (agreement.status !== 'Deployed') return { status: agreement.status, state: agreement.state || null };
     if (this.config.externalApiBaseUrl === 'mock') return { status: agreement.status, state: agreement.state || null };
     const externalAgreementId = agreement.externalAgreementId || agreement.id;
@@ -284,8 +289,8 @@ export class ExternalAgreementsService {
     return external;
   }
 
-  async listInputs(id: string, user: any, userId?: string | null) {
-    const agreement = await this.getReadableAgreement(id, user);
+  async listInputs(id: string, user: any, userId?: string | null, options: { chainId?: unknown } = {}) {
+    const agreement = await this.getReadableAgreement(id, user, options);
     if (agreement.status === 'Deployed' && this.config.externalApiBaseUrl !== 'mock') {
       const externalInputs = await this.externalApiCall(
         'list-inputs',
@@ -301,7 +306,7 @@ export class ExternalAgreementsService {
       await Promise.all(externalInputs.map((input) => this.upsertInputMirror(input, agreement)));
       return externalInputs;
     }
-    return (await this.inputs.find({ agreementAddress: agreement.address || agreement.id }))
+    return (await this.inputs.find({ agreementId: agreement.id }))
       .filter((entry) => !userId || entry.userId === userId)
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   }
@@ -331,9 +336,15 @@ export class ExternalAgreementsService {
   }
 
   private async upsertInputMirror(inputRecord: any, agreement: any) {
+    const agreementAddress = normalizeAddress(inputRecord.agreementAddress) ||
+      normalizeAddress(agreement.address) ||
+      inputRecord.agreementAddress ||
+      agreement.address ||
+      agreement.externalAgreementId ||
+      agreement.id;
     const mirrored = {
       ...inputRecord,
-      agreementAddress: inputRecord.agreementAddress || agreement.address || agreement.externalAgreementId || agreement.id,
+      agreementAddress,
       agreementId: agreement.id,
       chainId: inputRecord.chainId || agreement.chainId || this.config.defaultAgreementChainId,
       values: inputRecord.values || {},
@@ -341,8 +352,8 @@ export class ExternalAgreementsService {
       updatedAt: inputRecord.updatedAt || new Date().toISOString(),
     };
     const key = mirrored.txHash
-      ? { txHash: mirrored.txHash }
-      : { agreementId: agreement.id, inputId: mirrored.inputId, createdAt: mirrored.createdAt };
+      ? { agreementId: agreement.id, chainId: mirrored.chainId, txHash: mirrored.txHash }
+      : { agreementId: agreement.id, chainId: mirrored.chainId, inputId: mirrored.inputId, createdAt: mirrored.createdAt };
     await this.inputs.upsertOne(key, mirrored);
   }
 
@@ -353,11 +364,14 @@ export class ExternalAgreementsService {
       .map(([key]) => key);
   }
 
-  private async getReadableAgreement(id: string, user: any) {
-    const normalizedLookupAddress = normalizeAddress(id);
-    const agreement = (await this.agreements.findOne({ id })) ||
-      (await this.agreements.findOne({ address: id })) ||
-      (normalizedLookupAddress ? await this.agreements.findOne({ address: normalizedLookupAddress }) : null);
+  private async getReadableAgreement(id: string, user: any, options: { chainId?: unknown } = {}) {
+    const lookup = await this.agreements.findByIdentifier(id, {
+      chainId: this.parseLookupChainId(options.chainId),
+    });
+    if (lookup.ambiguous) {
+      throw new BadRequestException('Agreement address matches multiple chains; include chainId or use the local agreement id');
+    }
+    const agreement = lookup.agreement;
     if (!agreement) throw new ForbiddenException('Agreement not found');
     const walletAddresses = user.wallets?.map((wallet: any) => normalizeAddress(wallet.address)).filter(Boolean) || [];
     const email = normalizeEmail(user.email || '');
@@ -485,5 +499,14 @@ export class ExternalAgreementsService {
       const supported = this.config.getSupportedAgreementChains().map((chain) => chain.chainId).join(', ');
       throw new BadRequestException(`Unsupported chainId. Supported chain IDs: ${supported}`);
     }
+  }
+
+  private parseLookupChainId(value: unknown): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const chainId = Number(value);
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new BadRequestException('chainId must be a positive integer');
+    }
+    return chainId;
   }
 }

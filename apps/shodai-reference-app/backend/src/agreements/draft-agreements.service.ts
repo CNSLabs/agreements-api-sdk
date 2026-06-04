@@ -94,8 +94,8 @@ export class DraftAgreementsService {
     return agreements.filter((agreement) => this.canReadAgreement(agreement, { walletAddresses, email }));
   }
 
-  async get(id: string, user: any) {
-    const agreement = await this.findAgreement(id);
+  async get(id: string, user: any, options: { chainId?: unknown } = {}) {
+    const agreement = await this.findAgreement(id, options);
     this.assertReadAccess(agreement, user);
     return agreement;
   }
@@ -132,8 +132,8 @@ export class DraftAgreementsService {
     return { ok: true };
   }
 
-  async getParticipants(id: string, user: any) {
-    const agreement = await this.get(id, user);
+  async getParticipants(id: string, user: any, options: { chainId?: unknown } = {}) {
+    const agreement = await this.get(id, user, options);
     return {
       participants: agreement.participants || [],
       participantVariableKeys: getParticipantVariableKeys(agreement.json || {}),
@@ -165,8 +165,8 @@ export class DraftAgreementsService {
     return agreement;
   }
 
-  async getObservers(id: string, user: any) {
-    const agreement = await this.get(id, user);
+  async getObservers(id: string, user: any, options: { chainId?: unknown } = {}) {
+    const agreement = await this.get(id, user, options);
     return { observers: agreement.observers || [] };
   }
 
@@ -206,10 +206,14 @@ export class DraftAgreementsService {
     }
   }
 
-  private async findAgreement(id: string) {
-    const normalizedLookupAddress = normalizeAddress(id);
-    const agreement = (await this.agreements.findOne({ id })) ||
-      (normalizedLookupAddress ? await this.agreements.findOne({ address: normalizedLookupAddress }) : null);
+  private async findAgreement(id: string, options: { chainId?: unknown } = {}) {
+    const lookup = await this.agreements.findByIdentifier(id, {
+      chainId: this.parseLookupChainId(options.chainId),
+    });
+    if (lookup.ambiguous) {
+      throw new BadRequestException('Agreement address matches multiple chains; include chainId or use the local agreement id');
+    }
+    const agreement = lookup.agreement;
     if (!agreement) throw new NotFoundException('Agreement not found');
     return agreement;
   }
@@ -313,5 +317,14 @@ export class DraftAgreementsService {
       const supported = this.config.getSupportedAgreementChains().map((chain) => chain.chainId).join(', ');
       throw new BadRequestException(`Unsupported chainId. Supported chain IDs: ${supported}`);
     }
+  }
+
+  private parseLookupChainId(value: unknown): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const chainId = Number(value);
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new BadRequestException('chainId must be a positive integer');
+    }
+    return chainId;
   }
 }

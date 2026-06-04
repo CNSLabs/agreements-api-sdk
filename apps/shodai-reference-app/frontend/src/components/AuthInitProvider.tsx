@@ -1,29 +1,8 @@
 import * as React from "react";
 import { useLogin } from "@/hooks/useLogin";
 import { useApi } from "@/hooks/useApi";
+import { AuthInitContext, type AuthInitContextValue, type AuthUser } from "./AuthInitContext";
 
-export type AuthUser = {
-  id: string;
-  email?: string;
-  platformUserId?: string;
-  wallets?: Array<{
-    address?: string;
-    chain?: string;
-    wallet_name?: string;
-    wallet_provider?: string;
-  }>;
-  [key: string]: unknown;
-};
-
-type AuthInitContextValue = {
-  status: "idle" | "loading" | "ready" | "error";
-  user?: AuthUser;
-  token?: string;
-  error?: Error;
-  retry: () => void;
-};
-
-const AuthInitContext = React.createContext<AuthInitContextValue | null>(null);
 const AUTH_INIT_TIMEOUT_MS = 15_000;
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
@@ -43,12 +22,6 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
       },
     );
   });
-}
-
-export function useAuthInit() {
-  const ctx = React.useContext(AuthInitContext);
-  if (!ctx) throw new Error("useAuthInit must be used within AuthInitProvider");
-  return ctx;
 }
 
 export const AuthInitProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

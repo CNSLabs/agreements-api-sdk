@@ -118,6 +118,10 @@ API failures with backoff, and records terminal stale or dead-letter outcomes.
 Duplicate deliveries update delivery metadata without starting parallel
 reconciliation.
 
+The reference frontend ships with no marketing telemetry enabled. To opt in for
+your own deployment, set `VITE_MARKETING_TELEMETRY_ENABLED=true` with
+`VITE_GA_MEASUREMENT_ID` and/or `VITE_HUBSPOT_PORTAL_ID` in `frontend/.env`.
+
 For local testing against hosted Shodai, expose backend port `4199` through an
 HTTPS tunnel and configure the webhook subscription to point at:
 
