@@ -45,8 +45,8 @@ export const AuthInitProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      // Don't re-initialize if already loading or ready
-      if (status === "ready" || status === "loading") {
+      // Don't re-initialize while loading, ready, or waiting for a manual retry.
+      if (status === "ready" || status === "loading" || status === "error") {
         return;
       }
 
