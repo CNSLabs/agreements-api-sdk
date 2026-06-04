@@ -51,7 +51,10 @@ Required frontend environment at build time:
 - `VITE_AUTH_API_URL`
 - optional RPC support via `VITE_INFURA_PROJECT_ID`, `VITE_AGREEMENTS_RPC_URL`, or per-chain `VITE_AGREEMENTS_RPC_URL_<chainId>`
 
-Optional Sentry values are listed in `frontend/.env.sample`.
+Optional Sentry values are listed in `frontend/.env.sample`. Marketing telemetry
+is disabled by default; only set `VITE_MARKETING_TELEMETRY_ENABLED=true` with
+your own `VITE_GA_MEASUREMENT_ID` and/or `VITE_HUBSPOT_PORTAL_ID` when a
+deployment intentionally opts in.
 
 ## Reverse Proxy
 

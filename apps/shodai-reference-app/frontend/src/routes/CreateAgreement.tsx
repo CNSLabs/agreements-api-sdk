@@ -11,7 +11,7 @@ import { TextField } from "@/subframe/components/TextField";
 import { useTemplatesApi } from "@/hooks/useTemplatesApi";
 import { FeatherFilter, FeatherSearch, FeatherX } from "@subframe/core";
 import { useAgreementsApi } from "@/hooks/useAgreementsApi";
-import { useAuthInit } from "@/components/AuthInitProvider";
+import { useAuthInit } from "@/components/AuthInitContext";
 import { getInitialShowDefaultTemplates } from "./createAgreementFilters";
 type TemplateSource = "default" | "whitelisted";
 

@@ -6,7 +6,8 @@ import { OnchainReferenceDisplay } from "@/components/OnchainReferenceDisplay";
 import { getOnchainReferenceDetails } from "@/utils/onchainReferences";
 import { IconButton } from "@/subframe/components/IconButton";
 
-import { ReadOnlyLongText, isReadOnlyLongTextVariable } from "./readOnlyLongText";
+import { ReadOnlyLongText } from "./readOnlyLongText";
+import { isReadOnlyLongTextVariable } from "./readOnlyLongTextLogic";
 import { getReadOnlyMarkdownPreviewText } from "./readOnlyMarkdownLogic";
 import {
   getAgreementValueContentDecision,

@@ -18,15 +18,15 @@ export function useDocumentObservers({
 }: UseDocumentObserversParams) {
   const [observersInput, setObserversInput] = React.useState("");
   const [observersSaveStatus, setObserversSaveStatus] = React.useState<SaveStatus>("idle");
+  const draftRecordId = draft?.id ?? null;
+  const draftObserversInput = Array.isArray(draft?.observers) && draft.observers.length > 0
+    ? draft.observers.join(", ")
+    : "";
 
   React.useEffect(() => {
-    if (!draft) return;
-    if (draft.observers && Array.isArray(draft.observers) && draft.observers.length > 0) {
-      setObserversInput(draft.observers.join(", "));
-    } else {
-      setObserversInput("");
-    }
-  }, [draft?.id, draft?.observers]);
+    if (!draftRecordId) return;
+    setObserversInput(draftObserversInput);
+  }, [draftRecordId, draftObserversInput]);
 
   const handleSaveObservers = React.useCallback(async () => {
     if (!draftId || !draft || draft.status !== "Draft" || isWorking) return;

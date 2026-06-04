@@ -5,7 +5,7 @@ import { createPublicClient, formatUnits, http, isAddress, keccak256, stringToHe
 import { Button } from "@/subframe/components/Button";
 import { Loader } from "@/subframe/components/Loader";
 import { VariableField } from "@/components/VariableField";
-import { createValidationRules } from "@/components/VariableInput";
+import { createValidationRules } from "@/components/variableValidation";
 import { IconButton } from "@/subframe/components/IconButton";
 import { RadioCardGroup } from "@/subframe/components/RadioCardGroup";
 import { Badge } from "@/subframe/components/Badge";
@@ -17,10 +17,8 @@ import { DisplayCard } from "@/subframe/components/DisplayCard";
 import { TextArea } from "@/subframe/components/TextArea";
 import { ConfirmFlowDialog } from "@/components/ConfirmFlowDialog";
 import { DiagnosticReportPanel } from "@/components/DiagnosticReportPanel";
-import {
-  InvoiceCsvField,
-  validateInvoiceCsvValue,
-} from "@/components/InvoiceCsvField";
+import { InvoiceCsvField } from "@/components/InvoiceCsvField";
+import { validateInvoiceCsvValue } from "@/components/invoiceCsvLogic";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import {
   formatDiagnosticReport,
@@ -35,7 +33,8 @@ import {
   resolveRetainerBalanceRpcUrl,
 } from "@/components/agreement/retainerBalancePresentation";
 import { AgreementVariableRow } from "./AgreementVariableRow";
-import { ReadOnlyLongText, isReadOnlyLongTextVariable } from "./readOnlyLongText";
+import { ReadOnlyLongText } from "./readOnlyLongText";
+import { isReadOnlyLongTextVariable } from "./readOnlyLongTextLogic";
 import { resolveSummaryVariableDefinition } from "./summaryVariableDefinition";
 import type { ParticipantApi, AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import type { AgreementInputRecordApi } from "@/hooks/useAgreementsApi";
@@ -369,6 +368,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
     setActionErrorReport(formatDiagnosticReport(diagnostic));
   }, [
     activeInputId,
+    address,
     canSignActiveInput,
     captureDiagnostic,
     currentState,

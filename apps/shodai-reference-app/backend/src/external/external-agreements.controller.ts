@@ -17,18 +17,18 @@ export class ExternalAgreementsController {
   }
 
   @Post(':id/input')
-  async input(@Headers('authorization') authorization: string, @Param('id') id: string, @Body() body: unknown) {
-    return this.external.submitInput(id, body, await this.requireUser(authorization));
+  async input(@Headers('authorization') authorization: string, @Param('id') id: string, @Body() body: unknown, @Query('chainId') chainId?: string) {
+    return this.external.submitInput(id, body, await this.requireUser(authorization), { chainId });
   }
 
   @Get(':id/state')
-  async state(@Headers('authorization') authorization: string, @Param('id') id: string) {
-    return this.external.readState(id, await this.requireUser(authorization));
+  async state(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('chainId') chainId?: string) {
+    return this.external.readState(id, await this.requireUser(authorization), { chainId });
   }
 
   @Get(':id/inputs')
-  async inputs(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('userId') userId?: string) {
-    return this.external.listInputs(id, await this.requireUser(authorization), userId);
+  async inputs(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('userId') userId?: string, @Query('chainId') chainId?: string) {
+    return this.external.listInputs(id, await this.requireUser(authorization), userId, { chainId });
   }
 
   private async requireUser(authorization: string) {

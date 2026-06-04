@@ -44,8 +44,8 @@ export class DraftAgreementsController {
   }
 
   @Get(':id/participants')
-  async getParticipants(@Headers('authorization') authorization: string, @Param('id') id: string) {
-    return this.drafts.getParticipants(id, await this.requireUser(authorization));
+  async getParticipants(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('chainId') chainId?: string) {
+    return this.drafts.getParticipants(id, await this.requireUser(authorization), { chainId });
   }
 
   @Put(':id/participants')
@@ -54,8 +54,8 @@ export class DraftAgreementsController {
   }
 
   @Get(':id/observers')
-  async getObservers(@Headers('authorization') authorization: string, @Param('id') id: string) {
-    return this.drafts.getObservers(id, await this.requireUser(authorization));
+  async getObservers(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('chainId') chainId?: string) {
+    return this.drafts.getObservers(id, await this.requireUser(authorization), { chainId });
   }
 
   @Put(':id/observers')
@@ -84,8 +84,8 @@ export class DraftAgreementsController {
   }
 
   @Get(':id')
-  async get(@Headers('authorization') authorization: string, @Param('id') id: string) {
-    return this.drafts.get(id, await this.requireUser(authorization));
+  async get(@Headers('authorization') authorization: string, @Param('id') id: string, @Query('chainId') chainId?: string) {
+    return this.drafts.get(id, await this.requireUser(authorization), { chainId });
   }
 
   private async requireUser(authorization: string) {

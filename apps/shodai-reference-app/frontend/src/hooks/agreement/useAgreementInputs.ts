@@ -117,7 +117,7 @@ export function useAgreementInputs({
       }
     }
     return ids;
-  }, [address, agreementJson, availableInputIds, record?.variables, resolveInputIssuerAddresses]);
+  }, [address, agreementJson, availableInputIds, resolveInputIssuerAddresses]);
 
   const nonPerformableInputIds = React.useMemo(
     () => availableInputIds.filter((inputId) => !performableInputIds.includes(inputId)),
@@ -290,6 +290,8 @@ export function useAgreementInputs({
 
       const agreementAddress = record?.address;
       if (!agreementAddress) throw new Error("Agreement address not found");
+      const agreementId = record?.id;
+      if (!agreementId) throw new Error("Agreement id not found");
       const payloadHex = buildInputPayload(agreementJson as AgreementJson, activeInputId, payload);
       const chainId = record?.chainId;
       if (!chainId) throw new Error("Agreement is missing a chain id");
@@ -387,7 +389,7 @@ export function useAgreementInputs({
       };
 
       submitStage = "submit-input-via-api";
-      const inputRecord = await processInput(agreementAddress, {
+      const inputRecord = await processInput(agreementId, {
         inputId: activeInputId,
         values: payload,
         signer: signerAddress,

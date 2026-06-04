@@ -12,12 +12,14 @@ import Router from '@/Router';
 import ConnectionResolver from './components/ConnectionResolver';
 import '@/index.css';
 import { AuthInitProvider } from './components/AuthInitProvider';
+import { initializeMarketingTelemetry } from './marketingTelemetry';
 import { getDynamicEvmNetwork, loadRuntimeAgreementConfig } from '@/utils/chainConfig';
 
 
 const envId = import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID;
 
 const queryClient = new QueryClient();
+initializeMarketingTelemetry();
 
 const DynamicAuthWrapper = ({
   children,

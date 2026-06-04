@@ -4,7 +4,6 @@ import { TextArea } from "@/subframe/components/TextArea";
 import { DateTimePicker } from "@/components/DateTimePicker";
 import { isOnchainReferenceSubType } from "@/utils/onchainReferences";
 import { OnchainReferenceInput } from "@/components/OnchainReferenceInput";
-export { createValidationRules } from "./variableValidation";
 
 export interface DocumentVariable {
   type: 'string' | 'number' | 'uint256' | 'boolean' | 'bool' | 'address' | 'dateTime' | 'signature' | 'txHash';

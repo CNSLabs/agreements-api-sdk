@@ -54,7 +54,7 @@ export function useAgreementActivity({
   }, [activityInputs, record, id]);
 
   const refreshInputs = React.useCallback(async () => {
-    const inputsId = record?.address || id || "";
+    const inputsId = record?.id || id || "";
     if (!inputsId) return;
     setActivityError(null);
     setActivityLoading(true);
@@ -87,7 +87,7 @@ export function useAgreementActivity({
     } finally {
       setActivityLoading(false);
     }
-  }, [record?.address, id, record?.json, getInputs, formatPaymentAmount]);
+  }, [record?.id, id, record?.json, getInputs, formatPaymentAmount]);
 
   return {
     activityInputs,

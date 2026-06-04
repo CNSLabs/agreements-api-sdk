@@ -1193,6 +1193,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
     assert.equal(deployBody.externalAgreementId, 'external-agreement-1');
     assert.equal(deployBody.address, '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     assert.equal(deployBody.chainId, 59141);
+    assert.equal(deployBody.onChainRef, 'eip155:59141:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     assert.equal(deployBody.docUri, 'ipfs://agreement/signed-doc-uri');
     assert.equal(deployBody.state, 'AWAITING_INPUT');
     assert.equal(deployBody.variables.clientWalletAddress, participant);
@@ -1314,6 +1315,204 @@ test('Reference app external bridge uses the real API client surface and mirrors
   }
 });
 
+test('Reference app scopes deployed agreement lookup and input mirrors by chain', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const sharedAddress = '0xabababababababababababababababababababab';
+  const sharedTxHash = `0x${'c'.repeat(64)}`;
+  const externalInputsByAgreement = {
+    'external-scope-linea': [{
+      agreementAddress: sharedAddress,
+      chainId: 59141,
+      inputId: 'lineaInput',
+      userId: 'platform-user-scope',
+      txHash: sharedTxHash,
+      payload: '0x',
+      values: { chain: 'linea' },
+      status: 'MINED',
+      createdAt: '2026-06-04T10:00:00.000Z',
+      updatedAt: '2026-06-04T10:00:00.000Z',
+    }],
+    'external-scope-base': [{
+      agreementAddress: sharedAddress,
+      chainId: 84532,
+      inputId: 'baseInput',
+      userId: 'platform-user-scope',
+      txHash: sharedTxHash,
+      payload: '0x',
+      values: { chain: 'base' },
+      status: 'MINED',
+      createdAt: '2026-06-04T10:01:00.000Z',
+      updatedAt: '2026-06-04T10:01:00.000Z',
+    }],
+  };
+  const externalStatesByAgreement = {
+    'external-scope-linea': 'LINEA_READY',
+    'external-scope-base': 'BASE_READY',
+  };
+  const externalServer = createServer(async (req, res) => {
+    const stateMatch = req.url?.match(/^\/v0\/agreements\/([^/?]+)\/state$/);
+    if (req.method === 'GET' && stateMatch) {
+      const externalAgreementId = decodeURIComponent(stateMatch[1]);
+      writeJson(res, 200, successEnvelope({
+        status: 'Deployed',
+        state: externalStatesByAgreement[externalAgreementId] || 'UNKNOWN',
+      }));
+      return;
+    }
+
+    const inputsMatch = req.url?.match(/^\/v0\/agreements\/([^/?]+)\/inputs(?:\?.*)?$/);
+    if (req.method === 'GET' && inputsMatch) {
+      const externalAgreementId = decodeURIComponent(inputsMatch[1]);
+      writeJson(res, 200, listEnvelope(externalInputsByAgreement[externalAgreementId] || []));
+      return;
+    }
+
+    writeJson(res, 404, { statusCode: 404, message: `No fake external route for ${req.method} ${req.url}` });
+  });
+  await new Promise((resolve) => externalServer.listen(0, '127.0.0.1', resolve));
+  const externalPort = externalServer.address().port;
+
+  const port = 5090 + Math.floor(Math.random() * 200);
+  const dbName = `standalone_agreements_scoped_lookup_${process.pid}_${port}`;
+  const child = spawn('pnpm', ['--filter', 'shodai-reference-backend', 'start'], {
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      AGREEMENTS_BACKEND_PORT: String(port),
+      MONGO_URI: mongoUri,
+      MONGO_DB_NAME: dbName,
+      SERVICE_AUTH_TOKEN: serviceToken,
+      EXTERNAL_API_BASE_URL: `http://127.0.0.1:${externalPort}`,
+      EXTERNAL_API_KEY: 'scoped-lookup-external-key',
+      SHODAI_WEBHOOK_SECRET: 'whsec_scoped_lookup',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  child.stdout.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+  child.stderr.on('data', (chunk) => {
+    logs += chunk.toString();
+  });
+
+  try {
+    await waitForHealth(port, child, () => logs);
+    const db = mongoClient.db(dbName);
+    const owner = '0x1111111111111111111111111111111111111111';
+    const token = tokenFor({
+      userId: 'scope-user',
+      email: 'scope@example.com',
+      wallet: owner,
+    });
+    const now = new Date().toISOString();
+    await db.collection('agreements').insertMany([
+      {
+        id: 'local-linea-agreement',
+        externalAgreementId: 'external-scope-linea',
+        address: sharedAddress,
+        onChainRef: `eip155:59141:${sharedAddress}`,
+        status: 'Deployed',
+        chainId: 59141,
+        displayName: 'Linea scoped agreement',
+        owner,
+        contributors: [owner],
+        json: { metadata: { templateId: 'did:template:scope-v1' }, execution: { initialState: 'LINEA_READY' } },
+        variables: {},
+        participants: [],
+        observers: [],
+        state: 'LOCAL_LINEA',
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'local-base-agreement',
+        externalAgreementId: 'external-scope-base',
+        address: sharedAddress,
+        onChainRef: `eip155:84532:${sharedAddress}`,
+        status: 'Deployed',
+        chainId: 84532,
+        displayName: 'Base scoped agreement',
+        owner,
+        contributors: [owner],
+        json: { metadata: { templateId: 'did:template:scope-v1' }, execution: { initialState: 'BASE_READY' } },
+        variables: {},
+        participants: [],
+        observers: [],
+        state: 'LOCAL_BASE',
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+
+    const ambiguousStateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${sharedAddress}/state`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const ambiguousStateBody = await readJsonResponse(ambiguousStateResponse);
+    assert.equal(ambiguousStateResponse.status, 400, JSON.stringify(ambiguousStateBody));
+    assert.match(ambiguousStateBody.message, /matches multiple chains/);
+
+    const rawScopedStateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${sharedAddress}/state?chainId=84532`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const rawScopedStateBody = await readJsonResponse(rawScopedStateResponse);
+    assert.equal(rawScopedStateResponse.status, 200, JSON.stringify(rawScopedStateBody));
+    assert.equal(rawScopedStateBody.state, 'BASE_READY');
+
+    const caipInputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${encodeURIComponent(`eip155:59141:${sharedAddress}`)}/inputs?userId=platform-user-scope`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const caipInputsBody = await readJsonResponse(caipInputsResponse);
+    assert.equal(caipInputsResponse.status, 200, JSON.stringify(caipInputsBody));
+    assert.deepEqual(caipInputsBody.map((entry) => [entry.inputId, entry.chainId]), [['lineaInput', 59141]]);
+
+    const localInputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/local-base-agreement/inputs?userId=platform-user-scope`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const localInputsBody = await readJsonResponse(localInputsResponse);
+    assert.equal(localInputsResponse.status, 200, JSON.stringify(localInputsBody));
+    assert.deepEqual(localInputsBody.map((entry) => [entry.inputId, entry.chainId]), [['baseInput', 84532]]);
+
+    const mirroredInputs = await db.collection('agreement_inputs').find(
+      { txHash: sharedTxHash },
+      { projection: { _id: 0, agreementId: 1, chainId: 1, agreementAddress: 1, txHash: 1, inputId: 1 } },
+    ).sort({ chainId: 1 }).toArray();
+    assert.deepEqual(mirroredInputs, [
+      {
+        agreementId: 'local-linea-agreement',
+        agreementAddress: sharedAddress,
+        chainId: 59141,
+        inputId: 'lineaInput',
+        txHash: sharedTxHash,
+      },
+      {
+        agreementId: 'local-base-agreement',
+        agreementAddress: sharedAddress,
+        chainId: 84532,
+        inputId: 'baseInput',
+        txHash: sharedTxHash,
+      },
+    ]);
+    assert.ok(!logs.includes('MongoServerError'), logs);
+  } finally {
+    child.kill('SIGTERM');
+    await once(child, 'exit').catch(() => undefined);
+    await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+    await new Promise((resolve) => externalServer.close(resolve));
+  }
+});
+
 test('Webhook receiver verifies deliveries, retries recoverable events, and reconciles full input history', async (t) => {
   const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
   const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
@@ -1336,6 +1535,15 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       variables: { scope: 'Validate webhook reconciliation' },
       observers: ['observer@example.com'],
       onChain: { source: 'fake-webhook-api' },
+    },
+    'external-agreement-deploy-1': {
+      id: 'external-agreement-deploy-1',
+      address: '0xbabababababababababababababababababababa',
+      state: 'PENDING_ACCEPTANCE',
+      displayName: 'Webhook Deploy Agreement',
+      variables: { scope: 'Deploy transition reconciliation' },
+      observers: ['deploy-observer@example.com'],
+      onChain: { source: 'fake-deploy-api' },
     },
     'external-agreement-race-1': {
       id: 'external-agreement-race-1',
@@ -1660,6 +1868,54 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     });
     assert.equal(externalCalls.length, callsAfterAccepted);
 
+    await insertWebhookAgreement(db, {
+      id: 'webhook-deploy-local-1',
+      externalAgreementId: 'external-agreement-deploy-1',
+      address: '0xbabababababababababababababababababababa',
+      displayName: 'Webhook Deploy Local Agreement',
+      variables: { scope: 'Before deploy webhook' },
+    });
+    const deployEvent = transitionEvent({
+      id: 'evt_webhook_deploy_1',
+      agreementId: 'external-agreement-deploy-1',
+      agreementName: 'Webhook Deploy Agreement',
+      createdAt: '2026-06-02T18:02:30.000Z',
+      fromState: '',
+      toState: 'PENDING_ACCEPTANCE',
+      inputId: '__deploy',
+    });
+    const callsBeforeDeploy = externalCalls.length;
+    const deployResponse = await sendWebhookEvent(port, deployEvent, webhookSecret);
+    assert.equal(deployResponse.status, 204, await deployResponse.text());
+    const deployStoredEvent = await waitForWebhookEvent(db, deployEvent.id, (event) => event.status === 'processed', {
+      projection: { _id: 0, status: 1, processedAction: 1, reconciliation: 1, attemptCount: 1 },
+    });
+    assert.deepEqual(deployStoredEvent, {
+      status: 'processed',
+      processedAction: 'reconciled_agreement_mirror',
+      attemptCount: 1,
+      reconciliation: {
+        state: 'PENDING_ACCEPTANCE',
+        inputCount: 0,
+        inputPageCount: 1,
+        latestInputId: null,
+      },
+    });
+    const deployAgreement = await db.collection('agreements').findOne(
+      { id: 'webhook-deploy-local-1' },
+      { projection: { _id: 0, state: 1, lastInputId: 1, lastInputAt: 1, lastWebhookEventId: 1 } },
+    );
+    assert.equal(deployAgreement.state, 'PENDING_ACCEPTANCE');
+    assert.equal(deployAgreement.lastWebhookEventId, deployEvent.id);
+    assert.equal(deployAgreement.lastInputId, undefined);
+    assert.equal(deployAgreement.lastInputAt, undefined);
+    assert.deepEqual(externalCalls.slice(callsBeforeDeploy).map((call) => [call.method, call.url]), [
+      ['GET', '/v0/agreements/external-agreement-deploy-1'],
+      ['GET', '/v0/agreements/external-agreement-deploy-1/state'],
+      ['GET', '/v0/agreements/external-agreement-deploy-1/inputs'],
+    ]);
+    const callsAfterDeploy = externalCalls.length;
+
     const raceEvent = transitionEvent({
       id: 'evt_webhook_race_1',
       agreementId: 'external-agreement-race-1',
@@ -1678,7 +1934,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     assert.equal(raceMissingEvent.retryReason, 'agreement_not_found');
     assert.equal(raceMissingEvent.attemptCount, 1);
     assert.ok(raceMissingEvent.nextAttemptAt);
-    assert.equal(externalCalls.length, callsAfterAccepted);
+    assert.equal(externalCalls.length, callsAfterDeploy);
 
     await insertWebhookAgreement(db, {
       id: 'webhook-race-local-1',
@@ -1773,6 +2029,43 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
     assert.equal(deadStoredEvent.maxAttempts, 2);
     assert.match(deadStoredEvent.error, /persistent external outage/);
 
+    const sharedWebhookAddress = '0xfafafafafafafafafafafafafafafafafafafafa';
+    await insertWebhookAgreement(db, {
+      id: 'webhook-ambiguous-linea-local-1',
+      address: sharedWebhookAddress,
+      chainId: 59141,
+      displayName: 'Webhook Ambiguous Linea Local Agreement',
+      variables: { scope: 'Ambiguous webhook Linea' },
+    });
+    await insertWebhookAgreement(db, {
+      id: 'webhook-ambiguous-base-local-1',
+      address: sharedWebhookAddress,
+      chainId: 84532,
+      displayName: 'Webhook Ambiguous Base Local Agreement',
+      variables: { scope: 'Ambiguous webhook Base' },
+    });
+    const ambiguousAddressEvent = transitionEvent({
+      id: 'evt_webhook_ambiguous_address_1',
+      agreementId: sharedWebhookAddress,
+      agreementName: 'Webhook Ambiguous Address Agreement',
+      createdAt: '2026-06-02T18:06:00.000Z',
+      fromState: 'PENDING_ACCEPTANCE',
+      toState: 'ACCEPTED',
+      inputId: 'ambiguousAccept',
+    });
+    const ambiguousAddressResponse = await sendWebhookEvent(port, ambiguousAddressEvent, webhookSecret);
+    assert.equal(ambiguousAddressResponse.status, 204, await ambiguousAddressResponse.text());
+    const ambiguousAddressStoredEvent = await waitForWebhookEvent(db, ambiguousAddressEvent.id, (event) => event.status === 'dead_letter', {
+      projection: { _id: 0, status: 1, deadLetterReason: 1, error: 1, attemptCount: 1 },
+      timeoutMs: 5000,
+    });
+    assert.deepEqual(ambiguousAddressStoredEvent, {
+      status: 'dead_letter',
+      deadLetterReason: 'ambiguous_agreement_lookup',
+      error: 'Webhook agreement identifier matches multiple local chains',
+      attemptCount: 1,
+    });
+
     const acceptedRawBody = JSON.stringify(acceptedEvent);
     const invalidResponse = await fetch(`http://localhost:${port}/shodai/webhooks`, {
       method: 'POST',
@@ -1815,7 +2108,7 @@ async function insertWebhookAgreement(db, overrides) {
     externalAgreementId: overrides.externalAgreementId,
     address: overrides.address,
     status: 'Deployed',
-    chainId: 59141,
+    chainId: overrides.chainId || 59141,
     displayName: overrides.displayName,
     owner: '0x1111111111111111111111111111111111111111',
     contributors: ['0x1111111111111111111111111111111111111111'],

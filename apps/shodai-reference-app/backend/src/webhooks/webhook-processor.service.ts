@@ -1,4 +1,4 @@
-import { HttpException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { StandaloneConfigService } from '../config/standalone-config.service';
 import { AgreementRepository } from '../database/repositories/agreement.repository';
@@ -66,9 +66,20 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     }
 
     const externalAgreementId = event.data.agreementId;
-    const agreement = (await this.agreements.findOne({ externalAgreementId })) ||
-      (await this.agreements.findOne({ id: externalAgreementId })) ||
-      (await this.agreements.findOne({ address: externalAgreementId }));
+    const externalIdAgreement = await this.agreements.findOne({ externalAgreementId });
+    const scopedLookup = externalIdAgreement
+      ? { agreement: externalIdAgreement, ambiguous: false }
+      : await this.agreements.findByIdentifier(externalAgreementId);
+    if (scopedLookup.ambiguous) {
+      await this.retryOrDeadLetter(
+        document,
+        'ambiguous_agreement_lookup',
+        new BadRequestException('Webhook agreement identifier matches multiple local chains'),
+        { externalAgreementId },
+      );
+      return;
+    }
+    const agreement = scopedLookup.agreement;
 
     if (!agreement) {
       await this.retryOrDeadLetter(document, 'agreement_not_found', new Error('Local agreement mirror not found for webhook event'), {

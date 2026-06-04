@@ -6,18 +6,6 @@ import {
   findCollapsedReadOnlyLongText,
 } from "./readOnlyLongTextLogic";
 
-export {
-  COLLAPSED_READ_ONLY_LONGTEXT_LABEL,
-  EXPANDED_READ_ONLY_LONGTEXT_LABEL,
-  findCollapsedReadOnlyLongText,
-  isReadOnlyLongTextVariable,
-} from "./readOnlyLongTextLogic";
-export type {
-  FindCollapsedReadOnlyLongTextParams,
-  FindCollapsedReadOnlyLongTextResult,
-  ReadOnlyLongTextVariable,
-} from "./readOnlyLongTextLogic";
-
 export interface ReadOnlyLongTextProps {
   text: string;
   expandedText?: string;
