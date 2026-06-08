@@ -19,6 +19,7 @@ export class StandaloneConfigService implements OnModuleInit {
   readonly dynamicApiToken = process.env.DYNAMIC_API_TOKEN || '';
   readonly externalApiBaseUrl = process.env.EXTERNAL_API_BASE_URL || '';
   readonly externalApiKey = process.env.EXTERNAL_API_KEY || '';
+  readonly allowLocalExternalApi = booleanFlag(process.env.ALLOW_LOCAL_EXTERNAL_API);
   readonly externalApiEnvironment = this.resolveExternalApiEnvironment();
   readonly shodaiWebhookSecret = process.env.SHODAI_WEBHOOK_SECRET || '';
   readonly shodaiWebhookToleranceSeconds = this.resolveWebhookToleranceSeconds();
@@ -57,8 +58,12 @@ export class StandaloneConfigService implements OnModuleInit {
       throw new Error('EXTERNAL_API_BASE_URL=mock is only allowed under NODE_ENV=test');
     }
 
-    if (this.isLocalOrPrivateExternalApiUrl(this.externalApiBaseUrl)) {
-      throw new Error('EXTERNAL_API_BASE_URL must target the real Shodai API outside NODE_ENV=test');
+    if (this.isLocalOrPrivateExternalApiUrl(this.externalApiBaseUrl) && !this.allowLocalExternalApi) {
+      throw new Error('EXTERNAL_API_BASE_URL must target the real Shodai API unless ALLOW_LOCAL_EXTERNAL_API=true is set');
+    }
+
+    if (this.isLocalOrPrivateExternalApiUrl(this.externalApiBaseUrl) && this.nodeEnv === 'production') {
+      throw new Error('ALLOW_LOCAL_EXTERNAL_API cannot be used when NODE_ENV=production');
     }
   }
 
@@ -143,4 +148,8 @@ export class StandaloneConfigService implements OnModuleInit {
 function positiveInteger(raw: string | undefined, fallback: number): number {
   const explicit = Number(raw || '');
   return Number.isInteger(explicit) && explicit > 0 ? explicit : fallback;
+}
+
+function booleanFlag(raw: string | undefined): boolean {
+  return String(raw || '').trim().toLowerCase() === 'true';
 }
