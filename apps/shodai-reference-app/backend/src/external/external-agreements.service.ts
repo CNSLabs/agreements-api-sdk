@@ -9,11 +9,12 @@ import type { AgreementTransitionedWebhookEvent } from '@cns-labs/agreements-api
 import type { ApiClient, AgreementInputRecord } from '@cns-labs/agreements-api-client';
 
 type AgreementsApiClientModule = typeof import('@cns-labs/agreements-api-client');
+type AgreementsApiHttpClientModule = typeof import('@cns-labs/agreements-api-client/client');
 
 const importAgreementsApiClientModule = new Function(
   'specifier',
   'return import(specifier)',
-) as (specifier: string) => Promise<AgreementsApiClientModule>;
+) as (specifier: string) => Promise<AgreementsApiClientModule | AgreementsApiHttpClientModule>;
 
 type InputListingResult = {
   inputs: AgreementInputRecord[];
@@ -468,7 +469,7 @@ export class ExternalAgreementsService {
     if (!this.config.externalApiBaseUrl || !this.config.externalApiKey) {
       throw new InternalServerErrorException('EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY are required for deployed agreement operations');
     }
-    const { ApiClient } = await importAgreementsApiClientModule('@cns-labs/agreements-api-client');
+    const { ApiClient } = await importAgreementsApiClientModule('@cns-labs/agreements-api-client/client') as AgreementsApiHttpClientModule;
     return new ApiClient({
       baseUrl: this.config.externalApiBaseUrl,
       apiKey: this.config.externalApiKey,

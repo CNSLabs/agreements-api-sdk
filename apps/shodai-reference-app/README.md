@@ -40,6 +40,11 @@ obtain a key, open `https://developers.shodai.network/portal`, sign in with
 Google, generate a testnet API key, and store it locally in
 `apps/shodai-reference-app/backend/.env`.
 
+For local CNS stack testing, set `EXTERNAL_API_BASE_URL` to your local
+external-api URL, such as `http://localhost:4005`, and set
+`ALLOW_LOCAL_EXTERNAL_API=true`. This opt-in is only for development and is
+rejected when `NODE_ENV=production`.
+
 Create a webhook subscription in the Shodai developer portal or API with the
 delivery URL `https://<your-tunnel-host>/shodai/webhooks` and event type
 `agreement.transitioned`. Store the returned subscription secret in
