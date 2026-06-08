@@ -5,6 +5,7 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
+      "@cns-labs/agreements-api-client/client": ["../../../packages/agreements-api-client/dist/client.d.ts"],
       "@cns-labs/agreements-api-client/webhooks": ["../../../packages/agreements-api-client/dist/webhooks.d.ts"]
     },
     "declaration": false,
