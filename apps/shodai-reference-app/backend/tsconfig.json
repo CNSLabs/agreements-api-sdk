@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@cns-labs/agreements-api-client/client": ["../../../packages/agreements-api-client/dist/client.d.ts"],
+      "@cns-labs/agreements-api-client/webhooks": ["../../../packages/agreements-api-client/dist/webhooks.d.ts"]
+    },
+    "declaration": false,
+    "sourceMap": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

@@ -99,6 +99,28 @@ describe('webhook receiver helpers', () => {
     assert.equal(event.data.inputId, 'submitInitialPaymentProof');
   });
 
+  it('verifies a deploy transition with an empty fromState boundary', () => {
+    const deployPayload = {
+      ...transitionPayload,
+      id: 'evt_deploy',
+      data: {
+        ...transitionPayload.data,
+        fromState: '',
+        toState: 'AWAITING_PAYMENT',
+        inputId: '__deploy',
+      },
+    };
+    const rawBody = body(deployPayload);
+    const event = constructWebhookEvent(rawBody, headersFor(rawBody, 'evt_deploy'), secret, {
+      now: nowSeconds,
+    });
+
+    assert.equal(event.type, 'agreement.transitioned');
+    assert.equal(event.data.fromState, '');
+    assert.equal(event.data.toState, 'AWAITING_PAYMENT');
+    assert.equal(event.data.inputId, '__deploy');
+  });
+
   it('rejects altered bodies and signatures', () => {
     const rawBody = body(testPayload);
     const headers = headersFor(rawBody, 'evt_test');
