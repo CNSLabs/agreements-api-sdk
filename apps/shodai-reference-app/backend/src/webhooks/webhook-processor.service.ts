@@ -21,11 +21,11 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
 
   onModuleInit() {
     this.interval = setInterval(
-      () => void this.processDueEvents(),
+      () => this.processDueEventsSafely(),
       this.config.webhookProcessorIntervalMs,
     );
     this.interval.unref?.();
-    void this.processDueEvents();
+    this.processDueEventsSafely();
   }
 
   onModuleDestroy() {
@@ -54,6 +54,12 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     } finally {
       this.running = false;
     }
+  }
+
+  private processDueEventsSafely(): void {
+    void this.processDueEvents().catch((error) => {
+      this.logger.warn(`Webhook processor skipped a cycle: ${errorMessage(error)}`);
+    });
   }
 
   private async processClaimedEvent(document: Record<string, any>): Promise<void> {
