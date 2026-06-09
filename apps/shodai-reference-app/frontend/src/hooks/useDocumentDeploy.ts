@@ -372,12 +372,13 @@ export function useDocumentDeploy({
         let latestDraft = draft;
         if (configure.participantKeys.length > 0) {
           const participants: ParticipantApi[] = configure.participantKeys.map((k) => {
-            const entry = configure.participantsMap[k] || { firstName: "", lastName: "", email: "" };
+            const entry = configure.participantsMap[k] || { firstName: "", lastName: "", email: "", walletAddress: "" };
             return {
               variableKey: k,
               firstName: entry.firstName || undefined,
               lastName: entry.lastName || undefined,
               email: entry.email && looksLikeEmail(entry.email) ? entry.email : undefined,
+              walletAddress: entry.walletAddress || undefined,
             };
           });
           diagnosticContext = {
@@ -388,6 +389,7 @@ export function useDocumentDeploy({
               emailDomain: participant.email?.split("@")[1] ?? null,
               hasFirstName: !!participant.firstName,
               hasLastName: !!participant.lastName,
+              hasWalletAddress: !!participant.walletAddress,
             })),
           };
           latestDraft = await setParticipants(draftId, participants, { resolveWallets: true });
