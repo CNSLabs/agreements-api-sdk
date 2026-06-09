@@ -35,6 +35,7 @@ export type ParticipantFormEntry = {
   firstName: string;
   lastName: string;
   email: string;
+  walletAddress: string;
 };
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -48,8 +49,8 @@ export interface DocumentConfigureViewModel {
   nonParticipantKeys: string[];
   variables: Record<string, DocumentVariable>;
   participantInputs: Record<string, { inputId: string; label: string }[]>;
-  participantErrors: Record<string, { firstName?: string; lastName?: string; email?: string }>;
-  touchedParticipantFields: Record<string, { firstName?: boolean; lastName?: boolean; email?: boolean }>;
+  participantErrors: Record<string, { firstName?: string; lastName?: string; email?: string; walletAddress?: string }>;
+  touchedParticipantFields: Record<string, { firstName?: boolean; lastName?: boolean; email?: boolean; walletAddress?: boolean }>;
   touchedInitFields: Record<string, boolean>;
   initFieldErrors: Record<string, string | null>;
   initValuesMap: Record<string, string>;

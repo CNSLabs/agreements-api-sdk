@@ -96,7 +96,7 @@ export function useDocumentConfigure({
   const hasParticipantErrors = React.useMemo(
     () =>
       Object.values(participantsState.participantErrors).some(
-        (e) => !!(e.firstName || e.lastName || e.email)
+        (e) => !!(e.firstName || e.lastName || e.email || e.walletAddress)
       ),
     [participantsState.participantErrors]
   );
@@ -168,7 +168,7 @@ export function useDocumentConfigure({
     const initErrCount = Object.values(initValuesState.initFieldErrors).filter((x) => !!x).length;
     count += initErrCount;
     const participantErrCount = Object.values(participantsState.participantErrors).reduce(
-      (sum, e) => sum + (e.firstName ? 1 : 0) + (e.lastName ? 1 : 0) + (e.email ? 1 : 0),
+      (sum, e) => sum + (e.firstName ? 1 : 0) + (e.lastName ? 1 : 0) + (e.email ? 1 : 0) + (e.walletAddress ? 1 : 0),
       0
     );
     count += participantErrCount;

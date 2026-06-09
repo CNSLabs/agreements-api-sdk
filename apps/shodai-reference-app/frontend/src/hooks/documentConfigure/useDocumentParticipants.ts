@@ -1,7 +1,15 @@
 import * as React from "react";
+import { isAddress } from "viem";
 import type { AgreementRecordApi, ParticipantApi } from "@/hooks/useAgreementsApi";
 import type { ParticipantFormEntry, SaveStatus } from "./types";
 import { looksLikeEmail } from "@/utils/validation";
+
+const emptyParticipant = (): ParticipantFormEntry => ({
+  firstName: "",
+  lastName: "",
+  email: "",
+  walletAddress: "",
+});
 
 export interface UseDocumentParticipantsParams {
   draft: AgreementRecordApi | null;
@@ -22,7 +30,7 @@ export function useDocumentParticipants({
 }: UseDocumentParticipantsParams) {
   const [participantsMap, setParticipantsMap] = React.useState<Record<string, ParticipantFormEntry>>({});
   const [touchedParticipantFields, setTouchedParticipantFields] = React.useState<
-    Record<string, { firstName?: boolean; lastName?: boolean; email?: boolean }>
+    Record<string, { firstName?: boolean; lastName?: boolean; email?: boolean; walletAddress?: boolean }>
   >({});
   const [participantSaveStatus, setParticipantSaveStatus] = React.useState<SaveStatus>("idle");
   const draftStatus = draft?.status;
@@ -39,6 +47,7 @@ export function useDocumentParticipants({
             firstName: p.firstName || "",
             lastName: p.lastName || "",
             email: p.email || "",
+            walletAddress: p.walletAddress || "",
           };
         }
         setParticipantsMap(map);
@@ -58,7 +67,7 @@ export function useDocumentParticipants({
   const updateParticipantField = React.useCallback(
     (variableKey: string, field: keyof ParticipantFormEntry, value: string) => {
       setParticipantsMap((prev) => {
-        const existing = prev[variableKey] || { firstName: "", lastName: "", email: "" };
+        const existing = prev[variableKey] || emptyParticipant();
         return { ...prev, [variableKey]: { ...existing, [field]: value } };
       });
     },
@@ -68,12 +77,14 @@ export function useDocumentParticipants({
   const handleSaveParticipants = React.useCallback(async () => {
     if (!draftId || !draft || draft.status !== "Draft" || isWorking) return;
     const participants: ParticipantApi[] = participantKeys.map((k) => {
-      const entry = participantsMap[k] || { firstName: "", lastName: "", email: "" };
+      const entry = participantsMap[k] || emptyParticipant();
+      const walletAddress = entry.walletAddress.trim();
       return {
         variableKey: k,
         firstName: entry.firstName || undefined,
         lastName: entry.lastName || undefined,
         email: entry.email && looksLikeEmail(entry.email) ? entry.email : undefined,
+        walletAddress: walletAddress && isAddress(walletAddress) ? walletAddress : undefined,
       };
     });
     setParticipantSaveStatus("saving");
@@ -87,15 +98,26 @@ export function useDocumentParticipants({
   }, [draft, draftId, participantKeys, participantsMap, setParticipants, isWorking]);
 
   const participantErrors = React.useMemo(() => {
-    const errs: Record<string, { firstName?: string; lastName?: string; email?: string }> = {};
+    const errs: Record<string, { firstName?: string; lastName?: string; email?: string; walletAddress?: string }> = {};
     for (const k of participantKeys) {
       const p = participantsMap[k];
-      const fieldErrs: { firstName?: string; lastName?: string; email?: string } = {};
-      if (!p?.firstName?.trim()) fieldErrs.firstName = "Required";
-      if (!p?.lastName?.trim()) fieldErrs.lastName = "Required";
-      if (!p?.email?.trim()) {
-        fieldErrs.email = "Required";
-      } else if (!looksLikeEmail(p.email.trim())) {
+      const fieldErrs: { firstName?: string; lastName?: string; email?: string; walletAddress?: string } = {};
+      const email = p?.email?.trim() || "";
+      const walletAddress = p?.walletAddress?.trim() || "";
+      const hasValidWalletAddress = walletAddress ? isAddress(walletAddress) : false;
+
+      if (walletAddress && !hasValidWalletAddress) {
+        fieldErrs.walletAddress = "Invalid wallet address";
+      }
+
+      if (!hasValidWalletAddress) {
+        if (!p?.firstName?.trim()) fieldErrs.firstName = "Required";
+        if (!p?.lastName?.trim()) fieldErrs.lastName = "Required";
+      }
+
+      if (!email && !hasValidWalletAddress) {
+        fieldErrs.email = "Email or wallet address required";
+      } else if (email && !looksLikeEmail(email)) {
         fieldErrs.email = "Invalid email";
       }
       errs[k] = fieldErrs;

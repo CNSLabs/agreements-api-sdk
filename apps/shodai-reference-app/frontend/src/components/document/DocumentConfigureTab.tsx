@@ -147,6 +147,7 @@ export function DocumentConfigureTab({
             emailDomain: participant?.email?.split("@")[1] ?? null,
             hasFirstName: !!participant?.firstName,
             hasLastName: !!participant?.lastName,
+            hasWalletAddress: !!participant?.walletAddress,
           };
         }),
         initValueSummary: summarizeRecordForDiagnostic(previewInitValues),
@@ -248,6 +249,10 @@ export function DocumentConfigureTab({
         map[`participant.${k}.email`]?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
+      if (pErrs.walletAddress) {
+        map[`participant.${k}.walletAddress`]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
     }
     for (const k of nonParticipantKeys) {
       if (initFieldErrors[k]) {
@@ -318,6 +323,7 @@ export function DocumentConfigureTab({
               const showFirstNameErr = showValidation || !!touched.firstName;
               const showLastNameErr = showValidation || !!touched.lastName;
               const showEmailErr = showValidation || !!touched.email;
+              const showWalletAddressErr = showValidation || !!touched.walletAddress;
 
               return (
                 <React.Fragment key={k}>
@@ -389,7 +395,11 @@ export function DocumentConfigureTab({
                         className="h-auto w-full flex-none"
                         variant="outline"
                         label="Email Address"
-                        helpText={showEmailErr && pErrs.email ? pErrs.email : ""}
+                        helpText={
+                          showEmailErr && pErrs.email
+                            ? pErrs.email
+                            : "Use email to resolve a Dynamic wallet, or enter a manual wallet address below."
+                        }
                         error={showEmailErr && !!pErrs.email}
                         icon={<FeatherMail />}
                       >
@@ -398,6 +408,32 @@ export function DocumentConfigureTab({
                           value={participantsMap[k]?.email ?? ""}
                           onChange={createParticipantFieldHandler(k, "email")}
                           onBlur={createParticipantFieldBlurHandler(k, "email")}
+                        />
+                      </TextField>
+                    </div>
+
+                    <div
+                      ref={(el) => {
+                        fieldRefsMap.current[`participant.${k}.walletAddress`] = el;
+                      }}
+                      className="w-full"
+                    >
+                      <TextField
+                        className="h-auto w-full flex-none"
+                        variant="outline"
+                        label="Manual Wallet Address"
+                        helpText={
+                          showWalletAddressErr && pErrs.walletAddress
+                            ? pErrs.walletAddress
+                            : "Optional. Use this to assign the role directly to a browser wallet such as MetaMask instead of resolving by email."
+                        }
+                        error={showWalletAddressErr && !!pErrs.walletAddress}
+                      >
+                        <TextField.Input
+                          placeholder="0x..."
+                          value={participantsMap[k]?.walletAddress ?? ""}
+                          onChange={createParticipantFieldHandler(k, "walletAddress")}
+                          onBlur={createParticipantFieldBlurHandler(k, "walletAddress")}
                         />
                       </TextField>
                     </div>
@@ -606,7 +642,8 @@ export function DocumentConfigureTab({
                 const pData = configure.participantsMap[k];
                 const fullName = [pData?.firstName, pData?.lastName].filter(Boolean).join(" ");
                 const email = pData?.email || "";
-                const walletAddr = configure.initValuesMap?.[k] ? String(configure.initValuesMap[k]).trim() : "";
+                const walletAddr = pData?.walletAddress?.trim() ||
+                  (configure.initValuesMap?.[k] ? String(configure.initValuesMap[k]).trim() : "");
                 const initial = (fullName?.[0] || roleName?.[0] || "P").toUpperCase();
 
                 return (
