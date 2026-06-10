@@ -162,6 +162,7 @@ export type ValidateDirectAgreementTemplateResponse = {
 export type DirectDeployAgreementWithPermitRequest = {
   agreement: Record<string, unknown>;
   displayName: string;
+  notificationTemplate?: NotificationTemplate;
   chainId?: number;
   docUri?: string;
   initValues?: Record<string, unknown>;
@@ -170,6 +171,47 @@ export type DirectDeployAgreementWithPermitRequest = {
   signer: string;
   deadline: number;
   signature: PermitSignature;
+};
+
+export type NotificationTemplate = {
+  metadata?: {
+    id?: string;
+    agreementTemplateId?: string;
+    version?: string;
+    name?: string;
+    description?: string;
+  };
+  rules: NotificationRule[];
+};
+
+export type NotificationRule = {
+  id: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  trigger:
+    | {
+        type: 'onTransition';
+        from?: string[];
+        to?: string[];
+        inputs?: string[];
+      }
+    | {
+        type: 'temporal';
+        states: string[];
+        condition: Record<string, unknown>;
+        checkInterval?: Record<string, unknown>;
+        fireOnce?: boolean;
+      };
+  recipients: string[];
+  notification: {
+    channel?: 'email' | 'external_webhook';
+    subject: string;
+    title?: string;
+    body: string;
+    ctaLabel?: string;
+  };
+  constraints?: Record<string, unknown>;
 };
 
 export type AgreementStateResponse = {
@@ -201,9 +243,15 @@ export type ProcessInputRequest = {
   signature: PermitSignature;
 };
 
-export type WebhookEventType = 'agreement.transitioned' | 'webhook.test';
+export type WebhookEventType =
+  | 'agreement.transitioned'
+  | 'agreement.notification.triggered'
+  | 'webhook.test';
 
-export type WebhookSubscriptionEventType = Extract<WebhookEventType, 'agreement.transitioned'>;
+export type WebhookSubscriptionEventType = Extract<
+  WebhookEventType,
+  'agreement.transitioned' | 'agreement.notification.triggered'
+>;
 
 export type WebhookSubscriptionStatus = 'active' | 'disabled';
 
@@ -213,6 +261,7 @@ export type WebhookFilters = {
   inputIds?: string[];
   fromStates?: string[];
   toStates?: string[];
+  ruleIds?: string[];
 };
 
 export type WebhookSubscription = {

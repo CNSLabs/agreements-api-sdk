@@ -39,7 +39,10 @@ export class WebhookVerificationError extends Error {
   }
 }
 
-export type WebhookEventType = 'agreement.transitioned' | 'webhook.test';
+export type WebhookEventType =
+  | 'agreement.transitioned'
+  | 'agreement.notification.triggered'
+  | 'webhook.test';
 
 export type WebhookEventEnvelope<TType extends WebhookEventType, TData extends object> = {
   id: string;
@@ -67,6 +70,32 @@ export type AgreementTransitionedWebhookEvent = WebhookEventEnvelope<
   AgreementTransitionedWebhookData
 >;
 
+export type AgreementNotificationTriggeredWebhookData = {
+  agreementId: string;
+  agreementName?: string;
+  templateId: string;
+  notificationTemplateId: string;
+  ruleId: string;
+  triggerType: 'onTransition' | 'temporal';
+  recipient: string;
+  notification: {
+    subject: string;
+    title?: string;
+    body: string;
+  };
+  transition?: {
+    fromState: string;
+    toState: string;
+    inputId: string;
+    occurredAt: string;
+  };
+};
+
+export type AgreementNotificationTriggeredWebhookEvent = WebhookEventEnvelope<
+  'agreement.notification.triggered',
+  AgreementNotificationTriggeredWebhookData
+>;
+
 export type UnknownWebhookEvent<TEventType extends string = string> = {
   id?: string;
   type: TEventType;
@@ -77,7 +106,8 @@ export type UnknownWebhookEvent<TEventType extends string = string> = {
 
 export type ShodaiWebhookEvent =
   | WebhookTestEvent
-  | AgreementTransitionedWebhookEvent;
+  | AgreementTransitionedWebhookEvent
+  | AgreementNotificationTriggeredWebhookEvent;
 
 export type VerifiedWebhookMetadata = {
   timestamp: string;
@@ -250,6 +280,49 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
     };
   }
 
+  if (type === 'agreement.notification.triggered') {
+    const notification = requirePayloadObject(data, 'notification');
+    const transition = optionalPayloadObject(data, 'transition');
+    const triggerType = requirePayloadString(data, 'triggerType');
+    if (triggerType !== 'onTransition' && triggerType !== 'temporal') {
+      throw new WebhookVerificationError(
+        'invalid_payload',
+        'Webhook payload triggerType must be onTransition or temporal.',
+      );
+    }
+
+    return {
+      id,
+      type: 'agreement.notification.triggered',
+      apiVersion: WEBHOOK_API_VERSION,
+      createdAt,
+      data: {
+        agreementId: requirePayloadString(data, 'agreementId'),
+        agreementName: optionalPayloadString(data, 'agreementName'),
+        templateId: requirePayloadString(data, 'templateId'),
+        notificationTemplateId: requirePayloadString(data, 'notificationTemplateId'),
+        ruleId: requirePayloadString(data, 'ruleId'),
+        triggerType,
+        recipient: requirePayloadString(data, 'recipient'),
+        notification: {
+          subject: requirePayloadString(notification, 'subject'),
+          title: optionalPayloadString(notification, 'title'),
+          body: requirePayloadString(notification, 'body'),
+        },
+        ...(transition
+          ? {
+              transition: {
+                fromState: requirePayloadString(transition, 'fromState', { allowEmpty: true }),
+                toState: requirePayloadString(transition, 'toState'),
+                inputId: requirePayloadString(transition, 'inputId'),
+                occurredAt: requirePayloadString(transition, 'occurredAt'),
+              },
+            }
+          : {}),
+      },
+    };
+  }
+
   throw new WebhookVerificationError(
     'invalid_payload',
     `Unsupported webhook event type: ${type}.`,
@@ -280,6 +353,15 @@ function optionalPayloadString(payload: Record<string, unknown>, field: string):
 function requirePayloadObject(payload: Record<string, unknown>, field: string): Record<string, unknown> {
   const value = payload[field];
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function optionalPayloadObject(payload: Record<string, unknown>, field: string): Record<string, unknown> | undefined {
+  const value = payload[field];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value)) {
     throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be an object.`);
   }
   return value as Record<string, unknown>;

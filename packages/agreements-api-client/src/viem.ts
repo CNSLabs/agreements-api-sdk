@@ -19,6 +19,7 @@ import type {
   AgreementRecord,
   DirectDeployAgreementWithPermitRequest,
   DirectParticipantRecord,
+  NotificationTemplate,
   ProcessInputRequest,
 } from './types.js';
 
@@ -135,6 +136,7 @@ export type DeployWithPermitCallParams = {
   initValues?: Record<string, InitValue>;
   participants?: DirectParticipantRecord[];
   observers?: string[];
+  notificationTemplate?: NotificationTemplate;
   docUri?: string;
   deadline?: number;
   /**
@@ -181,6 +183,7 @@ export async function deployAgreementWithPermit(
     chainId,
     participants: params.participants,
     observers: params.observers,
+    notificationTemplate: params.notificationTemplate,
     signer: signerAddress,
     deadline,
     signature,
