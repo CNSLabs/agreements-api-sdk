@@ -4,7 +4,10 @@ import { StandaloneConfigService } from '../config/standalone-config.service';
 import { AgreementRepository } from '../database/repositories/agreement.repository';
 import { WebhookEventRepository } from '../database/repositories/webhook-event.repository';
 import { ExternalAgreementsService } from '../external/external-agreements.service';
-import type { AgreementTransitionedWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
+import type {
+  AgreementTransitionedWebhookEvent,
+  ShodaiWebhookEvent,
+} from '@cns-labs/agreements-api-client/webhooks';
 
 @Injectable()
 export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
@@ -63,7 +66,18 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
   }
 
   private async processClaimedEvent(document: Record<string, any>): Promise<void> {
-    const event = document.payload as AgreementTransitionedWebhookEvent | undefined;
+    const event = document.payload as ShodaiWebhookEvent | undefined;
+    if (event?.type === 'agreement.notification.triggered') {
+      const updated = await this.webhookEvents.markProcessed(document.eventId, document.lockToken, {
+        externalAgreementId: event.data.agreementId,
+        processedAction: 'recorded_notification_trigger',
+        notificationRuleId: event.data.ruleId,
+        notificationRecipient: event.data.recipient,
+      });
+      this.logLostLease(document, updated, 'record notification webhook');
+      return;
+    }
+
     if (!event || event.type !== 'agreement.transitioned') {
       const updated = await this.webhookEvents.markIgnored(document.eventId, document.lockToken, 'unsupported_event_type', {
         processedAction: 'ignored_unsupported_webhook_event',
@@ -72,7 +86,8 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
       return;
     }
 
-    const externalAgreementId = event.data.agreementId;
+    const transitionEvent = event as AgreementTransitionedWebhookEvent;
+    const externalAgreementId = transitionEvent.data.agreementId;
     const externalIdAgreement = await this.agreements.findOne({ externalAgreementId });
     const scopedLookup = externalIdAgreement
       ? { agreement: externalIdAgreement, ambiguous: false }
@@ -95,7 +110,7 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
       return;
     }
 
-    if (isStaleEvent(event.createdAt, agreement.lastWebhookEventAt)) {
+    if (isStaleEvent(transitionEvent.createdAt, agreement.lastWebhookEventAt)) {
       const updated = await this.webhookEvents.markIgnored(document.eventId, document.lockToken, 'stale_delivery', {
         agreementId: agreement.id,
         externalAgreementId,
@@ -107,7 +122,7 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     }
 
     try {
-      const reconciliation = await this.external.reconcileAgreementMirrorFromWebhook(agreement, event, {
+      const reconciliation = await this.external.reconcileAgreementMirrorFromWebhook(agreement, transitionEvent, {
         isLeaseCurrent: () => this.webhookEvents.isProcessingLeaseCurrent(document.eventId, document.lockToken),
       });
       if (reconciliation.skippedReason === 'lease_lost') {
