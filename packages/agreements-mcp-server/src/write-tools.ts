@@ -18,7 +18,7 @@ import {
   prepareInputTypedData,
 } from './signing.js';
 
-const PLAYGROUND_URL = 'https://developers.shodai.network/api-n';
+const PLAYGROUND_URL = 'https://developers.shodai.network/api-playground';
 
 export type WriteToolOptions = {
   /**

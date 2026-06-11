@@ -270,6 +270,7 @@ test('write tools without a permit return signing guidance (hosted mode has no e
     });
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /prepare_deployment_typed_data/);
+    assert.match(result.content[0].text, /https:\/\/developers\.shodai\.network\/api-playground/);
     await client.close();
   } finally {
     await env.close();
