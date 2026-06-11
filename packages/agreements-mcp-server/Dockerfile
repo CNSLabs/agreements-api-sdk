@@ -7,7 +7,6 @@ RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 WORKDIR /workspace
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches ./patches
 COPY packages/agreements-api-client/package.json ./packages/agreements-api-client/
 COPY packages/agreements-mcp-server/package.json ./packages/agreements-mcp-server/
 
