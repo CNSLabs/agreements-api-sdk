@@ -1,0 +1,65 @@
+{
+  "name": "@cns-labs/agreements-mcp-server",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for the Agreements API, built on @cns-labs/agreements-api-client",
+  "author": "Agreements API Maintainers",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CNSLabs/agreements-api-sdk.git",
+    "directory": "packages/agreements-mcp-server"
+  },
+  "homepage": "https://github.com/CNSLabs/agreements-api-sdk/tree/main/packages/agreements-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/CNSLabs/agreements-api-sdk/issues"
+  },
+  "keywords": [
+    "agreements-protocol",
+    "mcp",
+    "model-context-protocol",
+    "api",
+    "typescript"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "import": "./dist/manifest.js"
+    }
+  },
+  "bin": {
+    "agreements-mcp-server": "./dist/stdio.js",
+    "agreements-mcp-server-http": "./dist/http-main.js"
+  },
+  "files": [
+    "dist",
+    "content"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run build",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "start": "node dist/http-main.js",
+    "start:stdio": "node dist/stdio.js"
+  },
+  "dependencies": {
+    "@cns-labs/agreements-api-client": "workspace:^",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "viem": "^2.43.0",
+    "zod": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "~5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
