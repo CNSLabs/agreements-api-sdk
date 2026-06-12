@@ -4,6 +4,8 @@ import {
   computeDefaultDeadlineSeconds,
   deployAgreementWithPermit,
   submitAgreementInputWithPermit,
+  type ApiClient,
+  type DirectParticipantRecord,
   type PermitSignature,
 } from '@cns-labs/agreements-api-client';
 import type { Address } from 'viem';
@@ -62,6 +64,31 @@ type PermitArgs = {
   signatureS?: string;
 };
 
+type DeployPreflightArgs = {
+  agreement: Record<string, unknown>;
+  chainId?: number;
+  initValues?: Record<string, unknown>;
+  participants?: DirectParticipantRecord[];
+  observers?: string[];
+};
+
+async function preflightDeployPayload(client: ApiClient, args: DeployPreflightArgs) {
+  const validation = await client.validateDeployment({
+    agreement: args.agreement,
+    chainId: args.chainId,
+    initValues: args.initValues,
+    participants: args.participants,
+    observers: args.observers,
+  });
+
+  return {
+    normalizedInitValues: validation.variables,
+    normalizedParticipants: validation.participants,
+    normalizedObservers: validation.observers,
+    preflightWarnings: validation.warnings,
+  };
+}
+
 function extractPermit(args: PermitArgs):
   | { signer: string; deadline: number; signature: PermitSignature }
   | undefined {
@@ -118,18 +145,20 @@ export function registerWriteTools(
     async (args) => {
       const permit = extractPermit(args);
       if (permit) {
-        return run(() =>
-          getClient().deployWithPermit({
+        return run(async () => {
+          const client = getClient();
+          const preflight = await preflightDeployPayload(client, args);
+          return client.deployWithPermit({
             agreement: args.agreement,
             displayName: args.displayName,
             chainId: args.chainId,
-            initValues: args.initValues,
-            participants: args.participants,
-            observers: args.observers,
+            initValues: preflight.normalizedInitValues,
+            participants: preflight.normalizedParticipants,
+            observers: preflight.normalizedObservers,
             docUri: args.docUri,
             ...permit,
-          }),
-        );
+          });
+        });
       }
 
       if (options.allowEnvSigner && getEnvSignerAccount()) {
@@ -138,18 +167,20 @@ export function registerWriteTools(
         }
         const chainId = args.chainId;
         return run(async () => {
+          const client = getClient();
+          const preflight = await preflightDeployPayload(client, args);
           const walletClient = createEnvSignerWalletClient(chainId)!;
           const publicClient = createChainPublicClient(chainId);
           return deployAgreementWithPermit({
-            client: getClient(),
+            client,
             walletClient,
             publicClient,
             chainId,
             agreement: args.agreement as never,
             displayName: args.displayName,
-            initValues: args.initValues as never,
-            participants: args.participants,
-            observers: args.observers,
+            initValues: preflight.normalizedInitValues as never,
+            participants: preflight.normalizedParticipants,
+            observers: preflight.normalizedObservers,
             docUri: args.docUri,
           });
         });
@@ -229,24 +260,28 @@ export function registerWriteTools(
           .optional()
           .describe('Permit deadline in unix seconds; defaults to one hour from now.'),
         initValues: z.record(z.unknown()).optional().describe('Deployment-time init values (must match the later deploy_agreement call).'),
+        participants: z.array(participantSchema).optional().describe('Wallet mappings for participant variables.'),
+        observers: z.array(z.string()).optional().describe('Observer email addresses.'),
         docUri: z.string().optional().describe('Document URI (must match the later deploy_agreement call).'),
       },
     },
     async (args) =>
       run(async () => {
+        const preflight = await preflightDeployPayload(getClient(), args);
         const deadline = args.deadline ?? computeDefaultDeadlineSeconds();
         const prepared = await prepareDeployTypedData({
           agreement: args.agreement,
           chainId: args.chainId,
           signerAddress: args.signerAddress as Address,
           deadline,
-          initValues: args.initValues,
+          initValues: preflight.normalizedInitValues,
           docUri: args.docUri,
         });
         return {
           ...prepared,
+          ...preflight,
           nextStep:
-            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with the same agreement, chainId, initValues, docUri, plus signer, deadline, signatureV, signatureR, signatureS.',
+            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, plus signer, deadline, signatureV, signatureR, signatureS.',
           playgroundUrl: PLAYGROUND_URL,
         };
       }),

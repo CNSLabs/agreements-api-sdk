@@ -98,6 +98,7 @@ const preparedDeploy = await call('prepare_deployment_typed_data', {
   chainId: CHAIN_ID,
   signerAddress: partyA.address,
   initValues,
+  participants,
 });
 const deploySignature = splitSignature(
   await partyA.signTypedData(reviveTypedData(preparedDeploy.typedData)),
@@ -106,8 +107,9 @@ const deployed = await call('deploy_agreement', {
   agreement,
   displayName: 'MCP e2e eval (simple MOU)',
   chainId: CHAIN_ID,
-  initValues,
-  participants,
+  initValues: preparedDeploy.normalizedInitValues,
+  participants: preparedDeploy.normalizedParticipants,
+  observers: preparedDeploy.normalizedObservers,
   signer: partyA.address,
   deadline: preparedDeploy.deadline,
   ...deploySignature,

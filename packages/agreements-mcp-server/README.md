@@ -77,7 +77,7 @@ Resources: the simple and complex example agreements, the Author Agreement JSON 
 Deploys and input submissions require EIP-712 permits. Three supported modes:
 
 1. **Pre-signed permit** — the agent or host app holds a wallet, signs externally, and passes `signer`/`deadline`/`signature` to `deploy_agreement` or `submit_input`.
-2. **Prepare typed data, sign externally** — call `prepare_deployment_typed_data` / `prepare_input_typed_data` to get the exact EIP-712 payload, sign it with any EIP-712-capable signer, then call the write tool.
+2. **Prepare typed data, sign externally** — call `prepare_deployment_typed_data` / `prepare_input_typed_data` to get the exact EIP-712 payload, sign it with any EIP-712-capable signer, then call the write tool. For deployments, pass the returned `normalizedInitValues`, `normalizedParticipants`, and `normalizedObservers` back to `deploy_agreement` with the signature.
 3. **Local environment signer (stdio only)** — set `AGREEMENTS_SIGNER_PRIVATE_KEY` and write tools sign locally. Dev/testnet pattern; the hosted endpoint never signs with server-side keys.
 
 ## Self-hosting

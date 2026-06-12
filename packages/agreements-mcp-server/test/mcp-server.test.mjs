@@ -22,12 +22,13 @@ function startStubGateway() {
     let body = '';
     req.on('data', (chunk) => (body += chunk));
     req.on('end', () => {
+      const parsedBody = body ? JSON.parse(body) : undefined;
       requests.push({
         method: req.method,
         url: req.url,
         apiKey: req.headers['x-api-key'],
         authorization: req.headers.authorization,
-        body: body ? JSON.parse(body) : undefined,
+        body: parsedBody,
       });
 
       const respond = (status, payload) => {
@@ -100,6 +101,31 @@ function startStubGateway() {
             status: 'PENDING',
             createdAt: '2026-06-01T00:00:00.000Z',
             updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+          meta,
+        });
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v0/agreements/validate') {
+        const participants = parsedBody.participants ?? [];
+        respond(201, {
+          data: {
+            templateId: 'did:template:mou-v1',
+            participantVariableKeys: ['partyAEthAddress', 'partyBEthAddress'],
+            participants,
+            observers: parsedBody.observers ?? [],
+            variables: {
+              ...(parsedBody.initValues ?? {}),
+              ...Object.fromEntries(
+                participants.map((participant) => [
+                  participant.variableKey,
+                  participant.walletAddress.toLowerCase(),
+                ]),
+              ),
+            },
+            contributors: [],
+            warnings: ['stub preflight warning'],
           },
           meta,
         });
@@ -180,6 +206,10 @@ test('lists the manifest tool surface plus permit-preparation tools', async () =
     const deployAgreement = tools.find((tool) => tool.name === 'deploy_agreement');
     assert.equal(deployAgreement.annotations.readOnlyHint, false);
     assert.equal(deployAgreement.annotations.destructiveHint, true);
+
+    const prepareDeployment = tools.find((tool) => tool.name === 'prepare_deployment_typed_data');
+    assert.ok(prepareDeployment.inputSchema.properties.participants);
+    assert.ok(prepareDeployment.inputSchema.properties.observers);
     await client.close();
   } finally {
     await env.close();
@@ -218,6 +248,63 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
       r: `0x${'aa'.repeat(32)}`,
       s: `0x${'bb'.repeat(32)}`,
     });
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('deploy_agreement preflights participant mappings before forwarding a permit', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const participants = [
+      {
+        variableKey: 'partyAEthAddress',
+        walletAddress: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      },
+    ];
+
+    const result = await client.callTool({
+      name: 'deploy_agreement',
+      arguments: {
+        agreement: { metadata: { templateId: 'did:template:mou-v1' } },
+        displayName: 'Deployed via MCP',
+        chainId: 59141,
+        initValues: { amount: 100 },
+        participants,
+        observers: ['observer@example.com'],
+        signer: '0x1111111111111111111111111111111111111111',
+        deadline: 1900000000,
+        signatureV: 27,
+        signatureR: `0x${'aa'.repeat(32)}`,
+        signatureS: `0x${'bb'.repeat(32)}`,
+      },
+    });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+
+    const preflightRequest = env.gateway.requests.find(
+      (request) => request.url === '/v0/agreements/validate',
+    );
+    assert.ok(preflightRequest, 'expected a deployment preflight request');
+    assert.deepEqual(
+      preflightRequest.body.participants,
+      participants,
+      JSON.stringify(env.gateway.requests, null, 2),
+    );
+
+    const deployRequest = env.gateway.requests.find(
+      (request) => request.url === '/v0/agreements/deploy-with-permit',
+    );
+    assert.equal(
+      deployRequest.body.initValues.partyAEthAddress,
+      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      JSON.stringify(env.gateway.requests, null, 2),
+    );
+    assert.equal(deployRequest.body.initValues.amount, 100);
+    assert.deepEqual(deployRequest.body.participants, participants);
+    assert.deepEqual(deployRequest.body.observers, ['observer@example.com']);
     await client.close();
   } finally {
     await env.close();
