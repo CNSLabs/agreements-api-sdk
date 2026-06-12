@@ -2,7 +2,7 @@
 
 [Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Connect Claude, Cursor, or any MCP client and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
 
-The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key (or OAuth bearer token) to the Agreements API gateway, which enforces auth, entitlements, and metering.
+The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
 ## Hosted endpoints
 
@@ -87,7 +87,7 @@ npm install @cns-labs/agreements-mcp-server
 agreements-mcp-server-http   # Streamable HTTP on PORT (default 3905), endpoint /mcp
 ```
 
-HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_ENVIRONMENT`, `AGREEMENTS_API_BASE_URL`. Optional OAuth 2.1 discovery (RFC 9728): `MCP_OAUTH_RESOURCE_URL`, `MCP_OAUTH_AUTHORIZATION_SERVERS`, `MCP_OAUTH_SCOPES`, `MCP_OAUTH_RESOURCE_DOCUMENTATION`. When OAuth is enabled, `MCP_OAUTH_RESOURCE_URL` must be the public MCP endpoint URL, with a path matching `MCP_PATH`, for example `https://test-api.shodai.network/mcp`.
+HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_ENVIRONMENT`, `AGREEMENTS_API_BASE_URL`.
 
 A `Dockerfile` is included for container deployments. `GET /healthz` serves as the health endpoint.
 

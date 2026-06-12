@@ -10,9 +10,7 @@ export {
   startAgreementsMcpHttpServer,
   extractApiKey,
   extractCredentials,
-  buildProtectedResourceMetadata,
   type AgreementsMcpHttpOptions,
-  type AgreementsMcpOauthOptions,
   type McpCallerCredentials,
 } from './http.js';
 export {

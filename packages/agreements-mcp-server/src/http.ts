@@ -4,25 +4,6 @@ import { ApiClient, type AgreementsApiEnvironment } from '@cns-labs/agreements-a
 
 import { createAgreementsMcpServer } from './server.js';
 
-/**
- * OAuth 2.1 protected-resource configuration (RFC 9728). When set, the server
- * advertises authorization-server discovery metadata at
- * `/.well-known/oauth-protected-resource` and challenges unauthenticated MCP
- * requests with `401` + `WWW-Authenticate` so spec-conformant clients can run
- * the authorization code + PKCE flow. Token validation itself happens at the
- * upstream gateway, which verifies issuer, signature, and RFC 8707 audience.
- */
-export type AgreementsMcpOauthOptions = {
-  /** Canonical resource identifier (RFC 8707), e.g. `https://test-api.shodai.network/mcp`. */
-  resource: string;
-  /** Issuer URLs of the authorization servers that mint tokens for this resource. */
-  authorizationServers: string[];
-  /** Scopes supported by the resource. Defaults to the Agreements API scopes. */
-  scopesSupported?: string[];
-  /** Optional human-readable docs URL surfaced in the metadata. */
-  resourceDocumentation?: string;
-};
-
 export type AgreementsMcpHttpOptions = {
   /** Port to listen on. Defaults to 3905. */
   port?: number;
@@ -34,20 +15,14 @@ export type AgreementsMcpHttpOptions = {
   environment?: AgreementsApiEnvironment;
   /** Explicit upstream gateway origin override (wins over `environment`). */
   baseUrl?: string;
-  /** Enables OAuth 2.1 discovery + challenges. API-key auth keeps working alongside. */
-  oauth?: AgreementsMcpOauthOptions;
 };
-
-const DEFAULT_SCOPES = ['agreements.read', 'agreements.write'];
-
-const PROTECTED_RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
-    'Content-Type, Authorization, X-API-Key, Mcp-Session-Id, MCP-Protocol-Version, Last-Event-ID',
-  'Access-Control-Expose-Headers': 'Mcp-Session-Id, MCP-Protocol-Version, WWW-Authenticate',
+    'Content-Type, X-API-Key, Mcp-Session-Id, MCP-Protocol-Version, Last-Event-ID',
+  'Access-Control-Expose-Headers': 'Mcp-Session-Id, MCP-Protocol-Version',
 };
 
 function applyCors(res: ServerResponse): void {
@@ -56,33 +31,16 @@ function applyCors(res: ServerResponse): void {
   }
 }
 
-export type McpCallerCredentials =
-  | { kind: 'api-key'; apiKey: string }
-  | { kind: 'bearer-jwt'; token: string };
-
-/** Compact JWS shape: three dot-separated base64url segments. */
-const JWT_PATTERN = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+export type McpCallerCredentials = { kind: 'api-key'; apiKey: string };
 
 /**
- * Extracts the caller's credentials. Opaque Agreements API keys arrive via
- * `X-API-Key` (or `Authorization: Bearer` for convenience); IdP-issued JWTs
- * arrive via `Authorization: Bearer` and are forwarded to the gateway as-is
- * so it can enforce issuer/audience/entitlement checks.
+ * Extracts the caller's Agreements API key. Hosted MCP authentication is
+ * API-key-only; bearer/JWT authorization is not accepted or forwarded.
  */
 export function extractCredentials(req: IncomingMessage): McpCallerCredentials | undefined {
   const headerKey = req.headers['x-api-key'];
   if (typeof headerKey === 'string' && headerKey.trim()) {
     return { kind: 'api-key', apiKey: headerKey.trim() };
-  }
-  const authorization = req.headers.authorization;
-  if (typeof authorization === 'string') {
-    const match = authorization.match(/^Bearer\s+(.+)$/i);
-    if (match) {
-      const value = match[1].trim();
-      return JWT_PATTERN.test(value)
-        ? { kind: 'bearer-jwt', token: value }
-        : { kind: 'api-key', apiKey: value };
-    }
   }
   return undefined;
 }
@@ -90,81 +48,13 @@ export function extractCredentials(req: IncomingMessage): McpCallerCredentials |
 /** Backwards-compatible helper: returns the raw credential string, if any. */
 export function extractApiKey(req: IncomingMessage): string | undefined {
   const credentials = extractCredentials(req);
-  if (!credentials) return undefined;
-  return credentials.kind === 'api-key' ? credentials.apiKey : credentials.token;
-}
-
-export function buildProtectedResourceMetadata(oauth: AgreementsMcpOauthOptions): Record<string, unknown> {
-  return {
-    resource: oauth.resource,
-    authorization_servers: oauth.authorizationServers,
-    bearer_methods_supported: ['header'],
-    scopes_supported: oauthScopes(oauth),
-    ...(oauth.resourceDocumentation
-      ? { resource_documentation: oauth.resourceDocumentation }
-      : {}),
-  };
+  return credentials?.apiKey;
 }
 
 function normalizeHttpPath(path: string): string {
   const trimmed = path.trim();
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return withLeadingSlash.replace(/\/+$/, '') || '/';
-}
-
-function parseOauthResource(resource: string): URL {
-  let parsed: URL;
-  try {
-    parsed = new URL(resource);
-  } catch {
-    throw new Error('OAuth resource must be an absolute URL.');
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new Error('OAuth resource must use http or https.');
-  }
-  if (parsed.search) {
-    throw new Error('OAuth resource must not include a query string.');
-  }
-  if (parsed.hash) {
-    throw new Error('OAuth resource must not include a fragment.');
-  }
-  return parsed;
-}
-
-function protectedResourceMetadataPath(resourceUrl: URL): string {
-  const resourcePath = normalizeHttpPath(resourceUrl.pathname);
-  return resourcePath === '/'
-    ? PROTECTED_RESOURCE_METADATA_PATH
-    : `${PROTECTED_RESOURCE_METADATA_PATH}${resourcePath}`;
-}
-
-function validateOauthResourceForMcpPath(oauth: AgreementsMcpOauthOptions, mcpPath: string): URL {
-  const resource = parseOauthResource(oauth.resource);
-  const resourcePath = normalizeHttpPath(resource.pathname);
-  if (resourcePath !== mcpPath) {
-    throw new Error(`OAuth resource path (${resourcePath}) must match MCP path (${mcpPath}).`);
-  }
-  return resource;
-}
-
-function oauthScopes(oauth: AgreementsMcpOauthOptions): string[] {
-  return oauth.scopesSupported ?? DEFAULT_SCOPES;
-}
-
-function resourceMetadataUrl(oauth: AgreementsMcpOauthOptions): string {
-  const resource = parseOauthResource(oauth.resource);
-  return `${resource.origin}${protectedResourceMetadataPath(resource)}`;
-}
-
-function quoteHeaderValue(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function wwwAuthenticateChallenge(oauth: AgreementsMcpOauthOptions): string {
-  return [
-    `resource_metadata="${quoteHeaderValue(resourceMetadataUrl(oauth))}"`,
-    `scope="${quoteHeaderValue(oauthScopes(oauth).join(' '))}"`,
-  ].join(', ');
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -180,9 +70,6 @@ function sendJson(res: ServerResponse, status: number, body: unknown, headers: R
  */
 export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions = {}): Server {
   const mcpPath = normalizeHttpPath(options.mcpPath ?? '/mcp');
-  const oauth = options.oauth;
-  const oauthResource = oauth ? validateOauthResourceForMcpPath(oauth, mcpPath) : undefined;
-  const oauthMetadataPath = oauthResource ? protectedResourceMetadataPath(oauthResource) : undefined;
 
   return createServer(async (req, res) => {
     applyCors(res);
@@ -200,18 +87,6 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       return;
     }
 
-    // RFC 9728: serve metadata at both the root well-known path and the
-    // path-suffixed variant (`.../oauth-protected-resource/mcp`).
-    if (
-      oauth &&
-      req.method === 'GET' &&
-      (url.pathname === PROTECTED_RESOURCE_METADATA_PATH ||
-        url.pathname === oauthMetadataPath)
-    ) {
-      sendJson(res, 200, buildProtectedResourceMetadata(oauth));
-      return;
-    }
-
     if (url.pathname !== mcpPath) {
       sendJson(res, 404, { error: 'not_found', message: `Use POST ${mcpPath} for MCP requests.` });
       return;
@@ -226,41 +101,17 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
 
     const credentials = extractCredentials(req);
 
-    // With OAuth configured, challenge unauthenticated requests so MCP
-    // clients can discover the authorization server and run the OAuth flow.
-    if (oauth && !credentials) {
-      sendJson(
-        res,
-        401,
-        {
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message:
-              'Authentication required. Complete the OAuth flow advertised in WWW-Authenticate, or send an X-API-Key header.',
-          },
-          id: null,
-        },
-        {
-          'WWW-Authenticate': `Bearer ${wwwAuthenticateChallenge(oauth)}`,
-        },
-      );
-      return;
-    }
-
     const server = createAgreementsMcpServer({
       getClient: () => {
         if (!credentials) {
           throw new Error(
-            'Missing Agreements API credentials. Send an `X-API-Key` header (or `Authorization: Bearer <token>`) on requests to this MCP server.',
+            'Missing Agreements API credentials. Send an `X-API-Key` header on requests to this MCP server.',
           );
         }
         const base = options.baseUrl
           ? { baseUrl: options.baseUrl }
           : { environment: options.environment ?? ('testnet' as const) };
-        return credentials.kind === 'bearer-jwt'
-          ? new ApiClient({ ...base, headers: { Authorization: `Bearer ${credentials.token}` } })
-          : new ApiClient({ ...base, apiKey: credentials.apiKey });
+        return new ApiClient({ ...base, apiKey: credentials.apiKey });
       },
     });
 
