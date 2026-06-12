@@ -1,9 +1,9 @@
 /**
  * Static manifest of the MCP tool surface.
  *
- * Each tool wraps exactly one public Agreements API route. This manifest is the
- * single source of truth consumed by tool registration and by the gateway-side
- * CI sync test that asserts the MCP surface stays aligned with `/v0/*` routes.
+ * Route-backed MCP tools are aligned with public Agreements API routes here.
+ * Some registered tools perform additional preflight or typed-data preparation
+ * outside this manifest.
  */
 
 export type AgreementsMcpToolScope =

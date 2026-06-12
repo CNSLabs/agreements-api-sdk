@@ -67,7 +67,7 @@ const JWT_PATTERN = /^[\w-]+\.[\w-]+\.[\w-]+$/;
  * Extracts the caller's credentials. Opaque Agreements API keys arrive via
  * `X-API-Key` (or `Authorization: Bearer` for convenience); IdP-issued JWTs
  * arrive via `Authorization: Bearer` and are forwarded to the gateway as-is
- * so it can enforce issuer/audience/scope checks.
+ * so it can enforce issuer/audience/entitlement checks.
  */
 export function extractCredentials(req: IncomingMessage): McpCallerCredentials | undefined {
   const headerKey = req.headers['x-api-key'];
@@ -99,17 +99,72 @@ export function buildProtectedResourceMetadata(oauth: AgreementsMcpOauthOptions)
     resource: oauth.resource,
     authorization_servers: oauth.authorizationServers,
     bearer_methods_supported: ['header'],
-    scopes_supported: oauth.scopesSupported ?? DEFAULT_SCOPES,
+    scopes_supported: oauthScopes(oauth),
     ...(oauth.resourceDocumentation
       ? { resource_documentation: oauth.resourceDocumentation }
       : {}),
   };
 }
 
+function normalizeHttpPath(path: string): string {
+  const trimmed = path.trim();
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/+$/, '') || '/';
+}
+
+function parseOauthResource(resource: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(resource);
+  } catch {
+    throw new Error('OAuth resource must be an absolute URL.');
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('OAuth resource must use http or https.');
+  }
+  if (parsed.search) {
+    throw new Error('OAuth resource must not include a query string.');
+  }
+  if (parsed.hash) {
+    throw new Error('OAuth resource must not include a fragment.');
+  }
+  return parsed;
+}
+
+function protectedResourceMetadataPath(resourceUrl: URL): string {
+  const resourcePath = normalizeHttpPath(resourceUrl.pathname);
+  return resourcePath === '/'
+    ? PROTECTED_RESOURCE_METADATA_PATH
+    : `${PROTECTED_RESOURCE_METADATA_PATH}${resourcePath}`;
+}
+
+function validateOauthResourceForMcpPath(oauth: AgreementsMcpOauthOptions, mcpPath: string): URL {
+  const resource = parseOauthResource(oauth.resource);
+  const resourcePath = normalizeHttpPath(resource.pathname);
+  if (resourcePath !== mcpPath) {
+    throw new Error(`OAuth resource path (${resourcePath}) must match MCP path (${mcpPath}).`);
+  }
+  return resource;
+}
+
+function oauthScopes(oauth: AgreementsMcpOauthOptions): string[] {
+  return oauth.scopesSupported ?? DEFAULT_SCOPES;
+}
+
 function resourceMetadataUrl(oauth: AgreementsMcpOauthOptions): string {
-  const resource = new URL(oauth.resource);
-  const resourcePath = resource.pathname === '/' ? '' : resource.pathname;
-  return `${resource.origin}${PROTECTED_RESOURCE_METADATA_PATH}${resourcePath}`;
+  const resource = parseOauthResource(oauth.resource);
+  return `${resource.origin}${protectedResourceMetadataPath(resource)}`;
+}
+
+function quoteHeaderValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function wwwAuthenticateChallenge(oauth: AgreementsMcpOauthOptions): string {
+  return [
+    `resource_metadata="${quoteHeaderValue(resourceMetadataUrl(oauth))}"`,
+    `scope="${quoteHeaderValue(oauthScopes(oauth).join(' '))}"`,
+  ].join(', ');
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -120,12 +175,14 @@ function sendJson(res: ServerResponse, status: number, body: unknown, headers: R
 /**
  * Stateless Streamable HTTP server: each POST gets a fresh MCP server bound to
  * an Agreements API client constructed from the caller's credentials. No
- * credential is ever stored server-side; auth, scopes, metering, and 402
+ * credential is ever stored server-side; auth, entitlements, metering, and 402
  * outcomes are enforced by the upstream gateway on every tool call.
  */
 export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions = {}): Server {
-  const mcpPath = options.mcpPath ?? '/mcp';
+  const mcpPath = normalizeHttpPath(options.mcpPath ?? '/mcp');
   const oauth = options.oauth;
+  const oauthResource = oauth ? validateOauthResourceForMcpPath(oauth, mcpPath) : undefined;
+  const oauthMetadataPath = oauthResource ? protectedResourceMetadataPath(oauthResource) : undefined;
 
   return createServer(async (req, res) => {
     applyCors(res);
@@ -149,7 +206,7 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       oauth &&
       req.method === 'GET' &&
       (url.pathname === PROTECTED_RESOURCE_METADATA_PATH ||
-        url.pathname === `${PROTECTED_RESOURCE_METADATA_PATH}${mcpPath}`)
+        url.pathname === oauthMetadataPath)
     ) {
       sendJson(res, 200, buildProtectedResourceMetadata(oauth));
       return;
@@ -185,7 +242,7 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
           id: null,
         },
         {
-          'WWW-Authenticate': `Bearer resource_metadata="${resourceMetadataUrl(oauth)}"`,
+          'WWW-Authenticate': `Bearer ${wwwAuthenticateChallenge(oauth)}`,
         },
       );
       return;

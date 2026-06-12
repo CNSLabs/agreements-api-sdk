@@ -8,6 +8,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import {
   AGREEMENTS_MCP_TOOLS,
   AGREEMENTS_MCP_RESOURCES,
+  createAgreementsMcpHttpServer,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
 
@@ -157,15 +158,16 @@ function startStubGateway() {
   });
 }
 
-async function startServers({ oauth } = {}) {
+async function startServers({ oauth, mcpPath = '/mcp' } = {}) {
   const gateway = await startStubGateway();
   const mcpServer = await startAgreementsMcpHttpServer({
     port: 0,
     host: '127.0.0.1',
     baseUrl: gateway.baseUrl,
+    mcpPath,
     oauth,
   });
-  const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}/mcp`);
+  const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
     gateway,
     mcpServer,
@@ -503,6 +505,66 @@ test('serves RFC 9728 protected-resource metadata when OAuth is configured', asy
   }
 });
 
+test('derives path-suffixed OAuth metadata from the configured resource', async () => {
+  const oauth = {
+    resource: 'https://test-api.example.com/custom/mcp',
+    authorizationServers: ['https://idp.example.com/'],
+    scopesSupported: ['agreements.read'],
+  };
+  const env = await startServers({ oauth, mcpPath: '/custom/mcp' });
+  try {
+    for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/custom/mcp']) {
+      const response = await fetch(new URL(path, env.mcpUrl));
+      assert.equal(response.status, 200);
+      const metadata = await response.json();
+      assert.equal(metadata.resource, oauth.resource);
+      assert.deepEqual(metadata.scopes_supported, ['agreements.read']);
+    }
+
+    const oldMcpPathResponse = await fetch(new URL('/.well-known/oauth-protected-resource/mcp', env.mcpUrl));
+    assert.equal(oldMcpPathResponse.status, 404);
+
+    const challenge = await fetch(env.mcpUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: {}, id: 1 }),
+    });
+    assert.equal(
+      challenge.headers.get('www-authenticate'),
+      'Bearer resource_metadata="https://test-api.example.com/.well-known/oauth-protected-resource/custom/mcp", scope="agreements.read"',
+    );
+  } finally {
+    await env.close();
+  }
+});
+
+test('rejects OAuth resources that cannot describe the configured MCP endpoint', () => {
+  assert.throws(
+    () =>
+      createAgreementsMcpHttpServer({
+        mcpPath: '/mcp',
+        oauth: { ...TEST_OAUTH, resource: 'https://test-api.example.com/v0' },
+      }),
+    /OAuth resource path \(\/v0\) must match MCP path \(\/mcp\)/,
+  );
+  assert.throws(
+    () =>
+      createAgreementsMcpHttpServer({
+        mcpPath: '/mcp',
+        oauth: { ...TEST_OAUTH, resource: 'https://test-api.example.com/mcp?tenant=abc' },
+      }),
+    /OAuth resource must not include a query string/,
+  );
+  assert.throws(
+    () =>
+      createAgreementsMcpHttpServer({
+        mcpPath: '/mcp',
+        oauth: { ...TEST_OAUTH, resource: 'urn:example:mcp' },
+      }),
+    /OAuth resource must use http or https/,
+  );
+});
+
 test('does not serve protected-resource metadata when OAuth is not configured', async () => {
   const env = await startServers();
   try {
@@ -524,7 +586,7 @@ test('challenges unauthenticated MCP requests with 401 + WWW-Authenticate when O
     assert.equal(response.status, 401);
     assert.equal(
       response.headers.get('www-authenticate'),
-      'Bearer resource_metadata="https://test-api.example.com/.well-known/oauth-protected-resource/mcp"',
+      'Bearer resource_metadata="https://test-api.example.com/.well-known/oauth-protected-resource/mcp", scope="agreements.read agreements.write"',
     );
   } finally {
     await env.close();

@@ -2,7 +2,7 @@
 
 [Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Connect Claude, Cursor, or any MCP client and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
 
-The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key (or OAuth bearer token) to the Agreements API gateway, which enforces auth, scopes, entitlements, and metering.
+The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key (or OAuth bearer token) to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
 ## Hosted endpoints
 
@@ -55,7 +55,7 @@ Stdio environment variables:
 
 ## Tools
 
-Each tool wraps exactly one public `/v0` route and carries MCP behavior annotations (`readOnlyHint`, `destructiveHint`).
+Most tools call the public `/v0` API through the TypeScript client and carry MCP behavior annotations (`readOnlyHint`, `destructiveHint`). A few tools perform more than one operation to keep signing and deployment safe.
 
 | Tool | Wraps | Scope |
 | --- | --- | --- |
@@ -65,10 +65,10 @@ Each tool wraps exactly one public `/v0` route and carries MCP behavior annotati
 | `get_input_history` | `GET /v0/agreements/{id}/inputs` | `agreements.read` |
 | `validate_agreement` | `POST /v0/agreements/validate-template` | `agreements.write` |
 | `preflight_deployment` | `POST /v0/agreements/validate` | `agreements.write` |
-| `deploy_agreement` | `POST /v0/agreements/deploy-with-permit` | `agreements.write` |
+| `deploy_agreement` | `POST /v0/agreements/validate`, then `POST /v0/agreements/deploy-with-permit` | `agreements.write` |
 | `submit_input` | `POST /v0/agreements/{id}/input` | `agreements.write` |
-| `prepare_deployment_typed_data` | Local EIP-712 payload construction | `agreements.write` |
-| `prepare_input_typed_data` | Local EIP-712 payload construction | `agreements.write` |
+| `prepare_deployment_typed_data` | `POST /v0/agreements/validate`, then local EIP-712 payload construction with a chain nonce read | `agreements.write` |
+| `prepare_input_typed_data` | `GET /v0/agreements/{id}`, then local EIP-712 payload construction with a chain nonce read | `agreements.write` |
 
 Resources: the simple and complex example agreements, the Author Agreement JSON guide, and the documentation index. Prompt: `author_agreement` (business description → agreement JSON).
 
@@ -87,7 +87,7 @@ npm install @cns-labs/agreements-mcp-server
 agreements-mcp-server-http   # Streamable HTTP on PORT (default 3905), endpoint /mcp
 ```
 
-HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_ENVIRONMENT`, `AGREEMENTS_API_BASE_URL`. Optional OAuth 2.1 discovery (RFC 9728): `MCP_OAUTH_RESOURCE_URL`, `MCP_OAUTH_AUTHORIZATION_SERVERS`, `MCP_OAUTH_SCOPES`, `MCP_OAUTH_RESOURCE_DOCUMENTATION`.
+HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_ENVIRONMENT`, `AGREEMENTS_API_BASE_URL`. Optional OAuth 2.1 discovery (RFC 9728): `MCP_OAUTH_RESOURCE_URL`, `MCP_OAUTH_AUTHORIZATION_SERVERS`, `MCP_OAUTH_SCOPES`, `MCP_OAUTH_RESOURCE_DOCUMENTATION`. When OAuth is enabled, `MCP_OAUTH_RESOURCE_URL` must be the public MCP endpoint URL, with a path matching `MCP_PATH`, for example `https://test-api.shodai.network/mcp`.
 
 A `Dockerfile` is included for container deployments. `GET /healthz` serves as the health endpoint.
 
