@@ -180,6 +180,19 @@ export type AgreementStateResponse = {
   state: string | null;
 };
 
+export type AgreementDocumentResponse = {
+  documentId: string;
+  docUri?: string;
+  agreementId: string;
+  agreementAddress?: string;
+  chainId: number;
+  displayName: string;
+  contentType: string;
+  content: string;
+  docHash?: string;
+  updatedAt?: string;
+};
+
 export type AgreementInputRecord = {
   agreementId: string;
   agreementAddress: string;
