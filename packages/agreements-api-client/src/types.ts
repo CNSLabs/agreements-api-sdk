@@ -33,6 +33,7 @@ export type AgreementRecord = {
   displayName: string;
   owner?: string;
   docUri?: string;
+  documentId?: string;
   contributors?: string[];
   participants?: ParticipantRecord[];
   observers?: string[];
@@ -53,6 +54,7 @@ export type AgreementSummary = {
   displayName: string;
   owner?: string;
   docUri?: string;
+  documentId?: string;
 };
 
 export type ParticipantRecord = {
@@ -164,6 +166,7 @@ export type DirectDeployAgreementWithPermitRequest = {
   displayName: string;
   chainId?: number;
   docUri?: string;
+  documentId?: string;
   initValues?: Record<string, unknown>;
   participants?: DirectParticipantRecord[];
   observers?: string[];

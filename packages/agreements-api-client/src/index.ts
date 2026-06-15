@@ -37,7 +37,9 @@ export type {
 } from './types.js';
 export { agreementsApiPaths, getExecutionInputIds, joinUrl } from './utils.js';
 export {
+  buildAgreementDocumentUri,
   computeDefaultDeadlineSeconds,
+  createAgreementDocumentId,
   DEFAULT_PERMIT_DEADLINE_SECONDS,
   deployAgreementWithPermit,
   signAgreementInputPermit,

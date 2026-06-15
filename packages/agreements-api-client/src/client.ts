@@ -43,6 +43,10 @@ export class ApiClient {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {
     return this.requestList<AgreementSummary>('GET', withQuery(agreementsApiPaths.agreements(), params));
   }
