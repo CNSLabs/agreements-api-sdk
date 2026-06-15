@@ -2,6 +2,7 @@ import { extractAgreementsApiErrorMessage, AgreementsApiError } from './errors.j
 import type {
   AgreementInputListParams,
   AgreementInputRecord,
+  AgreementDocumentResponse,
   AgreementListParams,
   AgreementRecord,
   AgreementSummary,
@@ -74,6 +75,10 @@ export class ApiClient {
 
   async getAgreementState(agreementId: string): Promise<AgreementStateResponse> {
     return this.requestData<AgreementStateResponse>('GET', agreementsApiPaths.agreementState(agreementId));
+  }
+
+  async getAgreementDocument(documentId: string): Promise<AgreementDocumentResponse> {
+    return this.requestData<AgreementDocumentResponse>('GET', agreementsApiPaths.agreementDocument(documentId));
   }
 
   async listAgreementInputs(agreementId: string, params?: AgreementInputListParams): Promise<ListResponse<AgreementInputRecord>> {

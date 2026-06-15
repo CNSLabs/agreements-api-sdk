@@ -9,6 +9,7 @@ export { ApiClient } from './client.js';
 export { AgreementsApiError, extractAgreementsApiErrorMessage } from './errors.js';
 export type {
   AgreementInputRecord,
+  AgreementDocumentResponse,
   AgreementInputListParams,
   AgreementInputListSortField,
   AgreementListParams,
