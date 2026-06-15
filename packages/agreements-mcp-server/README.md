@@ -24,6 +24,10 @@ Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Add it to a
 }
 ```
 
+`X-API-Key: cns_pk_...` is the canonical hosted MCP credential. Clients that only support
+bearer-style headers may send the same API key as `Authorization: Bearer cns_pk_...`. OAuth
+and JWT bearer tokens are not supported.
+
 Get an API key from the [Developer Portal](https://developers.shodai.network). Full client setup, tool reference, and signing guidance: [Connect via MCP](https://docs.shodai.network/sdks/connect-via-mcp).
 
 ## Run locally (stdio)

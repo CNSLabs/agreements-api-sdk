@@ -427,6 +427,43 @@ test('calls list_agreements through the gateway with the caller API key', async 
   }
 });
 
+test('accepts bearer API-key alias and forwards only X-API-Key upstream', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, {
+      headers: { Authorization: `Bearer ${TEST_API_KEY}` },
+    });
+    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
+    assert.equal(gatewayRequest.authorization, undefined);
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('accepts matching X-API-Key and bearer API-key credentials', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, {
+      apiKey: TEST_API_KEY,
+      headers: { Authorization: `Bearer ${TEST_API_KEY}` },
+    });
+    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
+    assert.equal(gatewayRequest.authorization, undefined);
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
 test('calls validate_agreement and returns validation payload', async () => {
   const env = await startServers();
   try {
@@ -452,6 +489,7 @@ test('returns a guidance error when the API key is missing', async () => {
     const result = await client.callTool({ name: 'get_agreement_state', arguments: { agreementId: 'agr_1' } });
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /X-API-Key/);
+    assert.match(result.content[0].text, /Authorization: Bearer cns_pk_/);
     assert.equal(env.gateway.requests.length, 0);
     await client.close();
   } finally {
@@ -544,6 +582,16 @@ test('healthz responds without auth and non-POST MCP requests are rejected', asy
     const health = await fetch(new URL('/healthz', env.mcpUrl));
     assert.equal(health.status, 200);
 
+    const options = await fetch(env.mcpUrl, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://example.com',
+        'Access-Control-Request-Headers': 'Authorization, X-API-Key',
+      },
+    });
+    assert.equal(options.status, 204);
+    assert.match(options.headers.get('access-control-allow-headers') ?? '', /Authorization/);
+
     const get = await fetch(env.mcpUrl, { method: 'GET' });
     assert.equal(get.status, 405);
   } finally {
@@ -587,8 +635,9 @@ test('does not accept or forward JWT-shaped bearer values', async () => {
 
     const result = await client.callTool({ name: 'list_agreements', arguments: {} });
     assert.equal(result.isError ?? false, true);
-    assert.match(result.content[0].text, /bearer credentials are not supported/);
+    assert.match(result.content[0].text, /JWT bearer tokens are not supported/);
     assert.match(result.content[0].text, /X-API-Key/);
+    assert.match(result.content[0].text, /Authorization: Bearer cns_pk_/);
 
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
     assert.equal(gatewayRequest, undefined);
@@ -599,17 +648,41 @@ test('does not accept or forward JWT-shaped bearer values', async () => {
   }
 });
 
-test('does not accept or forward opaque bearer API-key values', async () => {
+test('does not accept or forward opaque bearer values', async () => {
   const env = await startServers();
   try {
     const client = await connectClient(env.mcpUrl, {
-      headers: { Authorization: `Bearer ${TEST_API_KEY}` },
+      headers: { Authorization: 'Bearer opaque-token' },
     });
 
     const result = await client.callTool({ name: 'list_agreements', arguments: {} });
     assert.equal(result.isError ?? false, true);
-    assert.match(result.content[0].text, /bearer credentials are not supported/);
+    assert.match(result.content[0].text, /Bearer values that are not Agreements API keys are not supported/);
     assert.match(result.content[0].text, /X-API-Key/);
+    assert.match(result.content[0].text, /Authorization: Bearer cns_pk_/);
+
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.equal(gatewayRequest, undefined);
+
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('rejects conflicting X-API-Key and bearer API-key credentials', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, {
+      apiKey: TEST_API_KEY,
+      headers: { Authorization: 'Bearer cns_pk_other_key' },
+    });
+
+    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    assert.equal(result.isError ?? false, true);
+    assert.match(result.content[0].text, /Conflicting Agreements API credentials/);
+    assert.match(result.content[0].text, /X-API-Key/);
+    assert.match(result.content[0].text, /Authorization: Bearer cns_pk_/);
 
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
     assert.equal(gatewayRequest, undefined);
