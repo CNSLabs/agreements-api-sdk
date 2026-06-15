@@ -14,6 +14,38 @@ import {
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
+const SYNTHETIC_UPSTREAM_FAILURES = {
+  cns_pk_payment_required: {
+    status: 402,
+    payload: {
+      error: {
+        code: 'payment_required',
+        message: 'Payment required for scope agreements.read',
+        requestId: 'req_test',
+      },
+    },
+  },
+  cns_pk_forbidden: {
+    status: 403,
+    payload: {
+      error: {
+        code: 'forbidden',
+        message: 'Missing entitlement for scope agreements.read',
+        requestId: 'req_test',
+      },
+    },
+  },
+  cns_pk_rate_limited: {
+    status: 429,
+    payload: {
+      error: {
+        code: 'rate_limited',
+        message: 'Rate limit exceeded',
+        requestId: 'req_test',
+      },
+    },
+  },
+};
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
 function startStubGateway() {
@@ -35,6 +67,12 @@ function startStubGateway() {
         res.writeHead(status, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(payload));
       };
+
+      const syntheticFailure = SYNTHETIC_UPSTREAM_FAILURES[req.headers['x-api-key']];
+      if (syntheticFailure) {
+        respond(syntheticFailure.status, syntheticFailure.payload);
+        return;
+      }
 
       const hasValidApiKey = req.headers['x-api-key'] === TEST_API_KEY;
       if (!hasValidApiKey) {
@@ -176,9 +214,12 @@ async function startServers({ mcpPath = '/mcp' } = {}) {
   };
 }
 
-async function connectClient(mcpUrl, { apiKey } = {}) {
+async function connectClient(mcpUrl, { apiKey, headers } = {}) {
   const transport = new StreamableHTTPClientTransport(mcpUrl, {
-    requestInit: apiKey ? { headers: { 'X-API-Key': apiKey } } : undefined,
+    requestInit:
+      apiKey || headers
+        ? { headers: { ...(apiKey ? { 'X-API-Key': apiKey } : {}), ...headers } }
+        : undefined,
   });
   const client = new Client({ name: 'agreements-mcp-test-client', version: '0.0.1' });
   await client.connect(transport);
@@ -411,20 +452,52 @@ test('returns a guidance error when the API key is missing', async () => {
     const result = await client.callTool({ name: 'get_agreement_state', arguments: { agreementId: 'agr_1' } });
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /X-API-Key/);
+    assert.equal(env.gateway.requests.length, 0);
     await client.close();
   } finally {
     await env.close();
   }
 });
 
-test('surfaces upstream auth failures with actionable hints', async () => {
+test('surfaces upstream 401, 402, 403, and 429 failures with actionable hints', async () => {
   const env = await startServers();
   try {
-    const client = await connectClient(env.mcpUrl, { apiKey: 'wrong-key' });
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
-    assert.equal(result.isError, true);
-    assert.match(result.content[0].text, /HTTP 401/);
-    await client.close();
+    const cases = [
+      {
+        apiKey: 'wrong-key',
+        status: 401,
+        upstreamMessage: /Invalid API key/,
+        hint: /API key is missing or invalid/,
+      },
+      {
+        apiKey: 'cns_pk_payment_required',
+        status: 402,
+        upstreamMessage: /Payment required for scope agreements\.read/,
+        hint: /paid entitlement/,
+      },
+      {
+        apiKey: 'cns_pk_forbidden',
+        status: 403,
+        upstreamMessage: /Missing entitlement for scope agreements\.read/,
+        hint: /agreements\.read/,
+      },
+      {
+        apiKey: 'cns_pk_rate_limited',
+        status: 429,
+        upstreamMessage: /Rate limit exceeded/,
+        hint: /Back off and retry/,
+      },
+    ];
+
+    for (const expectation of cases) {
+      const client = await connectClient(env.mcpUrl, { apiKey: expectation.apiKey });
+      const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, new RegExp(`HTTP ${expectation.status}`));
+      assert.match(result.content[0].text, expectation.upstreamMessage);
+      assert.match(result.content[0].text, expectation.hint);
+      await client.close();
+    }
   } finally {
     await env.close();
   }
@@ -508,14 +581,35 @@ test('does not challenge unauthenticated MCP requests with OAuth metadata', asyn
 test('does not accept or forward JWT-shaped bearer values', async () => {
   const env = await startServers();
   try {
-    const transport = new StreamableHTTPClientTransport(env.mcpUrl, {
-      requestInit: { headers: { Authorization: `Bearer ${TEST_JWT}` } },
+    const client = await connectClient(env.mcpUrl, {
+      headers: { Authorization: `Bearer ${TEST_JWT}` },
     });
-    const client = new Client({ name: 'agreements-mcp-test-client', version: '0.0.1' });
-    await client.connect(transport);
 
     const result = await client.callTool({ name: 'list_agreements', arguments: {} });
     assert.equal(result.isError ?? false, true);
+    assert.match(result.content[0].text, /bearer credentials are not supported/);
+    assert.match(result.content[0].text, /X-API-Key/);
+
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.equal(gatewayRequest, undefined);
+
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('does not accept or forward opaque bearer API-key values', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, {
+      headers: { Authorization: `Bearer ${TEST_API_KEY}` },
+    });
+
+    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    assert.equal(result.isError ?? false, true);
+    assert.match(result.content[0].text, /bearer credentials are not supported/);
+    assert.match(result.content[0].text, /X-API-Key/);
 
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
     assert.equal(gatewayRequest, undefined);

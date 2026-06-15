@@ -100,12 +100,17 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     }
 
     const credentials = extractCredentials(req);
+    const unsupportedAuthorization =
+      typeof req.headers.authorization === 'string' && req.headers.authorization.trim().length > 0;
 
     const server = createAgreementsMcpServer({
       getClient: () => {
         if (!credentials) {
+          const unsupportedAuthorizationHint = unsupportedAuthorization
+            ? ' Authorization bearer credentials are not supported by hosted MCP.'
+            : '';
           throw new Error(
-            'Missing Agreements API credentials. Send an `X-API-Key` header on requests to this MCP server.',
+            `Missing Agreements API credentials.${unsupportedAuthorizationHint} Send an \`X-API-Key\` header on requests to this MCP server.`,
           );
         }
         const base = options.baseUrl
