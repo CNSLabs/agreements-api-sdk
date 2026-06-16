@@ -204,7 +204,7 @@ export type ProcessInputRequest = {
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
 type ApiClientSharedConfig = {
-  /** `X-API-Key` value for the API principal. */
+  /** API key for the API principal; sent as the canonical `X-API-Key` header. */
   apiKey?: string;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
   headers?: Record<string, string> | (() => Record<string, string> | undefined);

@@ -21,7 +21,7 @@ const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
-    'Content-Type, X-API-Key, Mcp-Session-Id, MCP-Protocol-Version, Last-Event-ID',
+    'Content-Type, X-API-Key, Authorization, Mcp-Session-Id, MCP-Protocol-Version, Last-Event-ID',
   'Access-Control-Expose-Headers': 'Mcp-Session-Id, MCP-Protocol-Version',
 };
 
@@ -33,22 +33,81 @@ function applyCors(res: ServerResponse): void {
 
 export type McpCallerCredentials = { kind: 'api-key'; apiKey: string };
 
+const API_KEY_PREFIX = 'cns_pk_';
+const SUPPORTED_CREDENTIALS_HINT =
+  'Send `X-API-Key: cns_pk_...` (canonical) or `Authorization: Bearer cns_pk_...` for clients that only support bearer-style headers.';
+
+type CredentialExtractionResult =
+  | { ok: true; credentials?: McpCallerCredentials }
+  | { ok: false; message: string };
+
 /**
- * Extracts the caller's Agreements API key. Hosted MCP authentication is
- * API-key-only; bearer/JWT authorization is not accepted or forwarded.
+ * Extracts the caller's Agreements API key. Hosted MCP authentication remains
+ * API-key-only; bearer auth is accepted only as an API-key compatibility alias.
  */
 export function extractCredentials(req: IncomingMessage): McpCallerCredentials | undefined {
-  const headerKey = req.headers['x-api-key'];
-  if (typeof headerKey === 'string' && headerKey.trim()) {
-    return { kind: 'api-key', apiKey: headerKey.trim() };
-  }
-  return undefined;
+  const result = extractCredentialResult(req);
+  return result.ok ? result.credentials : undefined;
 }
 
 /** Backwards-compatible helper: returns the raw credential string, if any. */
 export function extractApiKey(req: IncomingMessage): string | undefined {
   const credentials = extractCredentials(req);
   return credentials?.apiKey;
+}
+
+function extractCredentialResult(req: IncomingMessage): CredentialExtractionResult {
+  const headerApiKey = readHeaderValue(req.headers['x-api-key']);
+  const authorization = readHeaderValue(req.headers.authorization);
+  const bearerApiKey = authorization ? extractBearerApiKey(authorization) : undefined;
+
+  if (bearerApiKey && !bearerApiKey.ok) {
+    return bearerApiKey;
+  }
+
+  if (headerApiKey && bearerApiKey?.apiKey && headerApiKey !== bearerApiKey.apiKey) {
+    return {
+      ok: false,
+      message: `Conflicting Agreements API credentials were provided. ${SUPPORTED_CREDENTIALS_HINT}`,
+    };
+  }
+
+  const apiKey = headerApiKey || bearerApiKey?.apiKey;
+  return apiKey ? { ok: true, credentials: { kind: 'api-key', apiKey } } : { ok: true };
+}
+
+function extractBearerApiKey(authorization: string): { ok: true; apiKey?: string } | { ok: false; message: string } {
+  const match = /^Bearer\s+(.+)$/i.exec(authorization);
+  if (!match) {
+    return {
+      ok: false,
+      message: `Unsupported Authorization header for Agreements API credentials. ${SUPPORTED_CREDENTIALS_HINT}`,
+    };
+  }
+
+  const token = match[1]?.trim() ?? '';
+  if (!token) {
+    return { ok: false, message: `Missing bearer API key. ${SUPPORTED_CREDENTIALS_HINT}` };
+  }
+
+  if (!token.startsWith(API_KEY_PREFIX)) {
+    const bearerType = isJwtShaped(token) ? 'JWT bearer tokens' : 'Bearer values that are not Agreements API keys';
+    return {
+      ok: false,
+      message: `${bearerType} are not supported by hosted MCP. ${SUPPORTED_CREDENTIALS_HINT}`,
+    };
+  }
+
+  return { ok: true, apiKey: token };
+}
+
+function readHeaderValue(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0]?.trim() ?? '';
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isJwtShaped(token: string): boolean {
+  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
 }
 
 function normalizeHttpPath(path: string): string {
@@ -99,13 +158,17 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       return;
     }
 
-    const credentials = extractCredentials(req);
+    const credentialResult = extractCredentialResult(req);
+    const credentials = credentialResult.ok ? credentialResult.credentials : undefined;
 
     const server = createAgreementsMcpServer({
       getClient: () => {
+        if (!credentialResult.ok) {
+          throw new Error(credentialResult.message);
+        }
         if (!credentials) {
           throw new Error(
-            'Missing Agreements API credentials. Send an `X-API-Key` header on requests to this MCP server.',
+            `Missing Agreements API credentials. ${SUPPORTED_CREDENTIALS_HINT}`,
           );
         }
         const base = options.baseUrl
