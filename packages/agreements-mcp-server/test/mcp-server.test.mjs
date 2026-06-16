@@ -8,12 +8,11 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import {
   AGREEMENTS_MCP_TOOLS,
   AGREEMENTS_MCP_RESOURCES,
-  createAgreementsMcpHttpServer,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
 
 const TEST_API_KEY = 'cns_pk_test_key';
-// Structurally valid compact JWS (header.payload.signature) accepted by the stub gateway.
+// Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
@@ -38,8 +37,7 @@ function startStubGateway() {
       };
 
       const hasValidApiKey = req.headers['x-api-key'] === TEST_API_KEY;
-      const hasValidBearer = req.headers.authorization === `Bearer ${TEST_JWT}`;
-      if (!hasValidApiKey && !hasValidBearer) {
+      if (!hasValidApiKey) {
         respond(401, {
           error: { code: 'unauthorized', message: 'Invalid API key', requestId: 'req_test' },
         });
@@ -158,14 +156,13 @@ function startStubGateway() {
   });
 }
 
-async function startServers({ oauth, mcpPath = '/mcp' } = {}) {
+async function startServers({ mcpPath = '/mcp' } = {}) {
   const gateway = await startStubGateway();
   const mcpServer = await startAgreementsMcpHttpServer({
     port: 0,
     host: '127.0.0.1',
     baseUrl: gateway.baseUrl,
     mcpPath,
-    oauth,
   });
   const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
@@ -481,120 +478,35 @@ test('healthz responds without auth and non-POST MCP requests are rejected', asy
   }
 });
 
-const TEST_OAUTH = {
-  resource: 'https://test-api.example.com/mcp',
-  authorizationServers: ['https://idp.example.com/'],
-  resourceDocumentation: 'https://docs.example.com/mcp',
-};
-
-test('serves RFC 9728 protected-resource metadata when OAuth is configured', async () => {
-  const env = await startServers({ oauth: TEST_OAUTH });
+test('does not serve OAuth protected-resource metadata', async () => {
+  const env = await startServers();
   try {
     for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp']) {
       const response = await fetch(new URL(path, env.mcpUrl));
-      assert.equal(response.status, 200);
-      const metadata = await response.json();
-      assert.equal(metadata.resource, TEST_OAUTH.resource);
-      assert.deepEqual(metadata.authorization_servers, TEST_OAUTH.authorizationServers);
-      assert.deepEqual(metadata.bearer_methods_supported, ['header']);
-      assert.ok(metadata.scopes_supported.includes('agreements.read'));
-      assert.equal(metadata.resource_documentation, TEST_OAUTH.resourceDocumentation);
+      assert.equal(response.status, 404);
     }
   } finally {
     await env.close();
   }
 });
 
-test('derives path-suffixed OAuth metadata from the configured resource', async () => {
-  const oauth = {
-    resource: 'https://test-api.example.com/custom/mcp',
-    authorizationServers: ['https://idp.example.com/'],
-    scopesSupported: ['agreements.read'],
-  };
-  const env = await startServers({ oauth, mcpPath: '/custom/mcp' });
-  try {
-    for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/custom/mcp']) {
-      const response = await fetch(new URL(path, env.mcpUrl));
-      assert.equal(response.status, 200);
-      const metadata = await response.json();
-      assert.equal(metadata.resource, oauth.resource);
-      assert.deepEqual(metadata.scopes_supported, ['agreements.read']);
-    }
-
-    const oldMcpPathResponse = await fetch(new URL('/.well-known/oauth-protected-resource/mcp', env.mcpUrl));
-    assert.equal(oldMcpPathResponse.status, 404);
-
-    const challenge = await fetch(env.mcpUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: {}, id: 1 }),
-    });
-    assert.equal(
-      challenge.headers.get('www-authenticate'),
-      'Bearer resource_metadata="https://test-api.example.com/.well-known/oauth-protected-resource/custom/mcp", scope="agreements.read"',
-    );
-  } finally {
-    await env.close();
-  }
-});
-
-test('rejects OAuth resources that cannot describe the configured MCP endpoint', () => {
-  assert.throws(
-    () =>
-      createAgreementsMcpHttpServer({
-        mcpPath: '/mcp',
-        oauth: { ...TEST_OAUTH, resource: 'https://test-api.example.com/v0' },
-      }),
-    /OAuth resource path \(\/v0\) must match MCP path \(\/mcp\)/,
-  );
-  assert.throws(
-    () =>
-      createAgreementsMcpHttpServer({
-        mcpPath: '/mcp',
-        oauth: { ...TEST_OAUTH, resource: 'https://test-api.example.com/mcp?tenant=abc' },
-      }),
-    /OAuth resource must not include a query string/,
-  );
-  assert.throws(
-    () =>
-      createAgreementsMcpHttpServer({
-        mcpPath: '/mcp',
-        oauth: { ...TEST_OAUTH, resource: 'urn:example:mcp' },
-      }),
-    /OAuth resource must use http or https/,
-  );
-});
-
-test('does not serve protected-resource metadata when OAuth is not configured', async () => {
+test('does not challenge unauthenticated MCP requests with OAuth metadata', async () => {
   const env = await startServers();
-  try {
-    const response = await fetch(new URL('/.well-known/oauth-protected-resource', env.mcpUrl));
-    assert.equal(response.status, 404);
-  } finally {
-    await env.close();
-  }
-});
-
-test('challenges unauthenticated MCP requests with 401 + WWW-Authenticate when OAuth is configured', async () => {
-  const env = await startServers({ oauth: TEST_OAUTH });
   try {
     const response = await fetch(env.mcpUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: {}, id: 1 }),
     });
-    assert.equal(response.status, 401);
-    assert.equal(
-      response.headers.get('www-authenticate'),
-      'Bearer resource_metadata="https://test-api.example.com/.well-known/oauth-protected-resource/mcp", scope="agreements.read agreements.write"',
-    );
+    assert.notEqual(response.status, 401);
+    assert.equal(response.headers.get('www-authenticate'), null);
   } finally {
     await env.close();
   }
 });
 
-test('forwards OAuth JWTs to the gateway as Authorization bearer, not X-API-Key', async () => {
-  const env = await startServers({ oauth: TEST_OAUTH });
+test('does not accept or forward JWT-shaped bearer values', async () => {
+  const env = await startServers();
   try {
     const transport = new StreamableHTTPClientTransport(env.mcpUrl, {
       requestInit: { headers: { Authorization: `Bearer ${TEST_JWT}` } },
@@ -603,34 +515,10 @@ test('forwards OAuth JWTs to the gateway as Authorization bearer, not X-API-Key'
     await client.connect(transport);
 
     const result = await client.callTool({ name: 'list_agreements', arguments: {} });
-    assert.equal(result.isError ?? false, false);
+    assert.equal(result.isError ?? false, true);
 
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
-    assert.ok(gatewayRequest, 'expected a gateway request');
-    assert.equal(gatewayRequest.authorization, `Bearer ${TEST_JWT}`);
-    assert.equal(gatewayRequest.apiKey, undefined);
-
-    await client.close();
-  } finally {
-    await env.close();
-  }
-});
-
-test('opaque keys sent via Authorization: Bearer still map to X-API-Key upstream', async () => {
-  const env = await startServers({ oauth: TEST_OAUTH });
-  try {
-    const transport = new StreamableHTTPClientTransport(env.mcpUrl, {
-      requestInit: { headers: { Authorization: `Bearer ${TEST_API_KEY}` } },
-    });
-    const client = new Client({ name: 'agreements-mcp-test-client', version: '0.0.1' });
-    await client.connect(transport);
-
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
-    assert.equal(result.isError ?? false, false);
-
-    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
-    assert.ok(gatewayRequest, 'expected a gateway request');
-    assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
+    assert.equal(gatewayRequest, undefined);
 
     await client.close();
   } finally {
