@@ -250,6 +250,8 @@ test('lists the manifest tool surface plus permit-preparation tools', async () =
     const prepareDeployment = tools.find((tool) => tool.name === 'prepare_deployment_typed_data');
     assert.ok(prepareDeployment.inputSchema.properties.participants);
     assert.ok(prepareDeployment.inputSchema.properties.observers);
+    assert.ok(prepareDeployment.inputSchema.properties.documentId);
+    assert.ok(deployAgreement.inputSchema.properties.documentId);
     await client.close();
   } finally {
     await env.close();
@@ -266,6 +268,7 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
         agreement: { metadata: { templateId: 'did:template:mou-v1' } },
         displayName: 'Deployed via MCP',
         chainId: 59141,
+        documentId: 'document-123',
         signer: '0x1111111111111111111111111111111111111111',
         deadline: 1900000000,
         signatureV: 27,
@@ -283,6 +286,11 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
     );
     assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
     assert.equal(gatewayRequest.body.signer, '0x1111111111111111111111111111111111111111');
+    assert.equal(gatewayRequest.body.documentId, 'document-123');
+    assert.equal(
+      gatewayRequest.body.docUri,
+      `${env.gateway.baseUrl}/v0/agreements/documents/document-123`,
+    );
     assert.deepEqual(gatewayRequest.body.signature, {
       v: 27,
       r: `0x${'aa'.repeat(32)}`,

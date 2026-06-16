@@ -1,8 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
+  agreementsApiPaths,
+  createAgreementDocumentId,
   computeDefaultDeadlineSeconds,
   deployAgreementWithPermit,
+  joinUrl,
   submitAgreementInputWithPermit,
   type ApiClient,
   type DirectParticipantRecord,
@@ -21,6 +24,7 @@ import {
 } from './signing.js';
 
 const PLAYGROUND_URL = 'https://developers.shodai.network/api-playground';
+const PUBLIC_API_BASE_URL_ENV = 'AGREEMENTS_API_PUBLIC_BASE_URL';
 
 export type WriteToolOptions = {
   /**
@@ -72,6 +76,11 @@ type DeployPreflightArgs = {
   observers?: string[];
 };
 
+type DeployDocumentArgs = {
+  docUri?: string;
+  documentId?: string;
+};
+
 async function preflightDeployPayload(client: ApiClient, args: DeployPreflightArgs) {
   const validation = await client.validateDeployment({
     agreement: args.agreement,
@@ -116,6 +125,27 @@ function missingPermitError(prepareTool: string): ReturnType<typeof errorResult>
   );
 }
 
+function buildHostedDocumentUri(client: ApiClient, documentId: string): string {
+  const publicBaseUrl = process.env[PUBLIC_API_BASE_URL_ENV]?.trim() || client.getBaseUrl();
+  return joinUrl(publicBaseUrl, agreementsApiPaths.agreementDocument(documentId));
+}
+
+function resolveDeployDocumentLink(
+  client: ApiClient,
+  args: DeployDocumentArgs,
+  options: { generateIfMissing: boolean },
+): { docUri?: string; documentId?: string } {
+  const docUri = args.docUri?.trim() || undefined;
+  const documentId = args.documentId?.trim() || (options.generateIfMissing && !docUri ? createAgreementDocumentId() : undefined);
+  if (docUri) {
+    return { docUri, documentId };
+  }
+  if (documentId) {
+    return { docUri: buildHostedDocumentUri(client, documentId), documentId };
+  }
+  return {};
+}
+
 export function registerWriteTools(
   server: McpServer,
   getClient: ClientResolver,
@@ -139,6 +169,10 @@ export function registerWriteTools(
         participants: z.array(participantSchema).optional().describe('Wallet mappings for participant variables.'),
         observers: z.array(z.string()).optional().describe('Observer email addresses.'),
         docUri: z.string().optional().describe('Optional document URI recorded on-chain with the agreement.'),
+        documentId: z
+          .string()
+          .optional()
+          .describe('Optional hosted document ID paired with docUri for GET /v0/agreements/documents/{documentId}.'),
         ...permitFields,
       },
     },
@@ -148,6 +182,7 @@ export function registerWriteTools(
         return run(async () => {
           const client = getClient();
           const preflight = await preflightDeployPayload(client, args);
+          const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: false });
           return client.deployWithPermit({
             agreement: args.agreement,
             displayName: args.displayName,
@@ -155,7 +190,8 @@ export function registerWriteTools(
             initValues: preflight.normalizedInitValues,
             participants: preflight.normalizedParticipants,
             observers: preflight.normalizedObservers,
-            docUri: args.docUri,
+            docUri: documentLink.docUri,
+            documentId: documentLink.documentId,
             ...permit,
           });
         });
@@ -169,6 +205,7 @@ export function registerWriteTools(
         return run(async () => {
           const client = getClient();
           const preflight = await preflightDeployPayload(client, args);
+          const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: true });
           const walletClient = createEnvSignerWalletClient(chainId)!;
           const publicClient = createChainPublicClient(chainId);
           return deployAgreementWithPermit({
@@ -181,7 +218,8 @@ export function registerWriteTools(
             initValues: preflight.normalizedInitValues as never,
             participants: preflight.normalizedParticipants,
             observers: preflight.normalizedObservers,
-            docUri: args.docUri,
+            docUri: documentLink.docUri,
+            documentId: documentLink.documentId,
           });
         });
       }
@@ -263,11 +301,17 @@ export function registerWriteTools(
         participants: z.array(participantSchema).optional().describe('Wallet mappings for participant variables.'),
         observers: z.array(z.string()).optional().describe('Observer email addresses.'),
         docUri: z.string().optional().describe('Document URI (must match the later deploy_agreement call).'),
+        documentId: z
+          .string()
+          .optional()
+          .describe('Hosted document ID. If omitted with docUri, no hosted document ID is stored; if both are omitted, the server generates both values.'),
       },
     },
     async (args) =>
       run(async () => {
-        const preflight = await preflightDeployPayload(getClient(), args);
+        const client = getClient();
+        const preflight = await preflightDeployPayload(client, args);
+        const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: true });
         const deadline = args.deadline ?? computeDefaultDeadlineSeconds();
         const prepared = await prepareDeployTypedData({
           agreement: args.agreement,
@@ -275,13 +319,14 @@ export function registerWriteTools(
           signerAddress: args.signerAddress as Address,
           deadline,
           initValues: preflight.normalizedInitValues,
-          docUri: args.docUri,
+          docUri: documentLink.docUri,
         });
         return {
           ...prepared,
+          ...documentLink,
           ...preflight,
           nextStep:
-            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, plus signer, deadline, signatureV, signatureR, signatureS.',
+            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, documentId, plus signer, deadline, signatureV, signatureR, signatureS.',
           playgroundUrl: PLAYGROUND_URL,
         };
       }),
