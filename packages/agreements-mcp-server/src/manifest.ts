@@ -67,6 +67,17 @@ export const AGREEMENTS_MCP_TOOLS: readonly AgreementsMcpToolDefinition[] = [
     annotations: READ_ONLY,
   },
   {
+    name: 'get_agreement_document',
+    title: 'Get agreement document',
+    description:
+      'Returns the rendered hosted prose document for an agreement by documentId, including content type, display name, chain, docUri, and agreement record references. Use documentId from list_agreements/get_agreement or from prepare_deployment_typed_data.',
+    method: 'GET',
+    path: '/v0/agreements/documents/{documentId}',
+    operationId: 'getAgreementDocument',
+    scope: 'agreements.read',
+    annotations: READ_ONLY,
+  },
+  {
     name: 'get_agreement_state',
     title: 'Get agreement state',
     description:

@@ -65,6 +65,7 @@ Most tools call the public `/v0` API through the TypeScript client and carry MCP
 | --- | --- | --- |
 | `list_agreements` | `GET /v0/agreements` | `agreements.read` |
 | `get_agreement` | `GET /v0/agreements/{id}` | `agreements.read` |
+| `get_agreement_document` | `GET /v0/agreements/documents/{documentId}` | `agreements.read` |
 | `get_agreement_state` | `GET /v0/agreements/{id}/state` | `agreements.read` |
 | `get_input_history` | `GET /v0/agreements/{id}/inputs` | `agreements.read` |
 | `validate_agreement` | `POST /v0/agreements/validate-template` | `agreements.write` |

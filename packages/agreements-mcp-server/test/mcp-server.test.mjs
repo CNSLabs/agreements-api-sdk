@@ -109,6 +109,24 @@ function startStubGateway() {
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/v0/agreements/documents/document-123') {
+        respond(200, {
+          data: {
+            documentId: 'document-123',
+            docUri: `${gatewayBaseUrl(req)}/v0/agreements/documents/document-123`,
+            agreementId: 'agr_1',
+            agreementAddress: '0x3333333333333333333333333333333333333333',
+            chainId: 59141,
+            displayName: 'Stub agreement',
+            contentType: 'text/markdown',
+            content: '# Stub agreement\n\nRendered prose.',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+          meta,
+        });
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v0/agreements/deploy-with-permit') {
         respond(201, {
           data: {
@@ -192,6 +210,10 @@ function startStubGateway() {
       resolve({ server, requests, baseUrl: `http://127.0.0.1:${server.address().port}` });
     });
   });
+}
+
+function gatewayBaseUrl(req) {
+  return `http://${req.headers.host}`;
 }
 
 async function startServers({ mcpPath = '/mcp' } = {}) {
@@ -296,6 +318,30 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
       r: `0x${'aa'.repeat(32)}`,
       s: `0x${'bb'.repeat(32)}`,
     });
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('get_agreement_document fetches rendered hosted prose through the gateway', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const result = await client.callTool({
+      name: 'get_agreement_document',
+      arguments: { documentId: 'document-123' },
+    });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+    const payload = JSON.parse(result.content[0].text);
+    assert.equal(payload.documentId, 'document-123');
+    assert.equal(payload.content, '# Stub agreement\n\nRendered prose.');
+
+    const gatewayRequest = env.gateway.requests.find(
+      (request) => request.url === '/v0/agreements/documents/document-123',
+    );
+    assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
     await client.close();
   } finally {
     await env.close();
