@@ -37,7 +37,7 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@cns-labs/agreements-protocol-evm": "^0.1.3",
+    "@cns-labs/agreements-protocol-evm": "^0.1.4",
     "viem": "^2.43.0"
   },
   "devDependencies": {
