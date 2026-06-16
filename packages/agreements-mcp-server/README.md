@@ -55,6 +55,7 @@ Stdio environment variables:
 | `AGREEMENTS_API_ENVIRONMENT` | `testnet` (default) or `production`. |
 | `AGREEMENTS_API_BASE_URL` | Explicit gateway origin override. Wins over the environment. |
 | `AGREEMENTS_SIGNER_PRIVATE_KEY` | Optional local permit signer for write tools (dev/testnet only). |
+| `INFURA_PROJECT_ID` | Infura project ID used to derive RPC URLs for the built-in Linea, Sepolia, and Base agreement chains. |
 | `AGREEMENTS_RPC_URL`, `AGREEMENTS_RPC_URL_<chainId>` | Optional RPC overrides used when preparing or signing permits. |
 
 ## Tools

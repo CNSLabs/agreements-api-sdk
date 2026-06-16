@@ -10,6 +10,7 @@ import {
   AGREEMENTS_MCP_RESOURCES,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
+import { resolveRpcUrl } from '../dist/signing.js';
 
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
@@ -46,6 +47,30 @@ const SYNTHETIC_UPSTREAM_FAILURES = {
     },
   },
 };
+
+function withEnv(overrides, callback) {
+  const previous = {};
+  for (const key of Object.keys(overrides)) {
+    previous[key] = process.env[key];
+    const value = overrides[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+  try {
+    return callback();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
 function startStubGateway() {
@@ -278,6 +303,37 @@ test('lists the manifest tool surface plus permit-preparation tools', async () =
   } finally {
     await env.close();
   }
+});
+
+test('resolves prepare-tool RPC URLs from explicit overrides or INFURA_PROJECT_ID', () => {
+  withEnv(
+    {
+      AGREEMENTS_RPC_URL_59141: undefined,
+      AGREEMENTS_RPC_URL: undefined,
+      INFURA_PROJECT_ID: 'infura-test',
+    },
+    () => {
+      assert.equal(
+        resolveRpcUrl(59141),
+        'https://linea-sepolia.infura.io/v3/infura-test',
+      );
+      assert.equal(
+        resolveRpcUrl(84532),
+        'https://base-sepolia.infura.io/v3/infura-test',
+      );
+    },
+  );
+
+  withEnv(
+    {
+      AGREEMENTS_RPC_URL_59141: 'https://chain-specific.example',
+      AGREEMENTS_RPC_URL: 'https://generic.example',
+      INFURA_PROJECT_ID: 'infura-test',
+    },
+    () => {
+      assert.equal(resolveRpcUrl(59141), 'https://chain-specific.example');
+    },
+  );
 });
 
 test('deploy_agreement forwards a pre-signed permit to the gateway', async () => {
