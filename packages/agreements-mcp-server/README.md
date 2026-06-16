@@ -1,6 +1,6 @@
 # @cns-labs/agreements-mcp-server
 
-[Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Connect Claude, Cursor, or any MCP client and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
+[Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Configure Shodai as a remote Streamable HTTP MCP server and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
 
 The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
@@ -11,22 +11,22 @@ The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements
 | Testnet | `https://test-api.shodai.network/mcp` |
 | Production | `https://api.shodai.network/mcp` |
 
-Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Add it to an MCP client with:
+Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this hosted setup contract:
 
-```json
-{
-  "mcpServers": {
-    "shodai-agreements": {
-      "url": "https://test-api.shodai.network/mcp",
-      "headers": { "X-API-Key": "YOUR_API_KEY" }
-    }
-  }
-}
+```text
+Configure Shodai as a remote Streamable HTTP MCP server.
+
+URL:
+https://test-api.shodai.network/mcp
+
+Auth:
+Authorization: Bearer $SHODAI_API_KEY
+
+Key shape:
+cns_pk_...
 ```
 
-`X-API-Key: cns_pk_...` is the canonical hosted MCP credential. Clients that only support
-bearer-style headers may send the same API key as `Authorization: Bearer cns_pk_...`. OAuth
-and JWT bearer tokens are not supported.
+For production, use `https://api.shodai.network/mcp`. OAuth and JWT bearer tokens are not supported.
 
 Get an API key from the [Developer Portal](https://developers.shodai.network). Full client setup, tool reference, and signing guidance: [Connect via MCP](https://docs.shodai.network/sdks/connect-via-mcp).
 
@@ -51,7 +51,7 @@ Stdio environment variables:
 
 | Variable | Use |
 | --- | --- |
-| `AGREEMENTS_API_KEY` (or `API_KEY`) | API key sent as `X-API-Key`. Required for tool calls. |
+| `AGREEMENTS_API_KEY` (or `API_KEY`) | API key used for tool calls. Required. |
 | `AGREEMENTS_API_ENVIRONMENT` | `testnet` (default) or `production`. |
 | `AGREEMENTS_API_BASE_URL` | Explicit gateway origin override. Wins over the environment. |
 | `AGREEMENTS_SIGNER_PRIVATE_KEY` | Optional local permit signer for write tools (dev/testnet only). |
@@ -107,7 +107,7 @@ Verify interactively with the [MCP Inspector](https://modelcontextprotocol.io/do
 
 ```bash
 npx -y @modelcontextprotocol/inspector@latest --cli http://localhost:3905/mcp \
-  --transport http --method tools/list --header "X-API-Key: YOUR_API_KEY"
+  --transport http --method tools/list --header "Authorization: Bearer $SHODAI_API_KEY"
 ```
 
 Pin `@latest`: older Inspector versions do not support `--transport`/`--header` for URL targets.
