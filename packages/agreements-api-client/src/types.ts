@@ -33,6 +33,7 @@ export type AgreementRecord = {
   displayName: string;
   owner?: string;
   docUri?: string;
+  documentId?: string;
   contributors?: string[];
   participants?: ParticipantRecord[];
   observers?: string[];
@@ -53,6 +54,7 @@ export type AgreementSummary = {
   displayName: string;
   owner?: string;
   docUri?: string;
+  documentId?: string;
 };
 
 export type ParticipantRecord = {
@@ -164,6 +166,7 @@ export type DirectDeployAgreementWithPermitRequest = {
   displayName: string;
   chainId?: number;
   docUri?: string;
+  documentId?: string;
   initValues?: Record<string, unknown>;
   participants?: DirectParticipantRecord[];
   observers?: string[];
@@ -175,6 +178,19 @@ export type DirectDeployAgreementWithPermitRequest = {
 export type AgreementStateResponse = {
   status: 'Draft' | 'Deployed';
   state: string | null;
+};
+
+export type AgreementDocumentResponse = {
+  documentId: string;
+  docUri?: string;
+  agreementId: string;
+  agreementAddress?: string;
+  chainId: number;
+  displayName: string;
+  contentType: string;
+  content: string;
+  docHash?: string;
+  updatedAt?: string;
 };
 
 export type AgreementInputRecord = {

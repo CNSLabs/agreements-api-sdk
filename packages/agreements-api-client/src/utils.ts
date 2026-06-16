@@ -15,6 +15,7 @@ export const agreementsApiPaths = {
   agreementsValidate: () => `${API_BASE_PATH}/agreements/validate`,
   agreementsValidateTemplate: () => `${API_BASE_PATH}/agreements/validate-template`,
   agreementsDeployWithPermit: () => `${API_BASE_PATH}/agreements/deploy-with-permit`,
+  agreementDocument: (documentId: string) => `${API_BASE_PATH}/agreements/documents/${encodeURIComponent(documentId)}`,
   agreement: (id: string) => `${API_BASE_PATH}/agreements/${encodeURIComponent(id)}`,
   agreementState: (id: string) => `${API_BASE_PATH}/agreements/${encodeURIComponent(id)}/state`,
   agreementInputs: (id: string) => `${API_BASE_PATH}/agreements/${encodeURIComponent(id)}/inputs`,

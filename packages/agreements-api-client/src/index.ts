@@ -9,6 +9,7 @@ export { ApiClient } from './client.js';
 export { AgreementsApiError, extractAgreementsApiErrorMessage } from './errors.js';
 export type {
   AgreementInputRecord,
+  AgreementDocumentResponse,
   AgreementInputListParams,
   AgreementInputListSortField,
   AgreementListParams,
@@ -37,7 +38,9 @@ export type {
 } from './types.js';
 export { agreementsApiPaths, getExecutionInputIds, joinUrl } from './utils.js';
 export {
+  buildAgreementDocumentUri,
   computeDefaultDeadlineSeconds,
+  createAgreementDocumentId,
   DEFAULT_PERMIT_DEADLINE_SECONDS,
   deployAgreementWithPermit,
   signAgreementInputPermit,
