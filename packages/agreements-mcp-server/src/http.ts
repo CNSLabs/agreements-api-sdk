@@ -3,6 +3,15 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { ApiClient, type AgreementsApiEnvironment } from '@cns-labs/agreements-api-client';
 
 import { createAgreementsMcpServer } from './server.js';
+import {
+  createAgreementsMcpCatalog,
+  createAgreementsMcpServerCard,
+  DISCOVERY_CACHE_CONTROL,
+  MCP_CATALOG_PATH,
+  PUBLIC_MCP_URL,
+  SERVER_CARD_MEDIA_TYPE,
+  SERVER_CARD_PATH,
+} from './discovery.js';
 
 export type AgreementsMcpHttpOptions = {
   /** Port to listen on. Defaults to 3905. */
@@ -106,6 +115,70 @@ function readHeaderValue(value: string | string[] | undefined): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function readFirstHeaderValue(value: string | string[] | undefined): string {
+  return readHeaderValue(value).split(',')[0]?.trim() ?? '';
+}
+
+function normalizeProtocol(value: string): 'http' | 'https' | undefined {
+  const protocol = value.trim().toLowerCase();
+  return protocol === 'http' || protocol === 'https' ? protocol : undefined;
+}
+
+function readForwardedProtocol(value: string | string[] | undefined): 'http' | 'https' | undefined {
+  const forwarded = readFirstHeaderValue(value);
+  const match = /(?:^|;)\s*proto=(https?)/i.exec(forwarded);
+  return normalizeProtocol(match?.[1] ?? '');
+}
+
+function normalizeHost(host: string): string | undefined {
+  try {
+    return new URL(`http://${host}`).host;
+  } catch {
+    return undefined;
+  }
+}
+
+function isLocalHost(host: string): boolean {
+  return (
+    host === 'localhost' ||
+    host.startsWith('localhost:') ||
+    host.startsWith('127.') ||
+    host === '[::1]' ||
+    host.startsWith('[::1]:')
+  );
+}
+
+function inferPublicProtocol(req: IncomingMessage, host: string): 'http' | 'https' {
+  const cloudFrontProtocol = normalizeProtocol(readFirstHeaderValue(req.headers['cloudfront-forwarded-proto']));
+  if (cloudFrontProtocol) return cloudFrontProtocol;
+
+  const forwardedProtocol = readForwardedProtocol(req.headers.forwarded);
+  if (forwardedProtocol) return forwardedProtocol;
+
+  const xForwardedProtocol = normalizeProtocol(readFirstHeaderValue(req.headers['x-forwarded-proto']));
+  if (xForwardedProtocol === 'https' || (xForwardedProtocol === 'http' && isLocalHost(host))) {
+    return xForwardedProtocol;
+  }
+
+  return isLocalHost(host) ? 'http' : 'https';
+}
+
+function publicOriginForRequest(req: IncomingMessage): string {
+  const fallbackOrigin = new URL(PUBLIC_MCP_URL).origin;
+  const host = normalizeHost(readFirstHeaderValue(req.headers.host));
+  if (!host) return fallbackOrigin;
+
+  return `${inferPublicProtocol(req, host)}://${host}`;
+}
+
+function publicDiscoveryUrls(req: IncomingMessage, mcpPath: string): { publicMcpUrl: string; serverCardUrl: string } {
+  const origin = publicOriginForRequest(req);
+  return {
+    publicMcpUrl: new URL(mcpPath, `${origin}/`).toString(),
+    serverCardUrl: new URL(SERVER_CARD_PATH, `${origin}/`).toString(),
+  };
+}
+
 function isJwtShaped(token: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
 }
@@ -143,6 +216,23 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
 
     if (req.method === 'GET' && url.pathname === '/healthz') {
       sendJson(res, 200, { status: 'ok', service: 'agreements-mcp-server' });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === SERVER_CARD_PATH) {
+      const { publicMcpUrl } = publicDiscoveryUrls(req, mcpPath);
+      sendJson(res, 200, createAgreementsMcpServerCard(publicMcpUrl), {
+        'Content-Type': SERVER_CARD_MEDIA_TYPE,
+        'Cache-Control': DISCOVERY_CACHE_CONTROL,
+      });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === MCP_CATALOG_PATH) {
+      const { serverCardUrl } = publicDiscoveryUrls(req, mcpPath);
+      sendJson(res, 200, createAgreementsMcpCatalog(serverCardUrl), {
+        'Cache-Control': DISCOVERY_CACHE_CONTROL,
+      });
       return;
     }
 
