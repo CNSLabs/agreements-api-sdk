@@ -5,14 +5,21 @@ import {
   type AgreementListParams,
   type AgreementInputListParams,
   type ApiClient,
+  type AgreementsApiEnvironment,
   type SortFilter,
   type AgreementListSortField,
 } from '@cns-labs/agreements-api-client';
 
 import { getToolDefinition } from './manifest.js';
 
-/** Resolves the API client for the current request (per-request in HTTP mode, fixed in stdio mode). */
-export type ClientResolver = () => ApiClient;
+/** Resolves the API client for the selected environment (per-request in HTTP mode, fixed in stdio mode). */
+export type ClientResolver = (environment?: AgreementsApiEnvironment) => ApiClient;
+
+export type ToolEnvironmentMode = 'required' | 'fixed';
+
+export type ToolRegistrationOptions = {
+  environmentMode: ToolEnvironmentMode;
+};
 
 type ToolResult = {
   content: Array<{ type: 'text'; text: string }>;
@@ -48,7 +55,7 @@ function errorResult(error: unknown): ToolResult {
 function apiErrorHint(status: number): string | undefined {
   switch (status) {
     case 401:
-      return 'The API key is missing or invalid. Provide a valid Agreements API key.';
+      return 'The API key is missing, invalid, or belongs to a different environment than the selected tool environment. Use a testnet key with environment: "testnet" and a production key with environment: "production".';
     case 402:
       return 'This scope requires a paid entitlement for the current API principal.';
     case 403:
@@ -91,6 +98,31 @@ const participantSchema = z
   })
   .describe('Mapping of one participant variable to a wallet.');
 
+const environmentSchema = z
+  .enum(['testnet', 'production'])
+  .describe('Agreements API environment for this tool call. API keys only work in the environment where they were created.');
+
+export function environmentInputSchema(options: ToolRegistrationOptions): Record<string, z.ZodTypeAny> {
+  return options.environmentMode === 'required' ? { environment: environmentSchema } : {};
+}
+
+export function resolveToolEnvironment(
+  args: unknown,
+  options: ToolRegistrationOptions,
+): AgreementsApiEnvironment | undefined {
+  if (options.environmentMode === 'fixed') {
+    return undefined;
+  }
+  const environment =
+    typeof args === 'object' && args !== null
+      ? (args as { environment?: unknown }).environment
+      : undefined;
+  if (environment !== 'testnet' && environment !== 'production') {
+    throw new Error('environment is required and must be either "testnet" or "production".');
+  }
+  return environment;
+}
+
 function buildSort(
   sortBy: AgreementListSortField | undefined,
   sortDirection: 'asc' | 'desc' | undefined,
@@ -108,7 +140,11 @@ function buildDateFilter(after: string | undefined, before: string | undefined) 
 }
 
 /** Registers the read + validation tool surface defined in `AGREEMENTS_MCP_TOOLS`. */
-export function registerReadTools(server: McpServer, getClient: ClientResolver): void {
+export function registerReadTools(
+  server: McpServer,
+  getClient: ClientResolver,
+  options: ToolRegistrationOptions,
+): void {
   const listAgreements = getToolDefinition('list_agreements');
   server.registerTool(
     listAgreements.name,
@@ -117,6 +153,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: listAgreements.description,
       annotations: listAgreements.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         chainId: z.number().int().optional().describe('Filter by EVM chain ID (e.g. 59141 for Linea Sepolia).'),
         state: z.string().optional().describe('Filter by current lifecycle state ID.'),
         createdAfter: z.string().optional().describe('ISO 8601 timestamp; only agreements created at or after this time.'),
@@ -131,6 +168,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
     },
     async (args) =>
       run(() => {
+        const environment = resolveToolEnvironment(args, options);
         const params: AgreementListParams = {
           chainId: args.chainId,
           state: args.state,
@@ -140,7 +178,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
           limit: args.limit,
           cursor: args.cursor,
         };
-        return getClient().listAgreements(params);
+        return getClient(environment).listAgreements(params);
       }),
   );
 
@@ -152,10 +190,11 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: getAgreement.description,
       annotations: getAgreement.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreementId: agreementIdSchema,
       },
     },
-    async (args) => run(() => getClient().getAgreement(args.agreementId)),
+    async (args) => run(() => getClient(resolveToolEnvironment(args, options)).getAgreement(args.agreementId)),
   );
 
   const getAgreementState = getToolDefinition('get_agreement_state');
@@ -166,10 +205,11 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: getAgreementState.description,
       annotations: getAgreementState.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreementId: agreementIdSchema,
       },
     },
-    async (args) => run(() => getClient().getAgreementState(args.agreementId)),
+    async (args) => run(() => getClient(resolveToolEnvironment(args, options)).getAgreementState(args.agreementId)),
   );
 
   const getInputHistory = getToolDefinition('get_input_history');
@@ -180,6 +220,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: getInputHistory.description,
       annotations: getInputHistory.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreementId: agreementIdSchema,
         inputId: z.string().optional().describe('Filter by input ID as defined in the agreement JSON (execution.inputs).'),
         status: z.enum(['PENDING', 'MINED', 'FAILED']).optional().describe('Filter by submission status.'),
@@ -189,13 +230,14 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
     },
     async (args) =>
       run(() => {
+        const environment = resolveToolEnvironment(args, options);
         const params: AgreementInputListParams = {
           inputId: args.inputId,
           status: args.status,
           limit: args.limit,
           cursor: args.cursor,
         };
-        return getClient().listAgreementInputs(args.agreementId, params);
+        return getClient(environment).listAgreementInputs(args.agreementId, params);
       }),
   );
 
@@ -207,10 +249,11 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: validateAgreement.description,
       annotations: validateAgreement.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreement: agreementJsonSchema,
       },
     },
-    async (args) => run(() => getClient().validateTemplate(args.agreement)),
+    async (args) => run(() => getClient(resolveToolEnvironment(args, options)).validateTemplate(args.agreement)),
   );
 
   const preflightDeployment = getToolDefinition('preflight_deployment');
@@ -221,6 +264,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
       description: preflightDeployment.description,
       annotations: preflightDeployment.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreement: agreementJsonSchema,
         chainId: z.number().int().optional().describe('Target EVM chain ID for deployment.'),
         initValues: z
@@ -233,7 +277,7 @@ export function registerReadTools(server: McpServer, getClient: ClientResolver):
     },
     async (args) =>
       run(() =>
-        getClient().validateDeployment({
+        getClient(resolveToolEnvironment(args, options)).validateDeployment({
           agreement: args.agreement,
           chainId: args.chainId,
           initValues: args.initValues,

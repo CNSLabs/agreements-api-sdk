@@ -33,4 +33,4 @@ export {
   type AgreementsMcpToolScope,
 } from './manifest.js';
 export { AGREEMENTS_MCP_RESOURCES } from './resources.js';
-export type { ClientResolver } from './tools.js';
+export type { ClientResolver, ToolEnvironmentMode } from './tools.js';

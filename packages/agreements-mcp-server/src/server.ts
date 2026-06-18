@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ApiClient, type ApiClientConfig } from '@cns-labs/agreements-api-client';
 
-import { registerReadTools, type ClientResolver } from './tools.js';
+import { registerReadTools, type ClientResolver, type ToolEnvironmentMode } from './tools.js';
 import { registerWriteTools } from './write-tools.js';
 import { registerResources } from './resources.js';
 import { registerPrompts } from './prompts.js';
@@ -16,6 +16,12 @@ export type AgreementsMcpServerOptions = {
    * stdio mode passes a fixed client built from environment variables.
    */
   getClient: ClientResolver;
+  /**
+   * Hosted remote mode requires agents to choose the Agreements API environment
+   * per API-calling tool. Local stdio mode keeps a fixed environment selected
+   * by process configuration.
+   */
+  toolEnvironmentMode?: ToolEnvironmentMode;
   /**
    * Allow permit signing with `AGREEMENTS_SIGNER_PRIVATE_KEY` from the
    * environment. Only safe for local single-user (stdio) deployments;
@@ -36,13 +42,20 @@ export function createAgreementsMcpServer(options: AgreementsMcpServerOptions): 
         'This server exposes the Shodai Agreements API: author, validate, deploy, and operate verifiable on-chain agreements.',
         'Authoring loop: read the simple/complex example resources to learn the agreement JSON shape, draft the document, then iterate with validate_agreement until it has no blocking warnings, and run preflight_deployment before any signing.',
         'Reads (list_agreements, get_agreement, get_agreement_state, get_input_history) require the agreements.read scope; validation tools require agreements.write.',
+        options.toolEnvironmentMode === 'required'
+          ? 'Hosted tool calls must include environment: "testnet" or "production"; API keys only work in the environment where they were created.'
+          : 'This server uses the fixed Agreements API environment configured for the local process.',
         'For deployment, signing, and troubleshooting workflows beyond these tools, fetch the docs pages listed in the docs-index resource.',
       ].join(' '),
     },
   );
 
-  registerReadTools(server, options.getClient);
-  registerWriteTools(server, options.getClient, { allowEnvSigner: options.allowEnvSigner ?? false });
+  const environmentMode = options.toolEnvironmentMode ?? 'fixed';
+  registerReadTools(server, options.getClient, { environmentMode });
+  registerWriteTools(server, options.getClient, {
+    allowEnvSigner: options.allowEnvSigner ?? false,
+    environmentMode,
+  });
   registerResources(server);
   registerPrompts(server);
 

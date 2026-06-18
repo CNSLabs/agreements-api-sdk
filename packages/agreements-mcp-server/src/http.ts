@@ -1,6 +1,10 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { ApiClient, type AgreementsApiEnvironment } from '@cns-labs/agreements-api-client';
+import {
+  ApiClient,
+  resolveApiBaseUrl,
+  type AgreementsApiEnvironment,
+} from '@cns-labs/agreements-api-client';
 
 import { createAgreementsMcpServer } from './server.js';
 import {
@@ -20,10 +24,12 @@ export type AgreementsMcpHttpOptions = {
   host?: string;
   /** Path serving the MCP Streamable HTTP endpoint. Defaults to `/mcp`. */
   mcpPath?: string;
-  /** Named Agreements API environment used to resolve the upstream gateway. */
+  /** @deprecated Hosted HTTP tool calls now select the API environment per call. */
   environment?: AgreementsApiEnvironment;
-  /** Explicit upstream gateway origin override (wins over `environment`). */
+  /** Explicit upstream gateway origin override for fixed/single-environment local use. */
   baseUrl?: string;
+  /** Explicit upstream gateway origins for selectable hosted environments. */
+  baseUrls?: Partial<Record<AgreementsApiEnvironment, string>>;
 };
 
 const CORS_HEADERS: Record<string, string> = {
@@ -194,6 +200,13 @@ function sendJson(res: ServerResponse, status: number, body: unknown, headers: R
   res.end(JSON.stringify(body));
 }
 
+function resolveEnvironmentBaseUrl(
+  options: AgreementsMcpHttpOptions,
+  environment: AgreementsApiEnvironment,
+): string {
+  return options.baseUrls?.[environment]?.trim() || options.baseUrl?.trim() || resolveApiBaseUrl(environment);
+}
+
 /**
  * Stateless Streamable HTTP server: each POST gets a fresh MCP server bound to
  * an Agreements API client constructed from the caller's credentials. No
@@ -252,7 +265,8 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     const credentials = credentialResult.ok ? credentialResult.credentials : undefined;
 
     const server = createAgreementsMcpServer({
-      getClient: () => {
+      toolEnvironmentMode: 'required',
+      getClient: (environment) => {
         if (!credentialResult.ok) {
           throw new Error(credentialResult.message);
         }
@@ -261,10 +275,13 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
             `Missing Agreements API credentials. ${SUPPORTED_CREDENTIALS_HINT}`,
           );
         }
-        const base = options.baseUrl
-          ? { baseUrl: options.baseUrl }
-          : { environment: options.environment ?? ('testnet' as const) };
-        return new ApiClient({ ...base, apiKey: credentials.apiKey });
+        if (environment !== 'testnet' && environment !== 'production') {
+          throw new Error('Missing Agreements API environment. Set environment to "testnet" or "production" on this tool call.');
+        }
+        return new ApiClient({
+          baseUrl: resolveEnvironmentBaseUrl(options, environment),
+          apiKey: credentials.apiKey,
+        });
       },
     });
 
