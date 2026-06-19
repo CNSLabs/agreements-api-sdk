@@ -19,10 +19,13 @@ export {
   createAgreementsMcpCatalog,
   createAgreementsMcpServerCard,
   DISCOVERY_CACHE_CONTROL,
+  LEGACY_SERVER_CARD_PATH,
+  MCP_JSON_SERVER_CARD_PATH,
   MCP_CATALOG_PATH,
   PUBLIC_MCP_URL,
   SERVER_CARD_MEDIA_TYPE,
   SERVER_CARD_PATH,
+  SERVER_CARD_PATHS,
   SERVER_CARD_URL,
 } from './discovery.js';
 export {
