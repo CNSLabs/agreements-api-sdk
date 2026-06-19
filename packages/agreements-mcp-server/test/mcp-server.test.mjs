@@ -23,6 +23,7 @@ import {
   SERVER_VERSION,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
+import { resolveRpcUrl } from '../dist/signing.js';
 import { deploymentPermitNextStep, inputPermitNextStep } from '../dist/write-tools.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -69,6 +70,30 @@ const SYNTHETIC_UPSTREAM_FAILURES = {
     },
   },
 };
+
+function withEnv(overrides, callback) {
+  const previous = {};
+  for (const key of Object.keys(overrides)) {
+    previous[key] = process.env[key];
+    const value = overrides[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+  try {
+    return callback();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
 
 function getJsonResponse(url, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -245,6 +270,24 @@ function startStubGateway() {
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/v0/agreements/documents/document-123') {
+        respond(200, {
+          data: {
+            documentId: 'document-123',
+            docUri: `${gatewayBaseUrl(req)}/v0/agreements/documents/document-123`,
+            agreementId: 'agr_1',
+            agreementAddress: '0x3333333333333333333333333333333333333333',
+            chainId: 59141,
+            displayName: 'Stub agreement',
+            contentType: 'text/markdown',
+            content: '# Stub agreement\n\nRendered prose.',
+            updatedAt: '2026-06-01T00:00:00.000Z',
+          },
+          meta,
+        });
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v0/agreements/deploy-with-permit') {
         respond(201, {
           data: {
@@ -328,6 +371,10 @@ function startStubGateway() {
       resolve({ server, requests, baseUrl: `http://127.0.0.1:${server.address().port}` });
     });
   });
+}
+
+function gatewayBaseUrl(req) {
+  return `http://${req.headers.host}`;
 }
 
 async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
@@ -433,15 +480,49 @@ test('lists the manifest tool surface plus permit-preparation tools', async () =
     assert.equal(prepareDeployment.inputSchema.required.includes('environment'), true);
     assert.ok(prepareDeployment.inputSchema.properties.participants);
     assert.ok(prepareDeployment.inputSchema.properties.observers);
+    assert.ok(prepareDeployment.inputSchema.properties.documentId);
+    assert.ok(deployAgreement.inputSchema.properties.documentId);
     await client.close();
   } finally {
     await env.close();
   }
 });
 
+test('resolves prepare-tool RPC URLs from explicit overrides or INFURA_PROJECT_ID', () => {
+  withEnv(
+    {
+      AGREEMENTS_RPC_URL_59141: undefined,
+      AGREEMENTS_RPC_URL: undefined,
+      INFURA_PROJECT_ID: 'infura-test',
+    },
+    () => {
+      assert.equal(
+        resolveRpcUrl(59141),
+        'https://linea-sepolia.infura.io/v3/infura-test',
+      );
+      assert.equal(
+        resolveRpcUrl(84532),
+        'https://base-sepolia.infura.io/v3/infura-test',
+      );
+    },
+  );
+
+  withEnv(
+    {
+      AGREEMENTS_RPC_URL_59141: 'https://chain-specific.example',
+      AGREEMENTS_RPC_URL: 'https://generic.example',
+      INFURA_PROJECT_ID: 'infura-test',
+    },
+    () => {
+      assert.equal(resolveRpcUrl(59141), 'https://chain-specific.example');
+    },
+  );
+});
+
 test('prepare typed-data next-step guidance preserves the selected environment', () => {
   assert.match(deploymentPermitNextStep('testnet'), /environment: "testnet"/);
   assert.match(deploymentPermitNextStep('testnet'), /deploy_agreement/);
+  assert.match(deploymentPermitNextStep('testnet'), /documentId/);
   assert.match(inputPermitNextStep('production'), /environment: "production"/);
   assert.match(inputPermitNextStep('production'), /submit_input/);
 });
@@ -457,6 +538,7 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
         agreement: { metadata: { templateId: 'did:template:mou-v1' } },
         displayName: 'Deployed via MCP',
         chainId: 59141,
+        documentId: 'document-123',
         signer: '0x1111111111111111111111111111111111111111',
         deadline: 1900000000,
         signatureV: 27,
@@ -474,11 +556,40 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
     );
     assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
     assert.equal(gatewayRequest.body.signer, '0x1111111111111111111111111111111111111111');
+    assert.equal(gatewayRequest.body.documentId, 'document-123');
+    assert.equal(
+      gatewayRequest.body.docUri,
+      `${env.gateway.baseUrl}/v0/agreements/documents/document-123`,
+    );
     assert.deepEqual(gatewayRequest.body.signature, {
       v: 27,
       r: `0x${'aa'.repeat(32)}`,
       s: `0x${'bb'.repeat(32)}`,
     });
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('get_agreement_document fetches rendered hosted prose through the gateway', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const result = await client.callTool({
+      name: 'get_agreement_document',
+      arguments: { environment: 'testnet', documentId: 'document-123' },
+    });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+    const payload = JSON.parse(result.content[0].text);
+    assert.equal(payload.documentId, 'document-123');
+    assert.equal(payload.content, '# Stub agreement\n\nRendered prose.');
+
+    const gatewayRequest = env.gateway.requests.find(
+      (request) => request.url === '/v0/agreements/documents/document-123',
+    );
+    assert.equal(gatewayRequest.apiKey, TEST_API_KEY);
     await client.close();
   } finally {
     await env.close();

@@ -47,8 +47,19 @@ export function resolveRpcUrl(chainId: number): string | undefined {
   return (
     process.env[`AGREEMENTS_RPC_URL_${chainId}`]?.trim() ||
     process.env.AGREEMENTS_RPC_URL?.trim() ||
+    resolveInfuraRpcUrl(chainId, process.env.INFURA_PROJECT_ID?.trim()) ||
     undefined
   );
+}
+
+function resolveInfuraRpcUrl(chainId: number, infuraProjectId: string | undefined): string | undefined {
+  if (!infuraProjectId) return undefined;
+  if (chainId === viemChains.linea.id) return `https://linea-mainnet.infura.io/v3/${infuraProjectId}`;
+  if (chainId === viemChains.lineaSepolia.id) return `https://linea-sepolia.infura.io/v3/${infuraProjectId}`;
+  if (chainId === viemChains.sepolia.id) return `https://sepolia.infura.io/v3/${infuraProjectId}`;
+  if (chainId === viemChains.base.id) return `https://base-mainnet.infura.io/v3/${infuraProjectId}`;
+  if (chainId === viemChains.baseSepolia.id) return `https://base-sepolia.infura.io/v3/${infuraProjectId}`;
+  return undefined;
 }
 
 export function createChainPublicClient(chainId: number): PublicClient {
@@ -56,7 +67,7 @@ export function createChainPublicClient(chainId: number): PublicClient {
   const rpcUrl = resolveRpcUrl(chainId);
   if (!chain && !rpcUrl) {
     throw new Error(
-      `No RPC endpoint known for chain ${chainId}. Set AGREEMENTS_RPC_URL (or AGREEMENTS_RPC_URL_${chainId}).`,
+      `No RPC endpoint known for chain ${chainId}. Set AGREEMENTS_RPC_URL, AGREEMENTS_RPC_URL_${chainId}, or INFURA_PROJECT_ID.`,
     );
   }
   return createPublicClient({ chain, transport: http(rpcUrl) }) as PublicClient;

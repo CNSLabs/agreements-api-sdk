@@ -80,6 +80,11 @@ const agreementIdSchema = z
   .min(1)
   .describe('Agreement record ID, as returned by list_agreements (not the on-chain address).');
 
+const documentIdSchema = z
+  .string()
+  .min(1)
+  .describe('Hosted agreement document ID, as returned by list_agreements/get_agreement or prepare_deployment_typed_data.');
+
 const agreementJsonSchema = z
   .record(z.unknown())
   .describe(
@@ -195,6 +200,21 @@ export function registerReadTools(
       },
     },
     async (args) => run(() => getClient(resolveToolEnvironment(args, options)).getAgreement(args.agreementId)),
+  );
+
+  const getAgreementDocument = getToolDefinition('get_agreement_document');
+  server.registerTool(
+    getAgreementDocument.name,
+    {
+      title: getAgreementDocument.title,
+      description: getAgreementDocument.description,
+      annotations: getAgreementDocument.annotations,
+      inputSchema: {
+        ...environmentInputSchema(options),
+        documentId: documentIdSchema,
+      },
+    },
+    async (args) => run(() => getClient(resolveToolEnvironment(args, options)).getAgreementDocument(args.documentId)),
   );
 
   const getAgreementState = getToolDefinition('get_agreement_state');
