@@ -23,16 +23,17 @@ import {
   SERVER_VERSION,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
+import { deploymentPermitNextStep, inputPermitNextStep } from '../dist/write-tools.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const registryServerJson = JSON.parse(readFileSync(new URL('../server.json', import.meta.url), 'utf8'));
 
-const TESTNET_DISCOVERY_HEADERS = {
-  Host: 'test-api.shodai.network',
+const DEVELOPERS_DISCOVERY_HEADERS = {
+  Host: 'developers.shodai.network',
   'CloudFront-Forwarded-Proto': 'https',
 };
-const TESTNET_MCP_URL = 'https://test-api.shodai.network/mcp';
-const TESTNET_SERVER_CARD_URL = 'https://test-api.shodai.network/mcp/server-card';
+const DEVELOPERS_MCP_URL = 'https://developers.shodai.network/mcp';
+const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/mcp/server-card';
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
@@ -127,7 +128,7 @@ test('registry server.json describes the hosted remote MCP server only', () => {
   assert.equal(registryServerJson.remotes.length, 1);
   const [remote] = registryServerJson.remotes;
   assert.equal(remote.type, 'streamable-http');
-  assert.equal(remote.url, 'https://api.shodai.network/mcp');
+  assert.equal(remote.url, DEVELOPERS_MCP_URL);
 
   assert.equal(remote.headers.length, 1);
   const [authorizationHeader] = remote.headers;
@@ -329,22 +330,31 @@ function startStubGateway() {
   });
 }
 
-async function startServers({ mcpPath = '/mcp' } = {}) {
-  const gateway = await startStubGateway();
+async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
+  const testnetGateway = await startStubGateway();
+  const productionGateway = dualGateways ? await startStubGateway() : testnetGateway;
   const mcpServer = await startAgreementsMcpHttpServer({
     port: 0,
     host: '127.0.0.1',
-    baseUrl: gateway.baseUrl,
+    baseUrls: {
+      testnet: testnetGateway.baseUrl,
+      production: productionGateway.baseUrl,
+    },
     mcpPath,
   });
   const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
-    gateway,
+    gateway: testnetGateway,
+    testnetGateway,
+    productionGateway,
     mcpServer,
     mcpUrl,
     async close() {
       mcpServer.close();
-      gateway.server.close();
+      testnetGateway.server.close();
+      if (productionGateway !== testnetGateway) {
+        productionGateway.server.close();
+      }
     },
   };
 }
@@ -364,12 +374,12 @@ async function connectClient(mcpUrl, { apiKey, headers } = {}) {
 test('serves the MCP server card discovery endpoint without auth', async () => {
   const env = await startServers();
   try {
-    const response = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), TESTNET_DISCOVERY_HEADERS);
+    const response = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
     assert.equal(response.status, 200);
     assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
     assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
     assert.equal(response.headers.get('access-control-allow-origin'), '*');
-    assert.deepEqual(await response.json(), createAgreementsMcpServerCard(TESTNET_MCP_URL));
+    assert.deepEqual(await response.json(), createAgreementsMcpServerCard(DEVELOPERS_MCP_URL));
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();
@@ -379,14 +389,14 @@ test('serves the MCP server card discovery endpoint without auth', async () => {
 test('serves the MCP catalog discovery endpoint without auth', async () => {
   const env = await startServers();
   try {
-    const response = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), TESTNET_DISCOVERY_HEADERS);
+    const response = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /^application\/json/);
     assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
     assert.equal(response.headers.get('access-control-allow-origin'), '*');
     const catalog = await response.json();
-    assert.deepEqual(catalog, createAgreementsMcpCatalog(TESTNET_SERVER_CARD_URL));
-    assert.equal(catalog.entries[0].url, TESTNET_SERVER_CARD_URL);
+    assert.deepEqual(catalog, createAgreementsMcpCatalog(DEVELOPERS_SERVER_CARD_URL));
+    assert.equal(catalog.entries[0].url, DEVELOPERS_SERVER_CARD_URL);
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();
@@ -409,18 +419,31 @@ test('lists the manifest tool surface plus permit-preparation tools', async () =
     const listAgreements = tools.find((tool) => tool.name === 'list_agreements');
     assert.equal(listAgreements.annotations.readOnlyHint, true);
     assert.equal(listAgreements.annotations.destructiveHint, false);
+    assert.deepEqual(listAgreements.inputSchema.properties.environment.enum, ['testnet', 'production']);
+    assert.equal(listAgreements.inputSchema.required.includes('environment'), true);
 
     const deployAgreement = tools.find((tool) => tool.name === 'deploy_agreement');
     assert.equal(deployAgreement.annotations.readOnlyHint, false);
     assert.equal(deployAgreement.annotations.destructiveHint, true);
+    assert.deepEqual(deployAgreement.inputSchema.properties.environment.enum, ['testnet', 'production']);
+    assert.equal(deployAgreement.inputSchema.required.includes('environment'), true);
 
     const prepareDeployment = tools.find((tool) => tool.name === 'prepare_deployment_typed_data');
+    assert.deepEqual(prepareDeployment.inputSchema.properties.environment.enum, ['testnet', 'production']);
+    assert.equal(prepareDeployment.inputSchema.required.includes('environment'), true);
     assert.ok(prepareDeployment.inputSchema.properties.participants);
     assert.ok(prepareDeployment.inputSchema.properties.observers);
     await client.close();
   } finally {
     await env.close();
   }
+});
+
+test('prepare typed-data next-step guidance preserves the selected environment', () => {
+  assert.match(deploymentPermitNextStep('testnet'), /environment: "testnet"/);
+  assert.match(deploymentPermitNextStep('testnet'), /deploy_agreement/);
+  assert.match(inputPermitNextStep('production'), /environment: "production"/);
+  assert.match(inputPermitNextStep('production'), /submit_input/);
 });
 
 test('deploy_agreement forwards a pre-signed permit to the gateway', async () => {
@@ -430,6 +453,7 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
     const result = await client.callTool({
       name: 'deploy_agreement',
       arguments: {
+        environment: 'testnet',
         agreement: { metadata: { templateId: 'did:template:mou-v1' } },
         displayName: 'Deployed via MCP',
         chainId: 59141,
@@ -475,6 +499,7 @@ test('deploy_agreement preflights participant mappings before forwarding a permi
     const result = await client.callTool({
       name: 'deploy_agreement',
       arguments: {
+        environment: 'testnet',
         agreement: { metadata: { templateId: 'did:template:mou-v1' } },
         displayName: 'Deployed via MCP',
         chainId: 59141,
@@ -525,6 +550,7 @@ test('submit_input forwards a pre-signed permit to the gateway', async () => {
     const result = await client.callTool({
       name: 'submit_input',
       arguments: {
+        environment: 'testnet',
         agreementId: 'agr_1',
         inputId: 'partyAData',
         values: { partyAName: 'Acme' },
@@ -558,6 +584,7 @@ test('write tools without a permit return signing guidance (hosted mode has no e
     const result = await client.callTool({
       name: 'deploy_agreement',
       arguments: {
+        environment: 'testnet',
         agreement: { metadata: {} },
         displayName: 'No permit',
       },
@@ -577,7 +604,7 @@ test('calls list_agreements through the gateway with the caller API key', async 
     const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
     const result = await client.callTool({
       name: 'list_agreements',
-      arguments: { limit: 25, sortBy: 'updatedAt', sortDirection: 'desc' },
+      arguments: { environment: 'testnet', limit: 25, sortBy: 'updatedAt', sortDirection: 'desc' },
     });
 
     assert.notEqual(result.isError, true);
@@ -594,13 +621,51 @@ test('calls list_agreements through the gateway with the caller API key', async 
   }
 });
 
+test('requires hosted tool calls to select an API environment', async () => {
+  const env = await startServers();
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const result = await client.callTool({
+      name: 'list_agreements',
+      arguments: { limit: 25 },
+    });
+
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /environment/);
+    assert.equal(env.gateway.requests.length, 0);
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('routes hosted tool calls to the selected API environment base URL', async () => {
+  const env = await startServers({ dualGateways: true });
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const result = await client.callTool({
+      name: 'list_agreements',
+      arguments: { environment: 'production' },
+    });
+
+    assert.notEqual(result.isError, true, result.content?.[0]?.text);
+    assert.equal(env.testnetGateway.requests.length, 0);
+    assert.equal(env.productionGateway.requests.length, 1);
+    assert.equal(env.productionGateway.requests[0].apiKey, TEST_API_KEY);
+    assert.equal(env.productionGateway.requests[0].url, '/v0/agreements');
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
 test('accepts bearer API-key alias and forwards only X-API-Key upstream', async () => {
   const env = await startServers();
   try {
     const client = await connectClient(env.mcpUrl, {
       headers: { Authorization: `Bearer ${TEST_API_KEY}` },
     });
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
 
     assert.notEqual(result.isError, true, result.content?.[0]?.text);
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
@@ -619,7 +684,7 @@ test('accepts matching X-API-Key and bearer API-key credentials', async () => {
       apiKey: TEST_API_KEY,
       headers: { Authorization: `Bearer ${TEST_API_KEY}` },
     });
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
 
     assert.notEqual(result.isError, true, result.content?.[0]?.text);
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
@@ -637,7 +702,7 @@ test('calls validate_agreement and returns validation payload', async () => {
     const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
     const result = await client.callTool({
       name: 'validate_agreement',
-      arguments: { agreement: { metadata: { templateId: 'did:template:mou-v1' } } },
+      arguments: { environment: 'testnet', agreement: { metadata: { templateId: 'did:template:mou-v1' } } },
     });
 
     assert.notEqual(result.isError, true);
@@ -653,7 +718,7 @@ test('returns a guidance error when the API key is missing', async () => {
   const env = await startServers();
   try {
     const client = await connectClient(env.mcpUrl);
-    const result = await client.callTool({ name: 'get_agreement_state', arguments: { agreementId: 'agr_1' } });
+    const result = await client.callTool({ name: 'get_agreement_state', arguments: { environment: 'testnet', agreementId: 'agr_1' } });
     assert.equal(result.isError, true);
     assert.match(result.content[0].text, /X-API-Key/);
     assert.match(result.content[0].text, /Authorization: Bearer cns_pk_/);
@@ -672,7 +737,7 @@ test('surfaces upstream 401, 402, 403, and 429 failures with actionable hints', 
         apiKey: 'wrong-key',
         status: 401,
         upstreamMessage: /Invalid API key/,
-        hint: /API key is missing or invalid/,
+        hint: /different environment than the selected tool environment/,
       },
       {
         apiKey: 'cns_pk_payment_required',
@@ -696,7 +761,7 @@ test('surfaces upstream 401, 402, 403, and 429 failures with actionable hints', 
 
     for (const expectation of cases) {
       const client = await connectClient(env.mcpUrl, { apiKey: expectation.apiKey });
-      const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+      const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
       assert.equal(result.isError, true);
       assert.match(result.content[0].text, new RegExp(`HTTP ${expectation.status}`));
       assert.match(result.content[0].text, expectation.upstreamMessage);
@@ -800,7 +865,7 @@ test('does not accept or forward JWT-shaped bearer values', async () => {
       headers: { Authorization: `Bearer ${TEST_JWT}` },
     });
 
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
     assert.equal(result.isError ?? false, true);
     assert.match(result.content[0].text, /JWT bearer tokens are not supported/);
     assert.match(result.content[0].text, /X-API-Key/);
@@ -822,7 +887,7 @@ test('does not accept or forward opaque bearer values', async () => {
       headers: { Authorization: 'Bearer opaque-token' },
     });
 
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
     assert.equal(result.isError ?? false, true);
     assert.match(result.content[0].text, /Bearer values that are not Agreements API keys are not supported/);
     assert.match(result.content[0].text, /X-API-Key/);
@@ -845,7 +910,7 @@ test('rejects conflicting X-API-Key and bearer API-key credentials', async () =>
       headers: { Authorization: 'Bearer cns_pk_other_key' },
     });
 
-    const result = await client.callTool({ name: 'list_agreements', arguments: {} });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
     assert.equal(result.isError ?? false, true);
     assert.match(result.content[0].text, /Conflicting Agreements API credentials/);
     assert.match(result.content[0].text, /X-API-Key/);
