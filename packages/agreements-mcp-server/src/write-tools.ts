@@ -8,13 +8,22 @@ import {
   joinUrl,
   submitAgreementInputWithPermit,
   type ApiClient,
+  type AgreementsApiEnvironment,
   type DirectParticipantRecord,
   type PermitSignature,
 } from '@cns-labs/agreements-api-client';
 import type { Address } from 'viem';
 
 import { getToolDefinition } from './manifest.js';
-import { errorResult, jsonResult, run, type ClientResolver } from './tools.js';
+import {
+  environmentInputSchema,
+  errorResult,
+  jsonResult,
+  resolveToolEnvironment,
+  run,
+  type ClientResolver,
+  type ToolRegistrationOptions,
+} from './tools.js';
 import {
   createChainPublicClient,
   createEnvSignerWalletClient,
@@ -32,7 +41,7 @@ export type WriteToolOptions = {
    * Enabled only for local stdio use; hosted multi-tenant mode must keep this off.
    */
   allowEnvSigner: boolean;
-};
+} & ToolRegistrationOptions;
 
 const agreementJsonSchema = z
   .record(z.unknown())
@@ -61,6 +70,7 @@ const permitFields = {
 };
 
 type PermitArgs = {
+  environment?: AgreementsApiEnvironment;
   signer?: string;
   deadline?: number;
   signatureV?: number;
@@ -69,6 +79,7 @@ type PermitArgs = {
 };
 
 type DeployPreflightArgs = {
+  environment?: AgreementsApiEnvironment;
   agreement: Record<string, unknown>;
   chainId?: number;
   initValues?: Record<string, unknown>;
@@ -146,6 +157,18 @@ function resolveDeployDocumentLink(
   return {};
 }
 
+function environmentNextStepPrefix(environment: AgreementsApiEnvironment | undefined): string {
+  return environment ? `the same environment: "${environment}", ` : '';
+}
+
+export function deploymentPermitNextStep(environment?: AgreementsApiEnvironment): string {
+  return `Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with ${environmentNextStepPrefix(environment)}the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, documentId, plus signer, deadline, signatureV, signatureR, signatureS.`;
+}
+
+export function inputPermitNextStep(environment?: AgreementsApiEnvironment): string {
+  return `Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call submit_input with ${environmentNextStepPrefix(environment)}the same agreementId, inputId, values, plus signer, deadline, signatureV, signatureR, signatureS.`;
+}
+
 export function registerWriteTools(
   server: McpServer,
   getClient: ClientResolver,
@@ -159,6 +182,7 @@ export function registerWriteTools(
       description: deployDefinition.description,
       annotations: deployDefinition.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreement: agreementJsonSchema,
         displayName: z.string().min(1).describe('Human-readable name for the deployed agreement record.'),
         chainId: z.number().int().optional().describe('Target EVM chain ID (e.g. 59141 for Linea Sepolia).'),
@@ -177,10 +201,16 @@ export function registerWriteTools(
       },
     },
     async (args) => {
+      let environment: AgreementsApiEnvironment | undefined;
+      try {
+        environment = resolveToolEnvironment(args, options);
+      } catch (error) {
+        return errorResult(error);
+      }
       const permit = extractPermit(args);
       if (permit) {
         return run(async () => {
-          const client = getClient();
+          const client = getClient(environment);
           const preflight = await preflightDeployPayload(client, args);
           const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: false });
           return client.deployWithPermit({
@@ -203,7 +233,7 @@ export function registerWriteTools(
         }
         const chainId = args.chainId;
         return run(async () => {
-          const client = getClient();
+          const client = getClient(environment);
           const preflight = await preflightDeployPayload(client, args);
           const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: true });
           const walletClient = createEnvSignerWalletClient(chainId)!;
@@ -236,6 +266,7 @@ export function registerWriteTools(
       description: submitDefinition.description,
       annotations: submitDefinition.annotations,
       inputSchema: {
+        ...environmentInputSchema(options),
         agreementId: z.string().min(1).describe('Agreement record ID of a deployed agreement.'),
         inputId: z.string().min(1).describe('Input ID defined by the agreement JSON (execution.inputs).'),
         values: z.record(z.unknown()).describe('Values matching the input schema defined by the agreement JSON.'),
@@ -243,10 +274,16 @@ export function registerWriteTools(
       },
     },
     async (args) => {
+      let environment: AgreementsApiEnvironment | undefined;
+      try {
+        environment = resolveToolEnvironment(args, options);
+      } catch (error) {
+        return errorResult(error);
+      }
       const permit = extractPermit(args);
       if (permit) {
         return run(() =>
-          getClient().submitAgreementInput(args.agreementId, {
+          getClient(environment).submitAgreementInput(args.agreementId, {
             inputId: args.inputId,
             values: args.values,
             ...permit,
@@ -256,7 +293,7 @@ export function registerWriteTools(
 
       if (options.allowEnvSigner && getEnvSignerAccount()) {
         return run(async () => {
-          const client = getClient();
+          const client = getClient(environment);
           const record = await client.getAgreement(args.agreementId);
           if (!record.address || !record.json) {
             throw new Error('Agreement is not deployed (missing on-chain address or agreement JSON).');
@@ -289,6 +326,7 @@ export function registerWriteTools(
         'Builds the exact EIP-712 payload that must be signed to authorize deployment of the given agreement JSON. Sign the returned typedData with the deploying wallet (eth_signTypedData_v4 / viem signTypedData), then call deploy_agreement with signer, deadline, and the signature components. No transaction is sent and nothing is stored. Reads the signer nonce from the target chain.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
+        ...environmentInputSchema(options),
         agreement: agreementJsonSchema,
         chainId: z.number().int().describe('Target EVM chain ID (e.g. 59141 for Linea Sepolia).'),
         signerAddress: z.string().describe('Wallet address (0x...) that will sign and own the deployment.'),
@@ -309,7 +347,8 @@ export function registerWriteTools(
     },
     async (args) =>
       run(async () => {
-        const client = getClient();
+        const environment = resolveToolEnvironment(args, options);
+        const client = getClient(environment);
         const preflight = await preflightDeployPayload(client, args);
         const documentLink = resolveDeployDocumentLink(client, args, { generateIfMissing: true });
         const deadline = args.deadline ?? computeDefaultDeadlineSeconds();
@@ -325,8 +364,7 @@ export function registerWriteTools(
           ...prepared,
           ...documentLink,
           ...preflight,
-          nextStep:
-            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, documentId, plus signer, deadline, signatureV, signatureR, signatureS.',
+          nextStep: deploymentPermitNextStep(environment),
           playgroundUrl: PLAYGROUND_URL,
         };
       }),
@@ -340,6 +378,7 @@ export function registerWriteTools(
         'Builds the exact EIP-712 payload that must be signed to authorize submitting an input to a deployed agreement. Sign the returned typedData with a wallet allowed by the input definition, then call submit_input with signer, deadline, and the signature components. No transaction is sent and nothing is stored. Reads the agreement record and signer nonce.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
+        ...environmentInputSchema(options),
         agreementId: z.string().min(1).describe('Agreement record ID of a deployed agreement.'),
         inputId: z.string().min(1).describe('Input ID defined by the agreement JSON (execution.inputs).'),
         values: z.record(z.unknown()).describe('Values matching the input schema (must match the later submit_input call).'),
@@ -353,7 +392,8 @@ export function registerWriteTools(
     },
     async (args) =>
       run(async () => {
-        const record = await getClient().getAgreement(args.agreementId);
+        const environment = resolveToolEnvironment(args, options);
+        const record = await getClient(environment).getAgreement(args.agreementId);
         if (!record.address || !record.json) {
           throw new Error('Agreement is not deployed (missing on-chain address or agreement JSON).');
         }
@@ -369,8 +409,7 @@ export function registerWriteTools(
         });
         return {
           ...prepared,
-          nextStep:
-            'Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call submit_input with the same agreementId, inputId, values, plus signer, deadline, signatureV, signatureR, signatureS.',
+          nextStep: inputPermitNextStep(environment),
           playgroundUrl: PLAYGROUND_URL,
         };
       }),

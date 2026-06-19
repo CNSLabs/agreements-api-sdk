@@ -12,7 +12,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://api.shodai.network/mcp",
+      "url": "https://developers.shodai.network/mcp",
       "headers": [
         {
           "name": "Authorization",

@@ -2,10 +2,10 @@ import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js'
 
 import { SERVER_VERSION } from './server.js';
 
-export const PUBLIC_MCP_URL = 'https://api.shodai.network/mcp';
+export const PUBLIC_MCP_URL = 'https://developers.shodai.network/mcp';
 export const SERVER_CARD_PATH = '/mcp/server-card';
 export const MCP_CATALOG_PATH = '/.well-known/mcp/catalog.json';
-export const SERVER_CARD_URL = 'https://api.shodai.network/mcp/server-card';
+export const SERVER_CARD_URL = 'https://developers.shodai.network/mcp/server-card';
 export const SERVER_CARD_MEDIA_TYPE = 'application/mcp-server-card+json';
 export const DISCOVERY_CACHE_CONTROL = 'public, max-age=3600';
 

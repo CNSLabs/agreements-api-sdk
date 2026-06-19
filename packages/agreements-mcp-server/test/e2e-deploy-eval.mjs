@@ -2,7 +2,7 @@
  * Manual full-lifecycle eval against a live gateway (testnet chain). Not run by `pnpm test`.
  *
  * Usage:
- *   AGREEMENTS_API_BASE_URL=... EVAL_API_KEY=... node test/e2e-deploy-eval.mjs
+ *   AGREEMENTS_API_BASE_URL=... EVAL_API_KEY=... EVAL_API_ENVIRONMENT=testnet node test/e2e-deploy-eval.mjs
  *
  * Exercises custody mode 2 end to end through the MCP server:
  * validate -> preflight -> prepare_deployment_typed_data -> local sign ->
@@ -21,6 +21,7 @@ import { startAgreementsMcpHttpServer } from '../dist/index.js';
 
 const baseUrl = process.env.AGREEMENTS_API_BASE_URL;
 const apiKey = process.env.EVAL_API_KEY;
+const environment = process.env.EVAL_API_ENVIRONMENT ?? 'testnet';
 if (!baseUrl || !apiKey) {
   console.error('Set AGREEMENTS_API_BASE_URL and EVAL_API_KEY.');
   process.exit(1);
@@ -31,7 +32,11 @@ const CHAIN_ID = 59141;
 const partyA = privateKeyToAccount(generatePrivateKey());
 const partyB = privateKeyToAccount(generatePrivateKey());
 
-const server = await startAgreementsMcpHttpServer({ port: 0, host: '127.0.0.1', baseUrl });
+const server = await startAgreementsMcpHttpServer({
+  port: 0,
+  host: '127.0.0.1',
+  baseUrls: { [environment]: baseUrl },
+});
 const mcpUrl = new URL(`http://127.0.0.1:${server.address().port}/mcp`);
 const client = new Client({ name: 'e2e-deploy-eval', version: '0.0.1' });
 await client.connect(
@@ -39,7 +44,7 @@ await client.connect(
 );
 
 async function call(name, args) {
-  const result = await client.callTool({ name, arguments: args });
+  const result = await client.callTool({ name, arguments: { environment, ...args } });
   const text = result.content?.[0]?.text ?? '';
   if (result.isError) {
     throw new Error(`${name} failed: ${text.slice(0, 600)}`);

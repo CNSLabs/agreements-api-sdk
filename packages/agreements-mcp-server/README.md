@@ -4,12 +4,7 @@
 
 The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
-## Hosted endpoints
-
-| Environment | MCP endpoint |
-| --- | --- |
-| Testnet | `https://test-api.shodai.network/mcp` |
-| Production | `https://api.shodai.network/mcp` |
+## Hosted endpoint
 
 Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this hosted setup contract:
 
@@ -17,16 +12,21 @@ Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this ho
 Configure Shodai as a remote Streamable HTTP MCP server.
 
 URL:
-https://test-api.shodai.network/mcp
+https://developers.shodai.network/mcp
 
 Auth:
 Authorization: Bearer $SHODAI_API_KEY
 
 Key shape:
 cns_pk_...
+
+Tool environment:
+testnet
+
+Use this value as the environment argument on API-calling tools. API keys only work in the environment where they were created.
 ```
 
-For production, use `https://api.shodai.network/mcp`. OAuth and JWT bearer tokens are not supported.
+Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`. OAuth and JWT bearer tokens are not supported.
 
 Get an API key from the [Developer Portal](https://developers.shodai.network). Full client setup, tool reference, and signing guidance: [Connect via MCP](https://docs.shodai.network/sdks/connect-via-mcp).
 
@@ -62,6 +62,8 @@ Stdio environment variables:
 
 Most tools call the public `/v0` API through the TypeScript client and carry MCP behavior annotations (`readOnlyHint`, `destructiveHint`). A few tools perform more than one operation to keep signing and deployment safe.
 
+On the hosted endpoint, every API-calling tool below requires `environment: "testnet" | "production"`. Local stdio mode uses the fixed environment from `AGREEMENTS_API_ENVIRONMENT` instead.
+
 | Tool | Wraps | Scope |
 | --- | --- | --- |
 | `list_agreements` | `GET /v0/agreements` | `agreements.read` |
@@ -95,7 +97,7 @@ Deploys and input submissions require EIP-712 permits. Three supported modes:
 2. **Prepare typed data, sign externally** — call `prepare_deployment_typed_data` / `prepare_input_typed_data` to get the exact EIP-712 payload, sign it with any EIP-712-capable signer, then call the write tool. For deployments, pass the returned `normalizedInitValues`, `normalizedParticipants`, and `normalizedObservers` back to `deploy_agreement` with the signature.
 3. **Local environment signer (stdio only)** — set `AGREEMENTS_SIGNER_PRIVATE_KEY` and write tools sign locally. Dev/testnet pattern; the hosted endpoint never signs with server-side keys.
 
-Minimal hosted flow: read `simple-example-agreement`, call `validate_agreement`, `preflight_deployment`, `prepare_deployment_typed_data` with `agreement`/`chainId`/`signerAddress` and intended deployment context, sign externally, then call `deploy_agreement` with `displayName`, matching `docUri`, normalized deployment fields, and permit fields. For inputs, call `prepare_input_typed_data` with `agreementId`/`inputId`/`values`/`signerAddress`, sign externally, call `submit_input`, then reread state and input history.
+Minimal hosted flow: read `simple-example-agreement`, call `validate_agreement`, `preflight_deployment`, `prepare_deployment_typed_data` with `environment`/`agreement`/`chainId`/`signerAddress` and intended deployment context, sign externally, then call `deploy_agreement` with the same `environment`, `displayName`, matching `docUri`, normalized deployment fields, and permit fields. For inputs, call `prepare_input_typed_data` with `environment`/`agreementId`/`inputId`/`values`/`signerAddress`, sign externally, call `submit_input` with the same `environment`, then reread state and input history.
 
 Hosted MCP receives signed permit fields only, never private keys. Private-key environment signing is for local stdio development and testnet automation only.
 
@@ -106,7 +108,7 @@ npm install @cns-labs/agreements-mcp-server
 agreements-mcp-server-http   # Streamable HTTP on PORT (default 3905), endpoint /mcp
 ```
 
-HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_ENVIRONMENT`, `AGREEMENTS_API_BASE_URL`.
+HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_TESTNET_BASE_URL`, `AGREEMENTS_API_PRODUCTION_BASE_URL`, and optional local `AGREEMENTS_API_BASE_URL` for single-origin testing.
 
 A `Dockerfile` is included for container deployments. `GET /healthz` serves as the health endpoint.
 
