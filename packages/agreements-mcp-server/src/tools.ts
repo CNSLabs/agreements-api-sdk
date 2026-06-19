@@ -8,7 +8,7 @@ import {
   type AgreementsApiEnvironment,
   type SortFilter,
   type AgreementListSortField,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 
 import { getToolDefinition } from './manifest.js';
 

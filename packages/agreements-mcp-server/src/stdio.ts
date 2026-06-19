@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Local stdio entrypoint. Builds a fixed Agreements API client from environment
- * variables, mirroring `@cns-labs/agreements-api-client` conventions:
+ * variables, mirroring `@shodai-network/agreements-api-client` conventions:
  *
  * - `AGREEMENTS_API_KEY` (or `API_KEY`): API key sent as `X-API-Key`.
  * - `AGREEMENTS_API_ENVIRONMENT`: `testnet` (default) or `production`.
@@ -10,7 +10,7 @@
  * - `AGREEMENTS_RPC_URL` / `AGREEMENTS_RPC_URL_<chainId>`: optional RPC overrides for signing.
  */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { ApiClient, type AgreementsApiEnvironment } from '@cns-labs/agreements-api-client';
+import { ApiClient, type AgreementsApiEnvironment } from '@shodai-network/agreements-api-client';
 
 import { createAgreementsMcpServer } from './server.js';
 

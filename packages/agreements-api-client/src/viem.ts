@@ -1,5 +1,5 @@
 /**
- * EIP-712 permit signing helpers using `@cns-labs/agreements-protocol-evm` + `viem`,
+ * EIP-712 permit signing helpers using `@shodai-network/agreements-protocol-evm` + `viem`,
  * matching the Agreements API playground deploy and input flows.
  */
 
@@ -10,7 +10,7 @@ import {
   type AgreementJson,
   type CreateAgreementOptions,
   type InitValue,
-} from '@cns-labs/agreements-protocol-evm';
+} from '@shodai-network/agreements-protocol-evm';
 import type { Address, Hex, PublicClient, WalletClient } from 'viem';
 
 import type { ApiClient } from './client.js';

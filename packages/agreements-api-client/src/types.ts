@@ -1,6 +1,6 @@
 /**
  * Types aligned with the public Agreements API OpenAPI contract.
- * Agreement JSON follows `@cns-labs/agreements-protocol-evm` `AgreementJson` at runtime.
+ * Agreement JSON follows `@shodai-network/agreements-protocol-evm` `AgreementJson` at runtime.
  */
 
 export type PermitSignature = {

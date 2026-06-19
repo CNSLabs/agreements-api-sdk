@@ -1,6 +1,6 @@
 # Agreements API Client Development
 
-Maintainer notes for `@cns-labs/agreements-api-client`.
+Maintainer notes for `@shodai-network/agreements-api-client`.
 
 ## Role in the Repository
 
@@ -21,13 +21,13 @@ Primary files to check:
 Build:
 
 ```bash
-pnpm --filter @cns-labs/agreements-api-client run build
+pnpm --filter @shodai-network/agreements-api-client run build
 ```
 
 Typecheck:
 
 ```bash
-pnpm --filter @cns-labs/agreements-api-client run lint
+pnpm --filter @shodai-network/agreements-api-client run lint
 ```
 
 ## Publishing

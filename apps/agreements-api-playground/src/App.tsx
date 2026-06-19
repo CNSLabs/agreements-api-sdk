@@ -18,8 +18,8 @@ import {
   type ApiResponse,
   type DirectParticipantRecord,
   type ListResponse,
-} from '@cns-labs/agreements-api-client';
-import type { AgreementJson, InitValue } from '@cns-labs/agreements-protocol-evm';
+} from '@shodai-network/agreements-api-client';
+import type { AgreementJson, InitValue } from '@shodai-network/agreements-protocol-evm';
 import { createPublicClient, createWalletClient, custom, http, type Address, type Chain } from 'viem';
 import { base, baseSepolia, linea, lineaSepolia, sepolia } from 'viem/chains';
 import { createBrowserTelemetryHeaders } from './telemetry';

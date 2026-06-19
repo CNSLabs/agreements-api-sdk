@@ -25,7 +25,7 @@
 - [Errors and troubleshooting](https://docs.shodai.network/reference/errors-and-troubleshooting.md): Resolve common API authentication, entitlement, validation, signing, deployment, and input-submission failures.
 - [May 2026 API/SDK Response Migration](https://docs.shodai.network/reference/migrations/may-2026-api-sdk-response-migration.md): Update Agreements API integrations for response envelopes, paged list results, filtering, sorting, and normalized error payloads.
 - [May 2026 Multi-Chain Migration](https://docs.shodai.network/reference/migrations/may-2026-multi-chain-migration.md): Update Agreements API integrations for explicit deployment chain selection, multi-chain signing, and the 0.3.0 TypeScript client changes.
-- [TypeScript client](https://docs.shodai.network/sdks/typescript-client.md): Use the `@cns-labs/agreements-api-client` SDK for typed API calls, signing helpers, diagnostics, and path helpers.
+- [TypeScript client](https://docs.shodai.network/sdks/typescript-client.md): Use the `@shodai-network/agreements-api-client` SDK for typed API calls, signing helpers, diagnostics, and path helpers.
 - [Contracts](https://docs.shodai.network/system-architecture/contracts.md): Find current Agreements Protocol EVM contract addresses and verified source links.
 - [Agreement data standard](https://docs.shodai.network/system-architecture/data-standard.md): Understand how the data standard defines agreement definitions: human-readable content, variables, participants, inputs, states, transitions, and execution history.
 - [Onchain execution engine](https://docs.shodai.network/system-architecture/on-chain.md): Understand how the EVM execution engine deploys agreement definitions and enforces valid inputs, issuers, states, transitions, and history.
