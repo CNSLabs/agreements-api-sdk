@@ -15,10 +15,13 @@ import {
   createAgreementsMcpCatalog,
   createAgreementsMcpServerCard,
   DISCOVERY_CACHE_CONTROL,
+  LEGACY_SERVER_CARD_PATH,
+  MCP_JSON_SERVER_CARD_PATH,
   MCP_CATALOG_PATH,
   PUBLIC_MCP_URL,
   SERVER_CARD_MEDIA_TYPE,
   SERVER_CARD_PATH,
+  SERVER_CARD_PATHS,
   SERVER_CARD_URL,
   SERVER_VERSION,
   startAgreementsMcpHttpServer,
@@ -34,7 +37,7 @@ const DEVELOPERS_DISCOVERY_HEADERS = {
   'CloudFront-Forwarded-Proto': 'https',
 };
 const DEVELOPERS_MCP_URL = 'https://developers.shodai.network/mcp';
-const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/mcp/server-card';
+const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/.well-known/mcp/server-card.json';
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
@@ -207,6 +210,17 @@ test('catalog discovery metadata points to the hosted server card', () => {
       },
     ],
   });
+});
+
+test('server card discovery paths cover current conventions and legacy route', () => {
+  assert.equal(SERVER_CARD_PATH, '/.well-known/mcp/server-card.json');
+  assert.equal(MCP_JSON_SERVER_CARD_PATH, '/.well-known/mcp.json');
+  assert.equal(LEGACY_SERVER_CARD_PATH, '/mcp/server-card');
+  assert.deepEqual(SERVER_CARD_PATHS, [
+    '/.well-known/mcp/server-card.json',
+    '/.well-known/mcp.json',
+    '/mcp/server-card',
+  ]);
 });
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
@@ -419,15 +433,17 @@ async function connectClient(mcpUrl, { apiKey, headers } = {}) {
   return client;
 }
 
-test('serves the MCP server card discovery endpoint without auth', async () => {
+test('serves MCP server card discovery endpoints without auth', async () => {
   const env = await startServers();
   try {
-    const response = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
-    assert.equal(response.status, 200);
-    assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
-    assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
-    assert.equal(response.headers.get('access-control-allow-origin'), '*');
-    assert.deepEqual(await response.json(), createAgreementsMcpServerCard(DEVELOPERS_MCP_URL));
+    for (const path of SERVER_CARD_PATHS) {
+      const response = await getJsonResponse(new URL(path, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+      assert.equal(response.status, 200);
+      assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
+      assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
+      assert.equal(response.headers.get('access-control-allow-origin'), '*');
+      assert.deepEqual(await response.json(), createAgreementsMcpServerCard(DEVELOPERS_MCP_URL));
+    }
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();

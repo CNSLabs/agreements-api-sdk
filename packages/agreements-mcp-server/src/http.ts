@@ -15,6 +15,7 @@ import {
   PUBLIC_MCP_URL,
   SERVER_CARD_MEDIA_TYPE,
   SERVER_CARD_PATH,
+  SERVER_CARD_PATHS,
 } from './discovery.js';
 
 export type AgreementsMcpHttpOptions = {
@@ -185,6 +186,10 @@ function publicDiscoveryUrls(req: IncomingMessage, mcpPath: string): { publicMcp
   };
 }
 
+function isServerCardPath(pathname: string): boolean {
+  return SERVER_CARD_PATHS.some((path) => path === pathname);
+}
+
 function isJwtShaped(token: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
 }
@@ -232,7 +237,7 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       return;
     }
 
-    if (req.method === 'GET' && url.pathname === SERVER_CARD_PATH) {
+    if (req.method === 'GET' && isServerCardPath(url.pathname)) {
       const { publicMcpUrl } = publicDiscoveryUrls(req, mcpPath);
       sendJson(res, 200, createAgreementsMcpServerCard(publicMcpUrl), {
         'Content-Type': SERVER_CARD_MEDIA_TYPE,
