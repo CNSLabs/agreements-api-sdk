@@ -1,6 +1,6 @@
 {
   "name": "@cns-labs/agreements-api-client",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
   "author": "Agreements API Maintainers",
   "license": "Apache-2.0",
@@ -37,7 +37,7 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@cns-labs/agreements-protocol-evm": "^0.1.3",
+    "@cns-labs/agreements-protocol-evm": "^0.1.4",
     "viem": "^2.43.0"
   },
   "devDependencies": {

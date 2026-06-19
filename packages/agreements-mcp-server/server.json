@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "network.shodai/agreements",
+  "title": "Shodai Agreements",
+  "description": "Author, validate, deploy, and operate Shodai on-chain agreements.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/CNSLabs/agreements-api-sdk",
+    "source": "github",
+    "subfolder": "packages/agreements-mcp-server"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://developers.shodai.network/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer API key, e.g. Bearer cns_pk_...",
+          "isRequired": true,
+          "isSecret": true,
+          "placeholder": "Bearer cns_pk_..."
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import {
   resolveApiBaseUrl,
   submitAgreementInputWithPermit,
   type AgreementInputRecord,
+  type AgreementDocumentResponse,
   type AgreementRecord,
   type AgreementStateResponse,
   type AgreementsApiEnvironment,
@@ -242,6 +243,10 @@ function App() {
     const agreement = tryAgreementJson(loadedAgreement?.json);
     return getExecutionInputs(agreement)[selectedInputId] || null;
   }, [loadedAgreement?.json, selectedInputId]);
+  const loadedDocumentId = useMemo(
+    () => loadedAgreement?.documentId || extractDocumentIdFromDocUri(loadedAgreement?.docUri),
+    [loadedAgreement?.documentId, loadedAgreement?.docUri],
+  );
   const curlPreview = useMemo(() => {
     const parts = ['curl', '-i'];
     if (path.includes('[') || path.includes(']')) parts.push('--globoff');
@@ -588,6 +593,27 @@ function App() {
     }
   }
 
+  async function loadAgreementDocument() {
+    if (!loadedDocumentId) {
+      setError('Load an agreement with a documentId first.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const envelope = await runAgreementsRequest<ApiResponse<AgreementDocumentResponse>>({
+        method: 'GET',
+        path: `${API_BASE_PATH}/agreements/documents/${encodeURIComponent(loadedDocumentId)}`,
+      });
+      const document = unwrapResourceEnvelope(envelope, 'agreement document');
+      setNotice(`Agreement document loaded: ${document.contentType}.`);
+    } catch (documentError) {
+      setError(documentError instanceof Error ? documentError.message : String(documentError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitInput() {
     setBusy(true);
     setError('');
@@ -669,6 +695,7 @@ function App() {
     participantsText,
     observersText,
     docUri,
+    documentId: loadedDocumentId,
     chainId: deployChain.chainId,
     selectedInputId,
   });
@@ -894,7 +921,7 @@ function App() {
                 <div className="pl-panel-head"><h2>Lookup</h2></div>
                 <div className="pl-panel-body">
                   <label className="pl-field"><span>Agreement ID</span><input value={agreementId} onChange={event => setAgreementId(event.target.value)} placeholder="agreement uuid" /></label>
-                  <div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void loadAgreement()}>Load Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadState()}>Load State</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Inputs</button></div>
+                  <div className="pl-row"><button type="button" className="pl-btn pl-btn-primary" disabled={busy} onClick={() => void loadAgreement()}>Load Agreement</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadState()}>Load State</button><button type="button" className="pl-btn" disabled={busy || !agreementId.trim()} onClick={() => void loadInputs()}>Load Inputs</button><button type="button" className="pl-btn" disabled={busy || !loadedDocumentId} onClick={() => void loadAgreementDocument()}>Load Document</button></div>
                   {error ? <div className="pl-banner pl-banner-error"><span className="pl-banner-mark">✕</span>{error}</div> : null}
                   {notice ? <div className="pl-banner"><span className="pl-banner-mark">✓</span>{notice}</div> : null}
                 </div>
@@ -902,7 +929,7 @@ function App() {
               <section className="pl-panel">
                 <div className="pl-panel-head"><h2>Loaded Agreement</h2></div>
                 <div className="pl-panel-body">
-                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
+                  {loadedAgreement ? <div className="pl-status-grid"><div className="pl-status-row"><span>ID</span><strong>{loadedAgreement.id}</strong></div><div className="pl-status-row"><span>Status</span><strong>{loadedAgreement.status || '—'}</strong></div><div className="pl-status-row"><span>Chain</span><strong>{loadedAgreement.chainId}</strong></div><div className="pl-status-row"><span>Address</span><strong>{loadedAgreement.address || 'Not deployed'}</strong></div><div className="pl-status-row"><span>Document</span><strong>{loadedDocumentId || '—'}</strong></div></div> : <div className="pl-empty">Load an agreement to inspect its record and discover available inputs.</div>}
                   <button type="button" className="pl-btn" disabled={!loadedAgreement} onClick={() => setActiveView('input')}>Use This For Input Submission →</button>
                 </div>
               </section>
@@ -1095,6 +1122,7 @@ function CodeBlock({ title, children, copyText }: { title: string; children: str
 
 function buildQuickActions(params: {
   agreementId: string;
+  documentId?: string;
   chainId: number;
   agreementJsonText: string;
   displayName: string;
@@ -1105,6 +1133,7 @@ function buildQuickActions(params: {
   selectedInputId: string;
 }) {
   const agreementId = params.agreementId.trim() || 'agreement-123';
+  const documentId = params.documentId?.trim() || 'document-id';
   const selectedInputId = params.selectedInputId.trim() || 'approve';
   const recentSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const agreement = parseJsonObjectLoose(params.agreementJsonText, SAMPLE_AGREEMENT);
@@ -1159,6 +1188,7 @@ function buildQuickActions(params: {
     { id: 'validate-template', label: 'Validate Template', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate-template`, body: JSON.stringify(agreement, null, 2), note: 'Validate only the inline agreement JSON.' },
     { id: 'validate', label: 'Validate Payload', method: 'POST' as const, path: `${API_BASE_PATH}/agreements/validate`, body: JSON.stringify(validateBody, null, 2), note: 'Validate the full deployment payload.' },
     { id: 'agreement', label: 'Get Agreement', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}`, note: 'Fetch one agreement record.' },
+    { id: 'document', label: 'Get Document', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/documents/${encodeURIComponent(documentId)}`, note: 'Fetch rendered agreement prose by documentId.' },
     { id: 'state', label: 'Get State', method: 'GET' as const, path: `${API_BASE_PATH}/agreements/${agreementId}/state`, note: 'Read the current agreement state.' },
     {
       id: 'inputs',
@@ -1213,6 +1243,12 @@ function buildQueryPath(path: string, params: Array<[string, string | number | u
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join('&');
   return query ? `${path}?${query}` : path;
+}
+
+function extractDocumentIdFromDocUri(docUri: string | undefined): string | undefined {
+  if (!docUri) return undefined;
+  const match = docUri.match(/\/agreements\/documents\/([^/?#]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
 }
 
 const DEFAULT_TESTNET_DEPLOY_CHAIN_IDS = [lineaSepolia.id, sepolia.id, baseSepolia.id] as const;

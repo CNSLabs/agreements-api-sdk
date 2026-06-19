@@ -21,6 +21,7 @@ import type {
   DirectParticipantRecord,
   ProcessInputRequest,
 } from './types.js';
+import { agreementsApiPaths, joinUrl } from './utils.js';
 
 export type SignDeployPermitParams = {
   walletClient: WalletClient;
@@ -136,6 +137,7 @@ export type DeployWithPermitCallParams = {
   participants?: DirectParticipantRecord[];
   observers?: string[];
   docUri?: string;
+  documentId?: string;
   deadline?: number;
   /**
    * Extra options passed to `AgreementFactory.createPermitSignature`.
@@ -153,7 +155,15 @@ export async function deployAgreementWithPermit(
   const deadline = params.deadline ?? computeDefaultDeadlineSeconds();
   const chainId = await resolveSigningChainId(params.publicClient, params.chainId);
 
-  const docUriRaw = params.docUri ?? params.permitOptions?.docUri;
+  const generatedDocumentId =
+    params.docUri === undefined && params.permitOptions?.docUri === undefined
+      ? params.documentId ?? createAgreementDocumentId()
+      : params.documentId;
+  const generatedDocUri =
+    params.docUri === undefined && params.permitOptions?.docUri === undefined && generatedDocumentId !== undefined
+      ? buildAgreementDocumentUri(params.client, generatedDocumentId)
+      : undefined;
+  const docUriRaw = params.docUri ?? params.permitOptions?.docUri ?? generatedDocUri;
   const docUri = docUriRaw !== undefined && docUriRaw !== '' ? docUriRaw : undefined;
   const initValues = params.initValues ?? params.permitOptions?.initValues;
 
@@ -186,9 +196,22 @@ export async function deployAgreementWithPermit(
     signature,
     ...(initValues !== undefined ? { initValues } : {}),
     ...(docUri !== undefined ? { docUri } : {}),
+    ...(generatedDocumentId !== undefined ? { documentId: generatedDocumentId } : {}),
   };
 
   return params.client.deployWithPermit(body);
+}
+
+export function createAgreementDocumentId(): string {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (!randomUUID) {
+    throw new Error('Unable to generate agreement documentId; provide docUri or documentId explicitly.');
+  }
+  return randomUUID.call(globalThis.crypto);
+}
+
+export function buildAgreementDocumentUri(client: ApiClient, documentId: string): string {
+  return joinUrl(client.getBaseUrl(), agreementsApiPaths.agreementDocument(documentId));
 }
 
 async function resolveSigningChainId(publicClient: PublicClient, requestedChainId?: number): Promise<number> {
