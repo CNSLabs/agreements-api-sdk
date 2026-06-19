@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "build": "pnpm -r build",
-    "build:client": "pnpm --filter @cns-labs/agreements-api-client build",
+    "build:client": "pnpm --filter @shodai-network/agreements-api-client build",
     "build:playground": "pnpm --filter agreements-api-playground build",
     "dev:playground": "pnpm --filter agreements-api-playground dev",
     "lint": "pnpm -r lint"

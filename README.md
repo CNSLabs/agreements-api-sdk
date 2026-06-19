@@ -7,18 +7,18 @@ Open-source home for the TypeScript client for the Agreements API and the refere
 Most consumers should install the published npm package rather than this monorepo:
 
 ```bash
-npm install @cns-labs/agreements-api-client
+npm install @shodai-network/agreements-api-client
 ```
 
 Add `viem` if you want to use the built-in permit-signing helpers for deploy and input submission:
 
 ```bash
-npm install @cns-labs/agreements-api-client viem
+npm install @shodai-network/agreements-api-client viem
 ```
 
 ## What This Repository Contains
 
-- `packages/agreements-api-client`: publishable npm package `@cns-labs/agreements-api-client`
+- `packages/agreements-api-client`: publishable npm package `@shodai-network/agreements-api-client`
 - `apps/agreements-api-playground`: reference Vite app for validating agreements, deploying with permits, inspecting state, and submitting inputs
 
 ## Start Here

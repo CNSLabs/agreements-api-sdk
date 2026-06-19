@@ -4,7 +4,7 @@ import {
   ApiClient,
   resolveApiBaseUrl,
   type AgreementsApiEnvironment,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 
 import { createAgreementsMcpServer } from './server.js';
 import {

@@ -1,7 +1,7 @@
 {
-  "name": "@cns-labs/agreements-mcp-server",
+  "name": "@shodai-network/agreements-mcp-server",
   "version": "0.1.0",
-  "description": "Model Context Protocol server for the Agreements API, built on @cns-labs/agreements-api-client",
+  "description": "Model Context Protocol server for the Agreements API, built on @shodai-network/agreements-api-client",
   "author": "Agreements API Maintainers",
   "license": "MIT",
   "repository": {
@@ -51,7 +51,7 @@
     "start:stdio": "node dist/stdio.js"
   },
   "dependencies": {
-    "@cns-labs/agreements-api-client": "workspace:^",
+    "@shodai-network/agreements-api-client": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "viem": "^2.43.0",
     "zod": "^3.25.1"

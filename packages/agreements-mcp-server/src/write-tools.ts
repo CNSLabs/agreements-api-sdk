@@ -11,7 +11,7 @@ import {
   type AgreementsApiEnvironment,
   type DirectParticipantRecord,
   type PermitSignature,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 import type { Address } from 'viem';
 
 import { getToolDefinition } from './manifest.js';
