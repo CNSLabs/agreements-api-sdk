@@ -1,17 +1,39 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { createServer, request } from 'node:http';
 import test from 'node:test';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 
 import {
+  AGREEMENTS_MCP_CATALOG,
+  AGREEMENTS_MCP_SERVER_CARD,
   AGREEMENTS_MCP_TOOLS,
   AGREEMENTS_MCP_RESOURCES,
+  createAgreementsMcpCatalog,
+  createAgreementsMcpServerCard,
+  DISCOVERY_CACHE_CONTROL,
+  MCP_CATALOG_PATH,
+  PUBLIC_MCP_URL,
+  SERVER_CARD_MEDIA_TYPE,
+  SERVER_CARD_PATH,
+  SERVER_CARD_URL,
+  SERVER_VERSION,
   startAgreementsMcpHttpServer,
 } from '../dist/index.js';
 import { resolveRpcUrl } from '../dist/signing.js';
 
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const registryServerJson = JSON.parse(readFileSync(new URL('../server.json', import.meta.url), 'utf8'));
+
+const TESTNET_DISCOVERY_HEADERS = {
+  Host: 'test-api.shodai.network',
+  'CloudFront-Forwarded-Proto': 'https',
+};
+const TESTNET_MCP_URL = 'https://test-api.shodai.network/mcp';
+const TESTNET_SERVER_CARD_URL = 'https://test-api.shodai.network/mcp/server-card';
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
@@ -71,6 +93,119 @@ function withEnv(overrides, callback) {
     }
   }
 }
+
+function getJsonResponse(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: `${url.pathname}${url.search}`,
+        method: 'GET',
+        headers,
+      },
+      (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          body += chunk;
+        });
+        res.on('end', () => {
+          resolve({
+            status: res.statusCode,
+            headers: {
+              get(name) {
+                const value = res.headers[name.toLowerCase()];
+                if (Array.isArray(value)) return value.join(', ');
+                return value ?? null;
+              },
+            },
+            async json() {
+              return JSON.parse(body);
+            },
+          });
+        });
+      },
+    );
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+test('registry server.json describes the hosted remote MCP server only', () => {
+  assert.equal(
+    registryServerJson.$schema,
+    'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json',
+  );
+  assert.equal(registryServerJson.name, 'network.shodai/agreements');
+  assert.equal(registryServerJson.title, 'Shodai Agreements');
+  assert.equal(registryServerJson.version, packageJson.version);
+  assert.equal(registryServerJson.version, SERVER_VERSION);
+  assert.ok(registryServerJson.description.length <= 100);
+  assert.deepEqual(registryServerJson.repository, {
+    url: 'https://github.com/CNSLabs/agreements-api-sdk',
+    source: 'github',
+    subfolder: 'packages/agreements-mcp-server',
+  });
+  assert.equal('packages' in registryServerJson, false);
+
+  assert.equal(registryServerJson.remotes.length, 1);
+  const [remote] = registryServerJson.remotes;
+  assert.equal(remote.type, 'streamable-http');
+  assert.equal(remote.url, 'https://api.shodai.network/mcp');
+
+  assert.equal(remote.headers.length, 1);
+  const [authorizationHeader] = remote.headers;
+  assert.equal(authorizationHeader.name, 'Authorization');
+  assert.equal(authorizationHeader.isRequired, true);
+  assert.equal(authorizationHeader.isSecret, true);
+  assert.match(authorizationHeader.description, /Bearer cns_pk_/);
+  assert.match(authorizationHeader.placeholder, /Bearer cns_pk_/);
+});
+
+test('server card discovery metadata stays aligned with the registry metadata', () => {
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.$schema, 'https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json');
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.name, registryServerJson.name);
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.title, registryServerJson.title);
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.description, registryServerJson.description);
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, registryServerJson.version);
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, SERVER_VERSION);
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.websiteUrl, 'https://docs.shodai.network/sdks/connect-via-mcp');
+  assert.deepEqual(AGREEMENTS_MCP_SERVER_CARD.repository, registryServerJson.repository);
+
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.remotes.length, 1);
+  const [serverCardRemote] = AGREEMENTS_MCP_SERVER_CARD.remotes;
+  const [registryRemote] = registryServerJson.remotes;
+  assert.equal(serverCardRemote.type, registryRemote.type);
+  assert.equal(serverCardRemote.url, registryRemote.url);
+  assert.equal(serverCardRemote.url, PUBLIC_MCP_URL);
+  assert.deepEqual(serverCardRemote.supportedProtocolVersions, SUPPORTED_PROTOCOL_VERSIONS);
+
+  assert.equal(serverCardRemote.headers.length, 1);
+  const [serverCardAuthorizationHeader] = serverCardRemote.headers;
+  const [registryAuthorizationHeader] = registryRemote.headers;
+  assert.equal(serverCardAuthorizationHeader.name, registryAuthorizationHeader.name);
+  assert.equal(serverCardAuthorizationHeader.isRequired, registryAuthorizationHeader.isRequired);
+  assert.equal(serverCardAuthorizationHeader.isSecret, registryAuthorizationHeader.isSecret);
+  assert.equal(serverCardAuthorizationHeader.value, 'Bearer {token}');
+  assert.match(serverCardAuthorizationHeader.variables.token.description, /cns_pk_/);
+  assert.equal(serverCardAuthorizationHeader.variables.token.isRequired, true);
+  assert.equal(serverCardAuthorizationHeader.variables.token.isSecret, true);
+});
+
+test('catalog discovery metadata points to the hosted server card', () => {
+  assert.deepEqual(AGREEMENTS_MCP_CATALOG, {
+    specVersion: 'draft',
+    entries: [
+      {
+        identifier: 'urn:mcp:server:network.shodai/agreements',
+        displayName: 'Shodai Agreements',
+        mediaType: SERVER_CARD_MEDIA_TYPE,
+        url: SERVER_CARD_URL,
+      },
+    ],
+  });
+});
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
 function startStubGateway() {
@@ -272,6 +407,38 @@ async function connectClient(mcpUrl, { apiKey, headers } = {}) {
   await client.connect(transport);
   return client;
 }
+
+test('serves the MCP server card discovery endpoint without auth', async () => {
+  const env = await startServers();
+  try {
+    const response = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), TESTNET_DISCOVERY_HEADERS);
+    assert.equal(response.status, 200);
+    assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
+    assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    assert.deepEqual(await response.json(), createAgreementsMcpServerCard(TESTNET_MCP_URL));
+    assert.equal(env.gateway.requests.length, 0);
+  } finally {
+    await env.close();
+  }
+});
+
+test('serves the MCP catalog discovery endpoint without auth', async () => {
+  const env = await startServers();
+  try {
+    const response = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), TESTNET_DISCOVERY_HEADERS);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^application\/json/);
+    assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
+    assert.equal(response.headers.get('access-control-allow-origin'), '*');
+    const catalog = await response.json();
+    assert.deepEqual(catalog, createAgreementsMcpCatalog(TESTNET_SERVER_CARD_URL));
+    assert.equal(catalog.entries[0].url, TESTNET_SERVER_CARD_URL);
+    assert.equal(env.gateway.requests.length, 0);
+  } finally {
+    await env.close();
+  }
+});
 
 test('lists the manifest tool surface plus permit-preparation tools', async () => {
   const env = await startServers();

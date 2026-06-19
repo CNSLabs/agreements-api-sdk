@@ -76,7 +76,16 @@ Most tools call the public `/v0` API through the TypeScript client and carry MCP
 | `prepare_deployment_typed_data` | `POST /v0/agreements/validate`, then local EIP-712 payload construction with a chain nonce read | `agreements.write` |
 | `prepare_input_typed_data` | `GET /v0/agreements/{id}`, then local EIP-712 payload construction with a chain nonce read | `agreements.write` |
 
-Resources: the simple and complex example agreements, the Author Agreement JSON guide, and the documentation index. Prompt: `author_agreement` (business description → agreement JSON).
+Resources are discoverable with `resources/list`:
+
+| Resource | URI |
+| --- | --- |
+| `simple-example-agreement` | `agreements://examples/simple-agreement.json` |
+| `complex-example-agreement` | `agreements://examples/complex-agreement.json` |
+| `authoring-guide` | `agreements://docs/author-agreement-json.md` |
+| `docs-index` | `agreements://docs/index.md` |
+
+Prompt: `author_agreement` (business description → agreement JSON).
 
 ## Signing custody modes
 
@@ -85,6 +94,10 @@ Deploys and input submissions require EIP-712 permits. Three supported modes:
 1. **Pre-signed permit** — the agent or host app holds a wallet, signs externally, and passes `signer`/`deadline`/`signature` to `deploy_agreement` or `submit_input`.
 2. **Prepare typed data, sign externally** — call `prepare_deployment_typed_data` / `prepare_input_typed_data` to get the exact EIP-712 payload, sign it with any EIP-712-capable signer, then call the write tool. For deployments, pass the returned `normalizedInitValues`, `normalizedParticipants`, and `normalizedObservers` back to `deploy_agreement` with the signature.
 3. **Local environment signer (stdio only)** — set `AGREEMENTS_SIGNER_PRIVATE_KEY` and write tools sign locally. Dev/testnet pattern; the hosted endpoint never signs with server-side keys.
+
+Minimal hosted flow: read `simple-example-agreement`, call `validate_agreement`, `preflight_deployment`, `prepare_deployment_typed_data` with `agreement`/`chainId`/`signerAddress` and intended deployment context, sign externally, then call `deploy_agreement` with `displayName`, matching `docUri`, normalized deployment fields, and permit fields. For inputs, call `prepare_input_typed_data` with `agreementId`/`inputId`/`values`/`signerAddress`, sign externally, call `submit_input`, then reread state and input history.
+
+Hosted MCP receives signed permit fields only, never private keys. Private-key environment signing is for local stdio development and testnet automation only.
 
 ## Self-hosting
 
