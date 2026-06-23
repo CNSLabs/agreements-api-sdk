@@ -41,6 +41,10 @@ export class ApiClient {
     this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   async getOpenApiDocument(): Promise<unknown> {
     return this.request<unknown>('GET', agreementsApiPaths.openapiJson());
   }
