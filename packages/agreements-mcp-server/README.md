@@ -12,7 +12,7 @@ Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this ho
 Configure Shodai as a remote Streamable HTTP MCP server.
 
 URL:
-https://developers.shodai.network/mcp
+https://shodai.network/mcp
 
 Auth:
 Authorization: Bearer $SHODAI_API_KEY

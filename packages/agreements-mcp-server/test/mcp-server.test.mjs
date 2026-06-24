@@ -12,6 +12,7 @@ import {
   AGREEMENTS_MCP_SERVER_CARD,
   AGREEMENTS_MCP_TOOLS,
   AGREEMENTS_MCP_RESOURCES,
+  createAgreementsMcpHttpServer,
   createAgreementsMcpCatalog,
   createAgreementsMcpServerCard,
   DISCOVERY_CACHE_CONTROL,
@@ -36,6 +37,8 @@ const DEVELOPERS_DISCOVERY_HEADERS = {
   Host: 'developers.shodai.network',
   'CloudFront-Forwarded-Proto': 'https',
 };
+const CANONICAL_MCP_URL = 'https://shodai.network/mcp';
+const CANONICAL_SERVER_CARD_URL = 'https://shodai.network/.well-known/mcp/server-card.json';
 const DEVELOPERS_MCP_URL = 'https://developers.shodai.network/mcp';
 const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/.well-known/mcp/server-card.json';
 const TEST_API_KEY = 'cns_pk_test_key';
@@ -157,7 +160,7 @@ test('registry server.json describes the hosted remote MCP server only', () => {
   assert.equal(registryServerJson.remotes.length, 1);
   const [remote] = registryServerJson.remotes;
   assert.equal(remote.type, 'streamable-http');
-  assert.equal(remote.url, DEVELOPERS_MCP_URL);
+  assert.equal(remote.url, CANONICAL_MCP_URL);
 
   assert.equal(remote.headers.length, 1);
   const [authorizationHeader] = remote.headers;
@@ -206,10 +209,12 @@ test('catalog discovery metadata points to the hosted server card', () => {
         identifier: 'urn:mcp:server:network.shodai/agreements',
         displayName: 'Shodai Agreements',
         mediaType: SERVER_CARD_MEDIA_TYPE,
-        url: SERVER_CARD_URL,
+        url: CANONICAL_SERVER_CARD_URL,
       },
     ],
   });
+  assert.equal(PUBLIC_MCP_URL, CANONICAL_MCP_URL);
+  assert.equal(SERVER_CARD_URL, CANONICAL_SERVER_CARD_URL);
 });
 
 test('server card discovery paths cover current conventions and legacy route', () => {
@@ -392,7 +397,7 @@ function gatewayBaseUrl(req) {
   return `http://${req.headers.host}`;
 }
 
-async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
+async function startServers({ mcpPath = '/mcp', dualGateways = false, publicMcpUrl } = {}) {
   const testnetGateway = await startStubGateway();
   const productionGateway = dualGateways ? await startStubGateway() : testnetGateway;
   const mcpServer = await startAgreementsMcpHttpServer({
@@ -403,6 +408,7 @@ async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
       production: productionGateway.baseUrl,
     },
     mcpPath,
+    publicMcpUrl,
   });
   const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
@@ -433,7 +439,7 @@ async function connectClient(mcpUrl, { apiKey, headers } = {}) {
   return client;
 }
 
-test('serves MCP server card discovery endpoints without auth', async () => {
+test('serves MCP server card discovery endpoints from request origin without auth', async () => {
   const env = await startServers();
   try {
     for (const path of SERVER_CARD_PATHS) {
@@ -450,7 +456,7 @@ test('serves MCP server card discovery endpoints without auth', async () => {
   }
 });
 
-test('serves the MCP catalog discovery endpoint without auth', async () => {
+test('serves the MCP catalog discovery endpoint from request origin without auth', async () => {
   const env = await startServers();
   try {
     const response = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
@@ -464,6 +470,38 @@ test('serves the MCP catalog discovery endpoint without auth', async () => {
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();
+  }
+});
+
+test('serves configured public MCP URL in discovery metadata without auth', async () => {
+  const env = await startServers({ publicMcpUrl: 'https://shodai.network/mcp/' });
+  try {
+    const serverCard = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+    assert.equal(serverCard.status, 200);
+    assert.deepEqual(await serverCard.json(), createAgreementsMcpServerCard(CANONICAL_MCP_URL));
+
+    const catalogResponse = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+    assert.equal(catalogResponse.status, 200);
+    const catalog = await catalogResponse.json();
+    assert.deepEqual(catalog, createAgreementsMcpCatalog(CANONICAL_SERVER_CARD_URL));
+    assert.equal(catalog.entries[0].url, CANONICAL_SERVER_CARD_URL);
+  } finally {
+    await env.close();
+  }
+});
+
+test('rejects invalid public MCP URL configuration', () => {
+  for (const publicMcpUrl of [
+    'ftp://shodai.network/mcp',
+    'https://user:password@shodai.network/mcp',
+    'https://shodai.network/mcp?debug=1',
+    'https://shodai.network/mcp#card',
+    'https://shodai.network/other',
+  ]) {
+    assert.throws(
+      () => createAgreementsMcpHttpServer({ publicMcpUrl, mcpPath: '/mcp' }),
+      /PUBLIC_MCP_URL/,
+    );
   }
 });
 

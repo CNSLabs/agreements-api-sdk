@@ -25,6 +25,8 @@ export type AgreementsMcpHttpOptions = {
   host?: string;
   /** Path serving the MCP Streamable HTTP endpoint. Defaults to `/mcp`. */
   mcpPath?: string;
+  /** Public canonical MCP endpoint URL advertised in discovery metadata. */
+  publicMcpUrl?: string;
   /** @deprecated Hosted HTTP tool calls now select the API environment per call. */
   environment?: AgreementsApiEnvironment;
   /** Explicit upstream gateway origin override for fixed/single-environment local use. */
@@ -186,6 +188,14 @@ function publicDiscoveryUrls(req: IncomingMessage, mcpPath: string): { publicMcp
   };
 }
 
+function configuredPublicDiscoveryUrls(publicMcpUrl: string): { publicMcpUrl: string; serverCardUrl: string } {
+  const url = new URL(publicMcpUrl);
+  return {
+    publicMcpUrl,
+    serverCardUrl: new URL(SERVER_CARD_PATH, `${url.origin}/`).toString(),
+  };
+}
+
 function isServerCardPath(pathname: string): boolean {
   return SERVER_CARD_PATHS.some((path) => path === pathname);
 }
@@ -198,6 +208,36 @@ function normalizeHttpPath(path: string): string {
   const trimmed = path.trim();
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return withLeadingSlash.replace(/\/+$/, '') || '/';
+}
+
+function resolvePublicMcpUrl(publicMcpUrl: string | undefined, mcpPath: string): string | undefined {
+  const trimmed = publicMcpUrl?.trim();
+  if (!trimmed) return undefined;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new Error('PUBLIC_MCP_URL must be an absolute http or https URL.');
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('PUBLIC_MCP_URL must use http or https.');
+  }
+  if (url.username || url.password) {
+    throw new Error('PUBLIC_MCP_URL must not include username or password.');
+  }
+  if (url.search || url.hash) {
+    throw new Error('PUBLIC_MCP_URL must not include query or hash components.');
+  }
+
+  const normalizedPublicPath = normalizeHttpPath(url.pathname);
+  if (normalizedPublicPath !== mcpPath) {
+    throw new Error(`PUBLIC_MCP_URL path must match MCP_PATH (${mcpPath}).`);
+  }
+
+  url.pathname = normalizedPublicPath;
+  return url.toString();
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -220,6 +260,7 @@ function resolveEnvironmentBaseUrl(
  */
 export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions = {}): Server {
   const mcpPath = normalizeHttpPath(options.mcpPath ?? '/mcp');
+  const publicMcpUrl = resolvePublicMcpUrl(options.publicMcpUrl, mcpPath);
 
   return createServer(async (req, res) => {
     applyCors(res);
@@ -238,8 +279,10 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     }
 
     if (req.method === 'GET' && isServerCardPath(url.pathname)) {
-      const { publicMcpUrl } = publicDiscoveryUrls(req, mcpPath);
-      sendJson(res, 200, createAgreementsMcpServerCard(publicMcpUrl), {
+      const discoveryUrls = publicMcpUrl
+        ? configuredPublicDiscoveryUrls(publicMcpUrl)
+        : publicDiscoveryUrls(req, mcpPath);
+      sendJson(res, 200, createAgreementsMcpServerCard(discoveryUrls.publicMcpUrl), {
         'Content-Type': SERVER_CARD_MEDIA_TYPE,
         'Cache-Control': DISCOVERY_CACHE_CONTROL,
       });
@@ -247,8 +290,10 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     }
 
     if (req.method === 'GET' && url.pathname === MCP_CATALOG_PATH) {
-      const { serverCardUrl } = publicDiscoveryUrls(req, mcpPath);
-      sendJson(res, 200, createAgreementsMcpCatalog(serverCardUrl), {
+      const discoveryUrls = publicMcpUrl
+        ? configuredPublicDiscoveryUrls(publicMcpUrl)
+        : publicDiscoveryUrls(req, mcpPath);
+      sendJson(res, 200, createAgreementsMcpCatalog(discoveryUrls.serverCardUrl), {
         'Cache-Control': DISCOVERY_CACHE_CONTROL,
       });
       return;
