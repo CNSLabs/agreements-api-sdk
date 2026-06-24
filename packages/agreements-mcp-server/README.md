@@ -28,7 +28,7 @@ Use this value as the environment argument on API-calling tools. API keys only w
 
 Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`. OAuth and JWT bearer tokens are not supported.
 
-Get an API key from the [Developer Portal](https://developers.shodai.network). Full client setup, tool reference, and signing guidance: [Connect via MCP](https://docs.shodai.network/sdks/connect-via-mcp).
+Get an API key from the [Developer Portal](https://developers.shodai.network). First-flight setup, tool access, and typed-data preparation: [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp).
 
 ## Run locally (stdio)
 

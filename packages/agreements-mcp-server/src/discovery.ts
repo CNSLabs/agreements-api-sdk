@@ -16,7 +16,7 @@ export function createAgreementsMcpServerCard(publicMcpUrl: string = PUBLIC_MCP_
     title: 'Shodai Agreements',
     description: 'Author, validate, deploy, and operate Shodai on-chain agreements.',
     version: SERVER_VERSION,
-    websiteUrl: 'https://docs.shodai.network/sdks/connect-via-mcp',
+    websiteUrl: 'https://docs.shodai.network/sdks/quickstart-with-mcp',
     repository: {
       url: 'https://github.com/CNSLabs/agreements-api-sdk',
       source: 'github',

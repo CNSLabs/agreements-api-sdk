@@ -192,4 +192,4 @@ Before validation, confirm that:
 
 ## Next step
 
-Use [Validate Agreement Structure](/authoring/validate-agreement-structure) to check participant roles, input IDs, state IDs, and warnings before deployment preflight.
+Use [Validate Agreement Structure](/workflow/validate-agreement-structure) to check participant roles, input IDs, state IDs, and warnings before deployment preflight.

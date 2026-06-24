@@ -44,7 +44,8 @@ const SYNTHETIC_UPSTREAM_FAILURES = {
     payload: {
       error: {
         code: 'payment_required',
-        message: 'Payment required for scope agreements.read',
+        message:
+          'The authenticated API principal has paid_required entitlement mode for scope agreements.read. Per-call x402 settlement is not implemented. Treat this as an entitlement/operator issue.',
         requestId: 'req_test',
       },
     },
@@ -171,7 +172,7 @@ test('server card discovery metadata stays aligned with the registry metadata', 
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.description, registryServerJson.description);
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, registryServerJson.version);
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, SERVER_VERSION);
-  assert.equal(AGREEMENTS_MCP_SERVER_CARD.websiteUrl, 'https://docs.shodai.network/sdks/connect-via-mcp');
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.websiteUrl, 'https://docs.shodai.network/sdks/quickstart-with-mcp');
   assert.deepEqual(AGREEMENTS_MCP_SERVER_CARD.repository, registryServerJson.repository);
 
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.remotes.length, 1);
@@ -853,8 +854,8 @@ test('surfaces upstream 401, 402, 403, and 429 failures with actionable hints', 
       {
         apiKey: 'cns_pk_payment_required',
         status: 402,
-        upstreamMessage: /Payment required for scope agreements\.read/,
-        hint: /paid entitlement/,
+        upstreamMessage: /paid_required entitlement mode for scope agreements\.read/,
+        hint: /Per-call x402 settlement is not implemented/,
       },
       {
         apiKey: 'cns_pk_forbidden',
