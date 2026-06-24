@@ -31,6 +31,9 @@ export class StandaloneConfigService implements OnModuleInit {
   readonly frontendBaseUrl = process.env.FRONTEND_BASE_URL || (this.nodeEnv === 'test' ? 'http://localhost:5184/agreements/' : '');
   readonly serviceAuthToken = process.env.SERVICE_AUTH_TOKEN || '';
   readonly temporalSweepInterval = process.env.TEMPORAL_SWEEP_INTERVAL || '1 minute';
+  readonly awsRegion = process.env.AWS_REGION || 'us-east-2';
+  readonly sesFromAddress = process.env.SES_FROM_ADDRESS || '';
+  readonly sesConfigurationSet = process.env.SES_CONFIGURATION_SET || '';
   readonly defaultAgreementChainId = this.resolveDefaultAgreementChainId();
 
   onModuleInit() {

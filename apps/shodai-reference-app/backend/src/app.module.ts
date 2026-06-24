@@ -11,6 +11,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
 import { StandaloneConfigModule } from './config/standalone-config.module';
 import { StandaloneRepositoriesModule } from './database/standalone-repositories.module';
 import { WebhookReceiverModule } from './webhooks/webhook-receiver.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -26,6 +27,7 @@ import { HealthController } from './health.controller';
     AdminModule,
     MigrationModule,
     TelemetryModule,
+    NotificationsModule,
     WebhookReceiverModule,
   ],
   controllers: [HealthController],

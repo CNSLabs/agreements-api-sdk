@@ -9,6 +9,7 @@ import { AgreementInputRepository } from './repositories/agreement-input.reposit
 import { ExternalApiEventRepository } from './repositories/external-api-event.repository';
 import { MigrationMappingRepository } from './repositories/migration-mapping.repository';
 import { WebhookEventRepository } from './repositories/webhook-event.repository';
+import { NotificationDeliveryRepository } from './repositories/notification-delivery.repository';
 
 const repositories = [
   PlatformUserRepository,
@@ -21,6 +22,7 @@ const repositories = [
   ExternalApiEventRepository,
   MigrationMappingRepository,
   WebhookEventRepository,
+  NotificationDeliveryRepository,
 ];
 
 @Module({

@@ -12,6 +12,7 @@ It runs independently of internal services, keeps Shodai API keys server-side in
 - Dynamic environment configured for `http://localhost:5184/agreements/`
 - Real Shodai external API base URL and API key
 - Shodai webhook subscription secret
+- AWS SES credentials, region, and verified sender for notification email delivery
 
 This reference app is intentionally self-contained: do not start any separate
 `auth-api`, `agreements-api`, nginx, or local `external-api` stack for normal
@@ -46,12 +47,20 @@ external-api URL, such as `http://localhost:4005`, and set
 rejected when `NODE_ENV=production`.
 
 Create a webhook subscription in the Shodai developer portal or API with the
-delivery URL `https://<your-tunnel-host>/shodai/webhooks` and event type
-`agreement.transitioned`. Store the returned subscription secret in
+delivery URL `https://<your-tunnel-host>/shodai/webhooks` and event types
+`agreement.transitioned` and `agreement.notification.triggered`. Store the returned subscription secret in
 `SHODAI_WEBHOOK_SECRET`. The backend verifies every delivery with the SDK
 webhook helper before it reads the event payload.
 
-The template catalog is vendored under `data/agreement-templates`. The frontend preview PDFs/images are under `frontend/public/template-assets`. The public SDK/API supports authored agreement JSON, but this reference app models an approved app catalog: draft creation sends a `templateId`, and the backend resolves the full agreement JSON from the vendored catalog.
+The template catalog is vendored under `data/agreement-templates`. Notification
+rules are loaded from `data/notification-templates` when present, or from
+`NOTIFICATION_TEMPLATES_DIR` when overridden. At deploy time the backend attaches
+the matching notification template to the external API request with each rule set
+to the `external_webhook` channel. Shodai hosted services evaluate transition and
+temporal notification rules, then send `agreement.notification.triggered`
+webhooks back to this app. The reference backend owns final SES email delivery.
+
+The frontend preview PDFs/images are under `frontend/public/template-assets`. The public SDK/API supports authored agreement JSON, but this reference app models an approved app catalog: draft creation sends a `templateId`, and the backend resolves the full agreement JSON from the vendored catalog.
 
 Required backend environment keys are listed in `backend/.env.sample`. At a
 minimum, local validation needs Mongo, `FRONTEND_BASE_URL`, Dynamic config,
@@ -68,6 +77,24 @@ The app expects a Mongo server on `mongodb://localhost:27017` and writes to
 local Mongo installation or container as long as it listens on that host/port.
 The reference app owns its Mongo collections; it does not read runtime state
 from any other app database.
+
+## Notifications
+
+Agreement notifications use hosted Shodai rule evaluation and this app's email
+delivery:
+
+1. The reference backend includes an `external_webhook` notification template
+   when deploying an agreement through the external API.
+2. Hosted `notifications-api` evaluates immediate transition rules and temporal
+   reminder rules.
+3. External API delivers signed `agreement.notification.triggered` webhooks to
+   `/shodai/webhooks`.
+4. The reference backend sends the email through AWS SES and records delivery
+   status in Mongo.
+
+Set `AWS_REGION`, `SES_FROM_ADDRESS`, and AWS credentials supported by the AWS
+SDK default provider chain. `SES_CONFIGURATION_SET` is optional. In SES sandbox
+mode, recipients must be verified before real delivery succeeds.
 
 For a zero-context walkthrough, see `docs/third-party-setup.md`.
 
@@ -121,8 +148,10 @@ The receiver requires the exact raw request body plus the Shodai signature
 headers. After verification, `agreement.transitioned` deliveries are stored in
 Mongo and acknowledged before processing. A background processor claims queued
 events, reconciles current agreement state plus paged input history from the
-Shodai external API into the local Mongo mirror, retries local race or transient
-API failures with backoff, and records terminal stale or dead-letter outcomes.
+Shodai external API into the local Mongo mirror, and sends SES emails for
+`agreement.notification.triggered` events. The processor retries local race,
+transient API, or transient SES failures with backoff, and records terminal stale
+or dead-letter outcomes.
 Duplicate deliveries update delivery metadata without starting parallel
 reconciliation.
 

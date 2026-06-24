@@ -63,6 +63,9 @@ export class MongoCollectionsService implements OnModuleDestroy, OnModuleInit {
       db.collection('webhook_events').createIndex({ status: 1, receivedAt: -1 }),
       db.collection('webhook_events').createIndex({ status: 1, nextAttemptAt: 1, receivedAt: 1 }),
       db.collection('webhook_events').createIndex({ status: 1, lockedAt: 1 }),
+      db.collection('notification_deliveries').createIndex({ webhookEventId: 1 }, { unique: true }),
+      db.collection('notification_deliveries').createIndex({ agreementId: 1, createdAt: -1 }),
+      db.collection('notification_deliveries').createIndex({ status: 1, updatedAt: -1 }),
       db.collection('migration_mappings').createIndex({ id: 1 }, { unique: true }),
     ]);
   }

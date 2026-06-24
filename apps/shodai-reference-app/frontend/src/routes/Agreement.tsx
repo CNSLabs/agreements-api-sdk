@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { isAddress } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { Button } from "@/subframe/components/Button";
@@ -17,6 +18,7 @@ import { SuccessDialog } from "@/components/SuccessDialog";
 import { markdownWithValuesToHtml, printDocument } from "@/utils/documentExport";
 import { markdownWithValues } from "@/utils/markdownWithValues";
 import { useAgreementsApi, type ParticipantApi } from "@/hooks/useAgreementsApi";
+import { useNotificationsApi } from "@/hooks/useNotificationsApi";
 import { useAgreementActivity } from "@/hooks/agreement/useAgreementActivity";
 import { useAgreementData, formatPaymentAmount as formatPaymentAmountForActivity } from "@/hooks/agreement/useAgreementData";
 import { useAgreementInputs } from "@/hooks/agreement/useAgreementInputs";
@@ -28,10 +30,12 @@ import {
   AgreementActivityTab,
   AgreementOverviewTab,
   AgreementActionsTab,
+  AgreementNotificationsTab,
 } from "@/components/agreement";
 import {
   FeatherArrowLeft,
   FeatherActivity,
+  FeatherBell,
   FeatherCircleDot,
   FeatherCopy,
   FeatherDownloadCloud,
@@ -52,6 +56,7 @@ const AGREEMENT_TAB_TO_PATH = {
   actions: "current-state",
   document: "document",
   stateMachine: "state-machine",
+  notifications: "notifications",
   activity: "activity",
 } as const;
 
@@ -62,6 +67,7 @@ const AGREEMENT_PATH_TO_TAB = {
   actions: "actions",
   document: "document",
   "state-machine": "stateMachine",
+  notifications: "notifications",
   activity: "activity",
 } as const;
 
@@ -76,6 +82,7 @@ const Agreement: React.FC = () => {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const { getInputs } = useAgreementsApi();
+  const { getTemplateByAgreementTemplateId } = useNotificationsApi();
   const requestedInputId = searchParams.get("input");
 
   const [documentThumbFailed, setDocumentThumbFailed] = React.useState(false);
@@ -130,6 +137,20 @@ const Agreement: React.FC = () => {
     refreshState,
     hasProcessedDeployModal,
   } = useAgreementData({ form });
+
+  const {
+    data: notificationTemplate = null,
+    isLoading: notificationTemplateLoading,
+    error: notificationTemplateError,
+  } = useQuery({
+    queryKey: ["notificationTemplate", agreementTemplateId],
+    queryFn: async () => {
+      if (!agreementTemplateId) return null;
+      return getTemplateByAgreementTemplateId(agreementTemplateId);
+    },
+    enabled: !!agreementTemplateId,
+    retry: false,
+  });
 
   // Activity data hook
   const formatPaymentAmount = React.useCallback(
@@ -544,6 +565,9 @@ const Agreement: React.FC = () => {
                 <Segment.Item icon={<FeatherWorkflow />} active={activeTab === "stateMachine"} onClick={() => handleSetTab("stateMachine")}>
                   State Machine Map
                 </Segment.Item>
+                <Segment.Item icon={<FeatherBell />} active={activeTab === "notifications"} onClick={() => handleSetTab("notifications")}>
+                  Notifications
+                </Segment.Item>
                 <Segment.Item icon={<FeatherActivity />} active={activeTab === "activity"} onClick={() => handleSetTab("activity")}>
                   Activity
                 </Segment.Item>
@@ -636,7 +660,7 @@ const Agreement: React.FC = () => {
               <div className="flex max-w-[1280px] grow shrink-0 basis-0 flex-col items-center gap-4 self-stretch bg-default-background">
                 <DisplayCard
                   className="w-full max-w-[1280px] grow"
-                  title={activeTab === "document" ? "Document" : activeTab === "stateMachine" ? "State Machine" : "Activity"}
+                  title={activeTab === "document" ? "Document" : activeTab === "stateMachine" ? "State Machine" : activeTab === "notifications" ? "Notifications" : "Activity"}
                   content={
                   <div className="flex w-full flex-col items-start gap-6 px-4 py-4">
                   {activeTab === "document" ? (
@@ -650,6 +674,12 @@ const Agreement: React.FC = () => {
                     />
                   ) : activeTab === "stateMachine" ? (
                     <AgreementStateMachineTab agreementJson={agreementJson as AgreementJson} currentState={currentState} />
+                  ) : activeTab === "notifications" ? (
+                    <AgreementNotificationsTab
+                      template={notificationTemplate}
+                      loading={notificationTemplateLoading}
+                      error={notificationTemplateError ? "Failed to load notification rules" : null}
+                    />
                   ) : (
                     <AgreementActivityTab
                       activityInputs={activityInputs}

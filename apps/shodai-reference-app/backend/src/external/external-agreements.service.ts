@@ -5,6 +5,7 @@ import { AgreementRepository } from '../database/repositories/agreement.reposito
 import { AgreementInputRepository } from '../database/repositories/agreement-input.repository';
 import { ExternalApiEventRepository } from '../database/repositories/external-api-event.repository';
 import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields } from '../agreements/agreement-utils';
+import { NotificationCatalogService } from '../notifications/notification-catalog.service';
 import type { AgreementTransitionedWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
 import type { ApiClient, AgreementInputRecord } from '@cns-labs/agreements-api-client';
 
@@ -51,6 +52,7 @@ export class ExternalAgreementsService {
     private readonly agreements: AgreementRepository,
     private readonly inputs: AgreementInputRepository,
     private readonly externalEvents: ExternalApiEventRepository,
+    private readonly notificationCatalog: NotificationCatalogService,
   ) {}
 
   async validateAgreementTemplate(agreement: any) {
@@ -104,6 +106,9 @@ export class ExternalAgreementsService {
     this.assertPermitSignerAuthorized(body.signer, user);
     const signedDocUri = this.getPermitDocUri(body.docUri, agreement.docUri, agreement.json);
     const initValues = this.getDeployInitValues(agreement, body);
+    const notificationTemplate = await this.notificationCatalog.getExternalWebhookTemplateByAgreementTemplateId(
+      getTemplateId(agreement.json) || '',
+    );
 
     const directPayload = this.directAgreementPayload({
       agreement: agreement.json,
@@ -111,6 +116,7 @@ export class ExternalAgreementsService {
       displayName: agreement.displayName,
       docUri: signedDocUri,
       initValues,
+      notificationTemplate,
       participants: (agreement.participants || []).map(({ status, ...entry }: any) => entry),
       observers: agreement.observers || [],
       signer: body.signer,
@@ -367,6 +373,7 @@ export class ExternalAgreementsService {
     return {
       agreement: body?.agreement || {},
       displayName: body?.displayName,
+      ...(body?.notificationTemplate ? { notificationTemplate: body.notificationTemplate } : {}),
       chainId: body?.chainId,
       docUri: body?.docUri,
       initValues: body?.initValues || {},

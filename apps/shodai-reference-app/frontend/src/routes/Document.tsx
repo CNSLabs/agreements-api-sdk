@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DocumentConfigureTab,
   DocumentDocumentTab,
+  DocumentNotificationsTab,
   DocumentStateMachineTab,
 } from "@/components/document";
 import { DeploymentNetworkSelect } from "@/components/DeploymentNetworkSelect";
@@ -20,11 +21,13 @@ import { PageHeader } from "@/subframe/components/PageHeader";
 import { Segment } from "@/subframe/components/Segment";
 import { DialogLayout } from "@/subframe/layouts/DialogLayout";
 import { useAgreementsApi, type AgreementRecordApi } from "@/hooks/useAgreementsApi";
+import { useNotificationsApi } from "@/hooks/useNotificationsApi";
 import type { AgreementJson } from "@cns-labs/agreements-protocol-evm";
 import { extractIssuerVariableKeys } from "@/utils/agreementsUi";
 import { getChainConfig, getDefaultChainConfig, getSupportedChainConfigs } from "@/utils/chainConfig";
 import {
   FeatherAlertTriangle,
+  FeatherBell,
   FeatherCircleDot,
   FeatherCheck,
   FeatherFileText,
@@ -43,13 +46,14 @@ const Document: React.FC = () => {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  const [activeTab, setActiveTab] = React.useState<"configure" | "document" | "stateMachine">("configure");
+  const [activeTab, setActiveTab] = React.useState<"configure" | "document" | "stateMachine" | "notifications">("configure");
   const [showValidation, setShowValidation] = React.useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const queryClient = useQueryClient();
   const { getAgreement, updateDraftValues, updateDraftDisplayName, updateDraftChainId, deleteDraft, setParticipants, getParticipants, setObservers: setObserversApi } = useAgreementsApi();
+  const { getTemplateByAgreementTemplateId } = useNotificationsApi();
 
   const updateDraftCache = React.useCallback((updatedRecord: AgreementRecordApi) => {
     queryClient.setQueryData(['agreement', draftId], updatedRecord);
@@ -84,6 +88,23 @@ const Document: React.FC = () => {
   // Derive template-like fields from the loaded draft
   const template = (draft?.json ?? null) as AgreementJson | null;
   const agreementJson = React.useMemo(() => template as AgreementJson, [template]);
+  const agreementTemplateId = React.useMemo(
+    () => (template as any)?.metadata?.templateId || (template as any)?.metadata?.id || null,
+    [template]
+  );
+  const {
+    data: notificationTemplate = null,
+    isLoading: notificationTemplateLoading,
+    error: notificationTemplateError,
+  } = useQuery({
+    queryKey: ["notificationTemplate", agreementTemplateId],
+    queryFn: async () => {
+      if (!agreementTemplateId) return null;
+      return getTemplateByAgreementTemplateId(agreementTemplateId);
+    },
+    enabled: !!agreementTemplateId,
+    retry: false,
+  });
 
   // Convert template variables to DocumentVariable format
   const variables = React.useMemo(() => {
@@ -241,6 +262,10 @@ const Document: React.FC = () => {
 
   const handleSetActiveTabStateMachine = React.useCallback(() => {
     setActiveTab("stateMachine");
+  }, []);
+
+  const handleSetActiveTabNotifications = React.useCallback(() => {
+    setActiveTab("notifications");
   }, []);
 
   // Memoize navigation handlers
@@ -428,6 +453,13 @@ const Document: React.FC = () => {
                   >
                     State Machine Map
                   </Segment.Item>
+                  <Segment.Item
+                    icon={<FeatherBell />}
+                    active={activeTab === "notifications"}
+                    onClick={handleSetActiveTabNotifications}
+                  >
+                    Notifications
+                  </Segment.Item>
                 </>
               }
             />
@@ -470,6 +502,14 @@ const Document: React.FC = () => {
 
         {activeTab === "stateMachine" && (
           <DocumentStateMachineTab agreementJson={agreementJson} template={template} />
+        )}
+
+        {activeTab === "notifications" && (
+          <DocumentNotificationsTab
+            template={notificationTemplate}
+            loading={notificationTemplateLoading}
+            error={notificationTemplateError ? "Failed to load notification rules" : null}
+          />
         )}
 
       </div>
