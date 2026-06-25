@@ -181,6 +181,21 @@ const deployed = await client.deployWithPermit({
   initValues,
   participants,
   observers,
+  notificationTemplate: {
+    rules: [
+      {
+        id: 'deployment-follow-up',
+        name: 'Deployment follow-up',
+        trigger: { type: 'onTransition', inputs: ['__deploy'] },
+        recipients: ['@observers'],
+        notification: {
+          channel: 'external_webhook',
+          subject: 'Agreement deployed',
+          body: 'Agreement ${agreementId} is ready for review.',
+        },
+      },
+    ],
+  },
 });
 
 console.log(deployed.id);
@@ -275,16 +290,17 @@ console.log(inputIds);
 
 This reads `execution.inputs` keys from the parsed agreement document.
 
-### 7. Subscribe to agreement transition webhooks
+### 7. Subscribe to agreement webhooks
 
-Create a webhook when your integration should receive signed push notifications for agreement transitions instead of polling state.
+Create a webhook when your integration should receive signed push notifications for agreement transitions or triggered notification rules instead of polling state.
 
 ```ts
 const webhook = await client.createWebhook({
   url: 'https://example.com/shodai/webhooks',
-  eventTypes: ['agreement.transitioned'],
+  eventTypes: ['agreement.transitioned', 'agreement.notification.triggered'],
   filters: {
     templateIds: ['did:template:service-retainer-v0-1'],
+    ruleIds: ['deployment-follow-up'],
   },
 });
 

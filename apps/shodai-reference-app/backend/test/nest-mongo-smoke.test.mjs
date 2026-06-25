@@ -120,6 +120,7 @@ test('Nest backend rejects local or private external API base URLs during normal
         DYNAMIC_ENVIRONMENT_ID: 'runtime-dynamic-env',
         DYNAMIC_API_TOKEN: 'runtime-dynamic-token',
         EXTERNAL_API_BASE_URL: externalApiBaseUrl,
+        ALLOW_LOCAL_EXTERNAL_API: 'false',
         EXTERNAL_API_KEY: 'runtime-external-key',
         SHODAI_WEBHOOK_SECRET: 'whsec_runtime',
         FRONTEND_BASE_URL: 'http://localhost:5184/agreements/',
@@ -138,7 +139,7 @@ test('Nest backend rejects local or private external API base URLs during normal
 
     const [code] = await once(child, 'exit');
     assert.notEqual(code, 0, `${externalApiBaseUrl}\n${logs}`);
-    assert.match(logs, /EXTERNAL_API_BASE_URL must target the real Shodai API outside NODE_ENV=test/, externalApiBaseUrl);
+    assert.match(logs, /EXTERNAL_API_BASE_URL must target the real Shodai API unless ALLOW_LOCAL_EXTERNAL_API=true is set/, externalApiBaseUrl);
   }
 });
 
@@ -394,6 +395,181 @@ test('Agreements API client emits the outbound external API contract used by the
   assert.equal(stateResult.state, 'Active');
   assert.deepEqual(inputsPage.data, []);
   assert.equal(inputsPage.pageInfo.nextCursor, null);
+});
+
+test('Notification catalog normalizes templates for external webhook deployment', async () => {
+  const previousDir = process.env.NOTIFICATION_TEMPLATES_DIR;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'shodai-notification-templates-'));
+  try {
+    process.env.NOTIFICATION_TEMPLATES_DIR = tempDir;
+    await fs.writeFile(path.join(tempDir, 'mou.notifications.json'), JSON.stringify({
+      metadata: {
+        id: 'ntpl:mou-v1',
+        agreementTemplateId: 'did:template:mou-v1',
+        version: '1.0.0',
+      },
+      rules: [
+        {
+          id: 'agreement-deployed',
+          name: 'Agreement Deployed',
+          trigger: { type: 'onTransition', inputs: ['__deploy'] },
+          recipients: ['*'],
+          notification: { channel: 'email', subject: 'Ready', body: 'Go' },
+        },
+      ],
+    }));
+    const { NotificationCatalogService } = requireBackendSource('notifications/notification-catalog.service.ts');
+    const service = new NotificationCatalogService();
+
+    const template = await service.getExternalWebhookTemplateByAgreementTemplateId('did:template:mou-v1');
+
+    assert.equal(template.metadata.id, 'ntpl:mou-v1');
+    assert.equal(template.rules[0].notification.channel, 'external_webhook');
+  } finally {
+    if (previousDir === undefined) {
+      delete process.env.NOTIFICATION_TEMPLATES_DIR;
+    } else {
+      process.env.NOTIFICATION_TEMPLATES_DIR = previousDir;
+    }
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('External deploy attaches matching external webhook notification template', async () => {
+  const { ExternalAgreementsService } = requireBackendSource('external/external-agreements.service.ts');
+  const agreement = {
+    id: 'draft-with-notifications-1',
+    status: 'Draft',
+    chainId: 59141,
+    displayName: 'Draft With Notifications',
+    owner: '0x1111111111111111111111111111111111111111',
+    json: {
+      metadata: { templateId: 'did:template:mou-v1' },
+      execution: { initialize: { initialState: 'PENDING' }, states: { PENDING: {} }, inputs: {} },
+      variables: {},
+    },
+    variables: {},
+    participants: [{ variableKey: 'partyA', walletAddress: '0x1111111111111111111111111111111111111111', status: 'accepted' }],
+    observers: ['observer@example.com'],
+  };
+  const deployBodies = [];
+  const service = new ExternalAgreementsService(
+    {
+      externalApiBaseUrl: 'https://external-api.example.test',
+      externalApiKey: 'external-key',
+      defaultAgreementChainId: 59141,
+      normalizeAgreementChainId: () => 59141,
+    },
+    {
+      findByIdentifier: async () => ({ agreement, ambiguous: false }),
+      findOne: async () => agreement,
+      upsertOne: async (_filter, doc) => Object.assign(agreement, doc),
+    },
+    { upsertInputMirror: async () => undefined },
+    { insertOne: async () => undefined },
+    {
+      getExternalWebhookTemplateByAgreementTemplateId: async () => ({
+        metadata: { id: 'ntpl:mou-v1', agreementTemplateId: 'did:template:mou-v1', version: '1.0.0' },
+        rules: [
+          {
+            id: 'agreement-deployed',
+            name: 'Agreement Deployed',
+            trigger: { type: 'onTransition', inputs: ['__deploy'] },
+            recipients: ['*'],
+            notification: { channel: 'external_webhook', subject: 'Ready', body: 'Go' },
+          },
+        ],
+      }),
+    },
+  );
+  service.externalApiClient = async () => ({
+    validateDeployment: async () => ({ variables: {}, participants: [], observers: [] }),
+    deployWithPermit: async (body) => {
+      deployBodies.push(body);
+      return { id: 'agr_notification_1', address: '0x2222222222222222222222222222222222222222', chainId: 59141, state: 'PENDING' };
+    },
+  });
+
+  await service.deployWithPermit('draft-with-notifications-1', {
+    signer: '0x1111111111111111111111111111111111111111',
+    deadline: 1,
+    signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+  }, {
+    wallets: [{ address: '0x1111111111111111111111111111111111111111' }],
+  });
+
+  assert.equal(deployBodies.length, 1);
+  assert.equal(deployBodies[0].notificationTemplate.metadata.id, 'ntpl:mou-v1');
+  assert.equal(deployBodies[0].notificationTemplate.rules[0].notification.channel, 'external_webhook');
+});
+
+test('Notification email service sends SES email and records delivery audit', async () => {
+  const { NotificationEmailService } = requireBackendSource('notifications/notification-email.service.ts');
+  const deliveryRecords = new Map();
+  const repository = {
+    findByWebhookEventId: async (eventId) => deliveryRecords.get(eventId) || null,
+    markSending: async (eventId, document) => {
+      deliveryRecords.set(eventId, {
+        ...(deliveryRecords.get(eventId) || {}),
+        ...document,
+        webhookEventId: eventId,
+        status: 'sending',
+        attemptCount: (deliveryRecords.get(eventId)?.attemptCount || 0) + 1,
+      });
+    },
+    markSent: async (eventId, patch) => {
+      deliveryRecords.set(eventId, { ...deliveryRecords.get(eventId), ...patch, status: 'sent' });
+    },
+    markFailed: async (eventId, error) => {
+      deliveryRecords.set(eventId, { ...deliveryRecords.get(eventId), status: 'failed', error: String(error) });
+    },
+  };
+  const sentCommands = [];
+  const service = new NotificationEmailService({
+    awsRegion: 'us-east-2',
+    sesFromAddress: '"Shodai Agreements" <notifications@example.com>',
+    sesConfigurationSet: '',
+    frontendBaseUrl: 'http://localhost:5184/agreements/',
+  }, repository, {
+    findOne: async (filter) => filter.externalAgreementId === 'agr_1'
+      ? { id: 'local-agreement-1', externalAgreementId: 'agr_1' }
+      : null,
+  });
+  service.client = {
+    send: async (command) => {
+      sentCommands.push(command);
+      return { MessageId: 'ses-message-1' };
+    },
+  };
+
+  const result = await service.deliverTriggeredNotification({
+    id: 'evt_notification_1',
+    type: 'agreement.notification.triggered',
+    apiVersion: '2026-06-01',
+    createdAt: '2026-06-24T10:00:00.000Z',
+    data: {
+      agreementId: 'agr_1',
+      agreementName: 'Test Agreement',
+      templateId: 'did:template:mou-v1',
+      notificationTemplateId: 'ntpl:mou-v1',
+      ruleId: 'agreement-deployed',
+      triggerType: 'onTransition',
+      recipient: 'Recipient@Example.com',
+      notification: { subject: 'Ready', title: 'Ready to sign', body: 'Please sign.' },
+      transition: { fromState: '', toState: 'PENDING', inputId: '__deploy', occurredAt: '2026-06-24T10:00:00.000Z' },
+    },
+  });
+
+  assert.equal(result.messageId, 'ses-message-1');
+  assert.equal(sentCommands.length, 1);
+  assert.equal(deliveryRecords.get('evt_notification_1').status, 'sent');
+  assert.equal(deliveryRecords.get('evt_notification_1').recipient, 'recipient@example.com');
+  assert.equal(deliveryRecords.get('evt_notification_1').localAgreementId, 'local-agreement-1');
+  const commandInput = sentCommands[0].input;
+  assert.match(
+    commandInput.Content.Simple.Body.Html.Data,
+    /http:\/\/localhost:5184\/agreements\/agreement\/local-agreement-1\/actions\?email=recipient%40example.com/,
+  );
 });
 
 test('Webhook event repository enforces processing lease ownership before completion', async (t) => {

@@ -23,6 +23,8 @@ export type {
   ErrorResponse,
   HealthResponse,
   ListResponse,
+  NotificationRule,
+  NotificationTemplate,
   PageInfo,
   ParticipantRecord,
   ApiClientConfig,

@@ -132,6 +132,26 @@ MONGO_URI=<mongo-uri> MONGO_DB_NAME=<db-name> pnpm --filter shodai-reference-app
 
 This writes the current vendored template IDs into the `template_access` collection as `kind: global-default`.
 
+## Notification Delivery
+
+Configure the Shodai webhook subscription with both event types:
+
+```text
+agreement.transitioned
+agreement.notification.triggered
+```
+
+The reference backend verifies both event types with `SHODAI_WEBHOOK_SECRET`.
+Transition events reconcile the local agreement mirror. Notification-triggered
+events are delivered as email through AWS SES using `AWS_REGION`,
+`SES_FROM_ADDRESS`, and optional `SES_CONFIGURATION_SET`.
+
+Notification templates are read from `data/notification-templates` when present,
+or from `NOTIFICATION_TEMPLATES_DIR` when overridden. During deployment, matching
+templates are sent to the external API using the `external_webhook` channel so
+hosted Shodai services evaluate the rules while this app owns final email
+delivery.
+
 ## Validation
 
 Before exposing the deployment:
@@ -141,5 +161,8 @@ Before exposing the deployment:
 - login works through Dynamic
 - Create Agreement shows expected templates
 - deploy and action submission work against the configured Shodai API
-- a signed Shodai webhook test delivery reaches `POST /shodai/webhooks`
+- signed Shodai webhook deliveries for `agreement.transitioned` and
+  `agreement.notification.triggered` reach `POST /shodai/webhooks`
+- an `agreement.notification.triggered` delivery records a
+  `notification_deliveries` document and sends through SES
 - `/notifications-api/*` and `/auth-api/auth/notify/*` are not present

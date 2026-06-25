@@ -6,6 +6,8 @@ import { Button } from "@/subframe/components/Button";
 import { PageHeader } from "@/subframe/components/PageHeader";
 import { Segment } from "@/subframe/components/Segment";
 import { useTemplatesApi, type AgreementTemplate } from "@/hooks/useTemplatesApi";
+import { useNotificationsApi } from "@/hooks/useNotificationsApi";
+import NotificationRulesView from "@/components/NotificationRulesView";
 import StateMachineFlowViewer from "@/components/StateMachineFlowViewer";
 import { DeploymentNetworkSelect } from "@/components/DeploymentNetworkSelect";
 import ReactMarkdown from "react-markdown";
@@ -14,6 +16,7 @@ import type { Components } from "react-markdown";
 import {
   FeatherChevronLeft,
   FeatherChevronRight,
+  FeatherBell,
   FeatherFileText,
   FeatherGitBranch,
   FeatherWorkflow,
@@ -70,7 +73,7 @@ const TemplatePreview: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
   const templateId = params.templateId as string | undefined;
-  const [tab, setTab] = React.useState<"document" | "stateMachine">("document");
+  const [tab, setTab] = React.useState<"document" | "stateMachine" | "notifications">("document");
   const [isCreatingDraft, setIsCreatingDraft] = React.useState(false);
   const [draftError, setDraftError] = React.useState<string | null>(null);
   const [templateSource, setTemplateSource] = React.useState<TemplateSource | null>(null);
@@ -79,6 +82,7 @@ const TemplatePreview: React.FC = () => {
   const { status: authStatus } = useAuthInit();
   const { createDraftAgreement, getAvailableTemplateIds } = useAgreementsApi();
   const { getTemplateById } = useTemplatesApi();
+  const { getTemplateByAgreementTemplateId } = useNotificationsApi();
 
   const {
     data: template,
@@ -95,6 +99,20 @@ const TemplatePreview: React.FC = () => {
       return getTemplateById(templateId) as Promise<PreviewAgreementTemplate>;
     },
     enabled: !!templateId,
+  });
+
+  const {
+    data: notificationTemplate = null,
+    isLoading: notificationTemplateLoading,
+    error: notificationTemplateError,
+  } = useQuery({
+    queryKey: ["notificationTemplate", templateId],
+    queryFn: async () => {
+      if (!templateId) return null;
+      return getTemplateByAgreementTemplateId(templateId);
+    },
+    enabled: !!templateId,
+    retry: false,
   });
 
   // Redirect to template list if user is not allowed to use this template
@@ -283,6 +301,13 @@ const TemplatePreview: React.FC = () => {
                   >
                     State Machine Map
                   </Segment.Item>
+                  <Segment.Item
+                    icon={<FeatherBell />}
+                    active={tab === "notifications"}
+                    onClick={() => setTab("notifications")}
+                  >
+                    Notifications
+                  </Segment.Item>
                 </>
               }
             />
@@ -331,7 +356,7 @@ const TemplatePreview: React.FC = () => {
               <div className="text-body font-body text-subtext-color">No document content found.</div>
             )}
           </div>
-        ) : (
+        ) : tab === "stateMachine" ? (
           <div className="w-full max-w-[1280px] flex-1 min-h-0">
             <StateMachineFlowViewer
               className="h-full"
@@ -340,6 +365,12 @@ const TemplatePreview: React.FC = () => {
               initialState={null}
             />
           </div>
+        ) : (
+          <NotificationRulesView
+            template={notificationTemplate}
+            loading={notificationTemplateLoading}
+            error={notificationTemplateError ? "Failed to load notification rules" : null}
+          />
         )}
       </div>
     </div>
