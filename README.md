@@ -1,6 +1,6 @@
 # Agreements API SDK
 
-Open-source home for the TypeScript client for the Agreements API and the reference playground app built on top of it.
+Open-source home for the TypeScript client for the Agreements API, the API playground, and the canonical Shodai Reference App built on top of the SDK.
 
 ## Install the SDK
 
@@ -20,12 +20,15 @@ npm install @cns-labs/agreements-api-client viem
 
 - `packages/agreements-api-client`: publishable npm package `@cns-labs/agreements-api-client`
 - `apps/agreements-api-playground`: reference Vite app for validating agreements, deploying with permits, inspecting state, and submitting inputs
+- `apps/shodai-reference-app`: full-stack React/Nest/Mongo reference implementation for developer platform auth, Agreements API usage, agreement lifecycle UX, signing, persistence, and webhook reconciliation
 
 ## Start Here
 
 - SDK usage and API lifecycle docs: [`packages/agreements-api-client/README.md`](./packages/agreements-api-client/README.md)
-- Reference implementation and local browser workflow: [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playground/README.md)
-- Full end-to-end example UI: [`apps/agreements-api-playground/src/App.tsx`](./apps/agreements-api-playground/src/App.tsx)
+- Shodai Reference App setup and lifecycle docs: [`apps/shodai-reference-app/README.md`](./apps/shodai-reference-app/README.md)
+- Full-stack reference UI entrypoint: [`apps/shodai-reference-app/frontend/src/Router.tsx`](./apps/shodai-reference-app/frontend/src/Router.tsx)
+- API playground local browser workflow: [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playground/README.md)
+- API playground example UI: [`apps/agreements-api-playground/src/App.tsx`](./apps/agreements-api-playground/src/App.tsx)
 
 ## Agreements API Environments
 
@@ -51,12 +54,26 @@ The client still supports `baseUrl` as an advanced override for local proxies, i
 # from the repository root
 pnpm install
 pnpm build
+pnpm dev
+```
+
+The default dev command starts the Shodai Reference App. Its backend defaults to `http://localhost:4199` and its frontend defaults to `http://localhost:5184/agreements/`.
+
+Stop the reference app dev stack with:
+
+```bash
+pnpm dev:stop
+```
+
+See [`apps/shodai-reference-app/README.md`](./apps/shodai-reference-app/README.md) for the required local environment files.
+
+Run the API playground explicitly with:
+
+```bash
 pnpm dev:playground
 ```
 
-The playground defaults to `http://localhost:5176`.
-
-If that port is already in use, start the playground on another port:
+The playground defaults to `http://localhost:5176`. If that port is already in use, start the playground on another port:
 
 ```bash
 pnpm --filter agreements-api-playground exec vite --host 127.0.0.1 --port 4176

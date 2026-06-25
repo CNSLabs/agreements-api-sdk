@@ -11,16 +11,21 @@ import type {
   HealthResponse,
   ApiClientConfig,
   ApiResponse,
+  CreateWebhookRequest,
+  CreateWebhookResponse,
   ListResponse,
   ProcessInputRequest,
+  UpdateWebhookRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
+  WebhookSubscription,
+  WebhookTestResponse,
 } from './types.js';
 import { resolveApiBaseUrl } from './constants.js';
 import { agreementsApiPaths, joinUrl } from './utils.js';
 
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
 export class ApiClient {
   private readonly baseUrl: string;
@@ -36,16 +41,16 @@ export class ApiClient {
     this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   async getOpenApiDocument(): Promise<unknown> {
     return this.request<unknown>('GET', agreementsApiPaths.openapiJson());
   }
 
   async getHealth(): Promise<HealthResponse> {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
-  }
-
-  getBaseUrl(): string {
-    return this.baseUrl;
   }
 
   async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {
