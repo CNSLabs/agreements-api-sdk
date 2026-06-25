@@ -12,7 +12,7 @@ Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this ho
 Configure Shodai as a remote Streamable HTTP MCP server.
 
 URL:
-https://developers.shodai.network/mcp
+https://shodai.network/mcp
 
 Auth:
 Authorization: Bearer $SHODAI_API_KEY
@@ -28,7 +28,7 @@ Use this value as the environment argument on API-calling tools. API keys only w
 
 Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`. OAuth and JWT bearer tokens are not supported.
 
-Get an API key from the [Developer Portal](https://developers.shodai.network). Full client setup, tool reference, and signing guidance: [Connect via MCP](https://docs.shodai.network/sdks/connect-via-mcp).
+Get an API key from the [Developer Portal](https://developers.shodai.network). First-flight setup, tool access, and typed-data preparation: [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp).
 
 ## Run locally (stdio)
 

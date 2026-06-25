@@ -3,7 +3,19 @@ You are an autonomous coding agent building with Shodai Agreements API. Start fr
 First load documentation context:
 1. Fetch https://docs.shodai.network/llms.txt and use it as the canonical page index.
 2. Fetch https://docs.shodai.network/skill.md for agent workflow constraints.
-3. Read the relevant page-level Markdown exports for Quickstart, TypeScript client, Simple or Complex Agreement, Validate Agreement Structure, Deploy an Agreement, Operate a Deployed Agreement, EIP-712 Signing Reference, and Errors and troubleshooting.
+3. Read the relevant page-level Markdown exports:
+   - https://docs.shodai.network/integration-surfaces.md
+   - https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md
+   - https://docs.shodai.network/sdks/quickstart-with-mcp.md
+   - https://docs.shodai.network/examples/end-to-end-workflow.md
+   - https://docs.shodai.network/sdks/typescript-client.md
+   - https://docs.shodai.network/examples/simple.md
+   - https://docs.shodai.network/examples/complex.md
+   - https://docs.shodai.network/workflow/validate-agreement-structure.md
+   - https://docs.shodai.network/workflow/deploy-an-agreement.md
+   - https://docs.shodai.network/workflow/operate-a-deployed-agreement.md
+   - https://docs.shodai.network/reference/eip-712-signing.md
+   - https://docs.shodai.network/reference/errors-and-troubleshooting.md
 4. Fetch https://docs.shodai.network/openapi.json or the generated API reference pages before composing raw routes, payloads, or response-status assertions.
 5. Use https://docs.shodai.network/llms-full.txt only as broad fallback context.
 

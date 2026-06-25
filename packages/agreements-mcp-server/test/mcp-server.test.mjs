@@ -12,13 +12,17 @@ import {
   AGREEMENTS_MCP_SERVER_CARD,
   AGREEMENTS_MCP_TOOLS,
   AGREEMENTS_MCP_RESOURCES,
+  createAgreementsMcpHttpServer,
   createAgreementsMcpCatalog,
   createAgreementsMcpServerCard,
   DISCOVERY_CACHE_CONTROL,
+  LEGACY_SERVER_CARD_PATH,
+  MCP_JSON_SERVER_CARD_PATH,
   MCP_CATALOG_PATH,
   PUBLIC_MCP_URL,
   SERVER_CARD_MEDIA_TYPE,
   SERVER_CARD_PATH,
+  SERVER_CARD_PATHS,
   SERVER_CARD_URL,
   SERVER_VERSION,
   startAgreementsMcpHttpServer,
@@ -33,8 +37,10 @@ const DEVELOPERS_DISCOVERY_HEADERS = {
   Host: 'developers.shodai.network',
   'CloudFront-Forwarded-Proto': 'https',
 };
+const CANONICAL_MCP_URL = 'https://shodai.network/mcp';
+const CANONICAL_SERVER_CARD_URL = 'https://shodai.network/.well-known/mcp/server-card.json';
 const DEVELOPERS_MCP_URL = 'https://developers.shodai.network/mcp';
-const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/mcp/server-card';
+const DEVELOPERS_SERVER_CARD_URL = 'https://developers.shodai.network/.well-known/mcp/server-card.json';
 const TEST_API_KEY = 'cns_pk_test_key';
 // Structurally valid compact JWS (header.payload.signature).
 const TEST_JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJjbGllbnQtYWJjIn0.c2lnbmF0dXJl';
@@ -44,7 +50,8 @@ const SYNTHETIC_UPSTREAM_FAILURES = {
     payload: {
       error: {
         code: 'payment_required',
-        message: 'Payment required for scope agreements.read',
+        message:
+          'The authenticated API principal has paid_required entitlement mode for scope agreements.read. Per-call x402 settlement is not implemented. Treat this as an entitlement/operator issue.',
         requestId: 'req_test',
       },
     },
@@ -153,7 +160,7 @@ test('registry server.json describes the hosted remote MCP server only', () => {
   assert.equal(registryServerJson.remotes.length, 1);
   const [remote] = registryServerJson.remotes;
   assert.equal(remote.type, 'streamable-http');
-  assert.equal(remote.url, DEVELOPERS_MCP_URL);
+  assert.equal(remote.url, CANONICAL_MCP_URL);
 
   assert.equal(remote.headers.length, 1);
   const [authorizationHeader] = remote.headers;
@@ -171,7 +178,7 @@ test('server card discovery metadata stays aligned with the registry metadata', 
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.description, registryServerJson.description);
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, registryServerJson.version);
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.version, SERVER_VERSION);
-  assert.equal(AGREEMENTS_MCP_SERVER_CARD.websiteUrl, 'https://docs.shodai.network/sdks/connect-via-mcp');
+  assert.equal(AGREEMENTS_MCP_SERVER_CARD.websiteUrl, 'https://docs.shodai.network/sdks/quickstart-with-mcp');
   assert.deepEqual(AGREEMENTS_MCP_SERVER_CARD.repository, registryServerJson.repository);
 
   assert.equal(AGREEMENTS_MCP_SERVER_CARD.remotes.length, 1);
@@ -202,10 +209,23 @@ test('catalog discovery metadata points to the hosted server card', () => {
         identifier: 'urn:mcp:server:network.shodai/agreements',
         displayName: 'Shodai Agreements',
         mediaType: SERVER_CARD_MEDIA_TYPE,
-        url: SERVER_CARD_URL,
+        url: CANONICAL_SERVER_CARD_URL,
       },
     ],
   });
+  assert.equal(PUBLIC_MCP_URL, CANONICAL_MCP_URL);
+  assert.equal(SERVER_CARD_URL, CANONICAL_SERVER_CARD_URL);
+});
+
+test('server card discovery paths cover current conventions and legacy route', () => {
+  assert.equal(SERVER_CARD_PATH, '/.well-known/mcp/server-card.json');
+  assert.equal(MCP_JSON_SERVER_CARD_PATH, '/.well-known/mcp.json');
+  assert.equal(LEGACY_SERVER_CARD_PATH, '/mcp/server-card');
+  assert.deepEqual(SERVER_CARD_PATHS, [
+    '/.well-known/mcp/server-card.json',
+    '/.well-known/mcp.json',
+    '/mcp/server-card',
+  ]);
 });
 
 /** Minimal stub of the Agreements API gateway. Records requests for assertions. */
@@ -377,7 +397,7 @@ function gatewayBaseUrl(req) {
   return `http://${req.headers.host}`;
 }
 
-async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
+async function startServers({ mcpPath = '/mcp', dualGateways = false, publicMcpUrl } = {}) {
   const testnetGateway = await startStubGateway();
   const productionGateway = dualGateways ? await startStubGateway() : testnetGateway;
   const mcpServer = await startAgreementsMcpHttpServer({
@@ -388,6 +408,7 @@ async function startServers({ mcpPath = '/mcp', dualGateways = false } = {}) {
       production: productionGateway.baseUrl,
     },
     mcpPath,
+    publicMcpUrl,
   });
   const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
@@ -418,22 +439,24 @@ async function connectClient(mcpUrl, { apiKey, headers } = {}) {
   return client;
 }
 
-test('serves the MCP server card discovery endpoint without auth', async () => {
+test('serves MCP server card discovery endpoints from request origin without auth', async () => {
   const env = await startServers();
   try {
-    const response = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
-    assert.equal(response.status, 200);
-    assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
-    assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
-    assert.equal(response.headers.get('access-control-allow-origin'), '*');
-    assert.deepEqual(await response.json(), createAgreementsMcpServerCard(DEVELOPERS_MCP_URL));
+    for (const path of SERVER_CARD_PATHS) {
+      const response = await getJsonResponse(new URL(path, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+      assert.equal(response.status, 200);
+      assert.ok(response.headers.get('content-type')?.startsWith(SERVER_CARD_MEDIA_TYPE));
+      assert.equal(response.headers.get('cache-control'), DISCOVERY_CACHE_CONTROL);
+      assert.equal(response.headers.get('access-control-allow-origin'), '*');
+      assert.deepEqual(await response.json(), createAgreementsMcpServerCard(DEVELOPERS_MCP_URL));
+    }
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();
   }
 });
 
-test('serves the MCP catalog discovery endpoint without auth', async () => {
+test('serves the MCP catalog discovery endpoint from request origin without auth', async () => {
   const env = await startServers();
   try {
     const response = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
@@ -447,6 +470,38 @@ test('serves the MCP catalog discovery endpoint without auth', async () => {
     assert.equal(env.gateway.requests.length, 0);
   } finally {
     await env.close();
+  }
+});
+
+test('serves configured public MCP URL in discovery metadata without auth', async () => {
+  const env = await startServers({ publicMcpUrl: 'https://shodai.network/mcp/' });
+  try {
+    const serverCard = await getJsonResponse(new URL(SERVER_CARD_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+    assert.equal(serverCard.status, 200);
+    assert.deepEqual(await serverCard.json(), createAgreementsMcpServerCard(CANONICAL_MCP_URL));
+
+    const catalogResponse = await getJsonResponse(new URL(MCP_CATALOG_PATH, env.mcpUrl), DEVELOPERS_DISCOVERY_HEADERS);
+    assert.equal(catalogResponse.status, 200);
+    const catalog = await catalogResponse.json();
+    assert.deepEqual(catalog, createAgreementsMcpCatalog(CANONICAL_SERVER_CARD_URL));
+    assert.equal(catalog.entries[0].url, CANONICAL_SERVER_CARD_URL);
+  } finally {
+    await env.close();
+  }
+});
+
+test('rejects invalid public MCP URL configuration', () => {
+  for (const publicMcpUrl of [
+    'ftp://shodai.network/mcp',
+    'https://user:password@shodai.network/mcp',
+    'https://shodai.network/mcp?debug=1',
+    'https://shodai.network/mcp#card',
+    'https://shodai.network/other',
+  ]) {
+    assert.throws(
+      () => createAgreementsMcpHttpServer({ publicMcpUrl, mcpPath: '/mcp' }),
+      /PUBLIC_MCP_URL/,
+    );
   }
 });
 
@@ -853,8 +908,8 @@ test('surfaces upstream 401, 402, 403, and 429 failures with actionable hints', 
       {
         apiKey: 'cns_pk_payment_required',
         status: 402,
-        upstreamMessage: /Payment required for scope agreements\.read/,
-        hint: /paid entitlement/,
+        upstreamMessage: /paid_required entitlement mode for scope agreements\.read/,
+        hint: /Per-call x402 settlement is not implemented/,
       },
       {
         apiKey: 'cns_pk_forbidden',

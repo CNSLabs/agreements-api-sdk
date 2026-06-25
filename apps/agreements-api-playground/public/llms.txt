@@ -10,7 +10,10 @@ The API Playground is an interactive browser surface. It is not the canonical AP
 - [Playground skill](https://developers.shodai.network/api-playground/skill.md): Routing guidance for agents starting from the playground.
 - [Docs skill](https://docs.shodai.network/skill.md): Canonical agent workflow for API, SDK, agreement JSON, signing, deployment, operation, and troubleshooting.
 - [Docs llms.txt](https://docs.shodai.network/llms.txt): Complete documentation index.
-- [Quickstart](https://docs.shodai.network/quickstart.md): Default builder path.
+- [Choose an integration surface](https://docs.shodai.network/integration-surfaces.md): Choose between the TypeScript SDK and MCP for the first run.
+- [Quickstart with TypeScript SDK](https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md): First-flight TypeScript SDK path.
+- [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp.md): First-flight MCP path.
+- [Run an end-to-end agreement workflow](https://docs.shodai.network/examples/end-to-end-workflow.md): Full lifecycle after either quickstart.
 - [OpenAPI](https://docs.shodai.network/openapi.json): Exact Agreements API routes, request bodies, response schemas, and servers.
 - [Developer Portal](https://developers.shodai.network/portal): API-key access and key management.
 - [Demo App](https://app.shodai.network/agreements): Product workflow for templates, drafts, deployed agreements, signing, available actions, and agreement operation.
