@@ -107,7 +107,7 @@ pnpm dev
 ```
 
 Open `http://localhost:5184/agreements/`. Backend health is available at `http://localhost:4199/health`.
-The dev start command also seeds global template access from `data/agreement-templates` so a fresh database can immediately create agreements.
+All vendored templates in `data/agreement-templates` are available to users by default. The dev start command also seeds the same IDs into `template_access` for environments that want an explicit persisted default list.
 
 Stop the local dev stack with:
 

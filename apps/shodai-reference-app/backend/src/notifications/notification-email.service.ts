@@ -43,7 +43,7 @@ export class NotificationEmailService {
       title: event.data.notification.title,
       body,
       ctaUrl,
-      ctaLabel: 'View Agreement',
+      ctaLabel: event.data.notification.ctaLabel || 'View Agreement',
       agreementName: event.data.agreementName,
     });
 

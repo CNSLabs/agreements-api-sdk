@@ -82,6 +82,7 @@ export type AgreementNotificationTriggeredWebhookData = {
     subject: string;
     title?: string;
     body: string;
+    ctaLabel?: string;
   };
   transition?: {
     fromState: string;
@@ -308,6 +309,7 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
           subject: requirePayloadString(notification, 'subject'),
           title: optionalPayloadString(notification, 'title'),
           body: requirePayloadString(notification, 'body'),
+          ctaLabel: optionalPayloadString(notification, 'ctaLabel'),
         },
         ...(transition
           ? {

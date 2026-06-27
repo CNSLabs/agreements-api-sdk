@@ -124,13 +124,13 @@ https://example.com/agreements/
 
 ## Template Access
 
-For a new environment, seed global template access once:
+Users can create agreements from all visible vendored templates by default. To pin an explicit persisted default list for an environment, seed global template access once:
 
 ```sh
 MONGO_URI=<mongo-uri> MONGO_DB_NAME=<db-name> pnpm --filter shodai-reference-app templates:seed-defaults
 ```
 
-This writes the current vendored template IDs into the `template_access` collection as `kind: global-default`.
+This writes the current vendored template IDs into the `template_access` collection as `kind: global-default`. If the row is absent, the backend falls back to the visible templates from `data/agreement-templates`.
 
 ## Notification Delivery
 

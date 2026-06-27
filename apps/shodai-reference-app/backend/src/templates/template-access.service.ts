@@ -19,9 +19,12 @@ export class TemplateAccessService {
   ) {}
 
   async getDefaults() {
-    return (await this.templateAccess.findOne({ kind: 'global-default' })) || {
+    const record = await this.templateAccess.findOne({ kind: 'global-default' });
+    if (Array.isArray(record?.templateIds) && record.templateIds.length > 0) return record;
+    return {
       kind: 'global-default',
-      templateIds: [],
+      templateIds: await this.catalog.listVisibleTemplateIds(),
+      source: 'catalog-default',
     };
   }
 

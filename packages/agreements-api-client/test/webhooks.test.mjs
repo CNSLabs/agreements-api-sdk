@@ -38,6 +38,28 @@ const transitionPayload = {
   },
 };
 
+const notificationPayload = {
+  id: 'evt_notification',
+  type: 'agreement.notification.triggered',
+  apiVersion: '2026-06-01',
+  createdAt: '2026-06-01T00:00:00.000Z',
+  data: {
+    agreementId: 'agreement-1',
+    agreementName: 'Retainer',
+    templateId: 'template-1',
+    notificationTemplateId: 'ntpl-1',
+    ruleId: 'rule-1',
+    triggerType: 'onTransition',
+    recipient: 'client@example.com',
+    notification: {
+      subject: 'Action required',
+      title: 'Please review',
+      body: 'Open the agreement.',
+      ctaLabel: 'Review now',
+    },
+  },
+};
+
 function body(payload) {
   return JSON.stringify(payload);
 }
@@ -119,6 +141,19 @@ describe('webhook receiver helpers', () => {
     assert.equal(event.data.fromState, '');
     assert.equal(event.data.toState, 'AWAITING_PAYMENT');
     assert.equal(event.data.inputId, '__deploy');
+  });
+
+  it('preserves optional CTA labels on notification-triggered deliveries', () => {
+    const rawBody = body(notificationPayload);
+    const event = constructWebhookEvent(rawBody, headersFor(rawBody, 'evt_notification'), secret, {
+      now: nowSeconds,
+    });
+
+    assert.equal(event.type, 'agreement.notification.triggered');
+    assert.equal(event.data.notification.subject, 'Action required');
+    assert.equal(event.data.notification.title, 'Please review');
+    assert.equal(event.data.notification.body, 'Open the agreement.');
+    assert.equal(event.data.notification.ctaLabel, 'Review now');
   });
 
   it('rejects altered bodies and signatures', () => {
