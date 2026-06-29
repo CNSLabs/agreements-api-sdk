@@ -56,6 +56,13 @@ const notificationPayload = {
       title: 'Please review',
       body: 'Open the agreement.',
       ctaLabel: 'Review now',
+      attachmentStrategy: {
+        type: 'customerInvoicePdf',
+        variant: 'invoice-v1',
+      },
+    },
+    variables: {
+      invoiceNumber: 'INV-100',
     },
   },
 };
@@ -154,6 +161,13 @@ describe('webhook receiver helpers', () => {
     assert.equal(event.data.notification.title, 'Please review');
     assert.equal(event.data.notification.body, 'Open the agreement.');
     assert.equal(event.data.notification.ctaLabel, 'Review now');
+    assert.deepEqual(event.data.notification.attachmentStrategy, {
+      type: 'customerInvoicePdf',
+      variant: 'invoice-v1',
+    });
+    assert.deepEqual(event.data.variables, {
+      invoiceNumber: 'INV-100',
+    });
   });
 
   it('rejects altered bodies and signatures', () => {

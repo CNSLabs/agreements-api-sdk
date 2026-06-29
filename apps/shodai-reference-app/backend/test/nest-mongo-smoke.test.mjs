@@ -442,6 +442,29 @@ test('Notification catalog normalizes templates for external webhook deployment'
   }
 });
 
+test('Notification catalog exposes monorepo templates in default local setup', async () => {
+  const previousDir = process.env.NOTIFICATION_TEMPLATES_DIR;
+  try {
+    delete process.env.NOTIFICATION_TEMPLATES_DIR;
+    const { NotificationCatalogService } = requireBackendSource('notifications/notification-catalog.service.ts');
+    const service = new NotificationCatalogService();
+
+    const template = await service.getExternalWebhookTemplateByAgreementTemplateId(
+      'did:template:service-retainer-manual-balance-v0-1',
+    );
+
+    assert.equal(template.metadata.agreementTemplateId, 'did:template:service-retainer-manual-balance-v0-1');
+    assert.ok(template.rules.some((rule) => rule.notification.attachmentStrategy?.type === 'customerInvoicePdf'));
+    assert.ok(template.rules.every((rule) => rule.notification.channel === 'external_webhook'));
+  } finally {
+    if (previousDir === undefined) {
+      delete process.env.NOTIFICATION_TEMPLATES_DIR;
+    } else {
+      process.env.NOTIFICATION_TEMPLATES_DIR = previousDir;
+    }
+  }
+});
+
 test('External deploy attaches matching external webhook notification template', async () => {
   const { ExternalAgreementsService } = requireBackendSource('external/external-agreements.service.ts');
   const agreement = {
@@ -562,7 +585,24 @@ test('Notification email service sends SES email and records delivery audit', as
       ruleId: 'agreement-deployed',
       triggerType: 'onTransition',
       recipient: 'Recipient@Example.com',
-      notification: { subject: 'Ready', title: 'Ready to sign', body: 'Please sign.', ctaLabel: 'Sign now' },
+      notification: {
+        subject: 'Ready',
+        title: 'Ready to sign',
+        body: 'Please sign.',
+        ctaLabel: 'Sign now',
+        attachmentStrategy: { type: 'customerInvoicePdf', variant: 'manual-balance-invoice-v1' },
+      },
+      variables: {
+        invoiceNumber: 'INV-100',
+        invoiceDate: '2026-06-24',
+        invoiceLineItems: 'date,description,quantity,rate,amount\n2026-06-24,Design work,2,100,200',
+        retainerCeiling: 1000,
+        retainerFloor: 250,
+        retainerBalanceBeforeInvoice: 300,
+        serviceProviderName: 'Provider LLC',
+        clientName: 'Client Inc.',
+        tokenSymbol: 'USDC',
+      },
       transition: { fromState: '', toState: 'PENDING', inputId: '__deploy', occurredAt: '2026-06-24T10:00:00.000Z' },
     },
   });
@@ -573,11 +613,11 @@ test('Notification email service sends SES email and records delivery audit', as
   assert.equal(deliveryRecords.get('evt_notification_1').recipient, 'recipient@example.com');
   assert.equal(deliveryRecords.get('evt_notification_1').localAgreementId, 'local-agreement-1');
   const commandInput = sentCommands[0].input;
-  assert.match(
-    commandInput.Content.Simple.Body.Html.Data,
-    /http:\/\/localhost:5184\/agreements\/agreement\/local-agreement-1\/actions\?email=recipient%40example.com/,
-  );
-  assert.match(commandInput.Content.Simple.Body.Html.Data, /Sign now/);
+  assert.ok(commandInput.Content.Raw?.Data, 'expected raw MIME email when attachmentStrategy is present');
+  const rawEmail = Buffer.from(commandInput.Content.Raw.Data).toString('utf8');
+  assert.match(rawEmail, /Content-Type: multipart\/mixed/);
+  assert.match(rawEmail, /Content-Disposition: attachment; filename="/);
+  assert.match(rawEmail, /Subject: Ready/);
 });
 
 test('Webhook event repository enforces processing lease ownership before completion', async (t) => {

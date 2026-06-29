@@ -70,6 +70,11 @@ export type AgreementTransitionedWebhookEvent = WebhookEventEnvelope<
   AgreementTransitionedWebhookData
 >;
 
+export type NotificationAttachmentStrategy = {
+  type: 'customerInvoicePdf';
+  variant: string;
+};
+
 export type AgreementNotificationTriggeredWebhookData = {
   agreementId: string;
   agreementName?: string;
@@ -83,7 +88,9 @@ export type AgreementNotificationTriggeredWebhookData = {
     title?: string;
     body: string;
     ctaLabel?: string;
+    attachmentStrategy?: NotificationAttachmentStrategy;
   };
+  variables?: Record<string, unknown>;
   transition?: {
     fromState: string;
     toState: string;
@@ -310,7 +317,9 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
           title: optionalPayloadString(notification, 'title'),
           body: requirePayloadString(notification, 'body'),
           ctaLabel: optionalPayloadString(notification, 'ctaLabel'),
+          attachmentStrategy: optionalAttachmentStrategy(notification, 'attachmentStrategy'),
         },
+        variables: optionalPayloadObject(data, 'variables'),
         ...(transition
           ? {
               transition: {
@@ -367,6 +376,19 @@ function optionalPayloadObject(payload: Record<string, unknown>, field: string):
     throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field} must be an object.`);
   }
   return value as Record<string, unknown>;
+}
+
+function optionalAttachmentStrategy(payload: Record<string, unknown>, field: string): NotificationAttachmentStrategy | undefined {
+  const value = optionalPayloadObject(payload, field);
+  if (!value) return undefined;
+  const type = requirePayloadString(value, 'type');
+  if (type !== 'customerInvoicePdf') {
+    throw new WebhookVerificationError('invalid_payload', `Webhook payload ${field}.type must be customerInvoicePdf.`);
+  }
+  return {
+    type,
+    variant: requirePayloadString(value, 'variant'),
+  };
 }
 
 function getHeader(headers: WebhookHeaders, name: string): string | undefined {
