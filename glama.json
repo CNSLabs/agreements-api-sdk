@@ -1,0 +1,9 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": [
+    "vkuts",
+    "mulligan-madness",
+    "vleipnik",
+    "leipnik"
+  ]
+}
