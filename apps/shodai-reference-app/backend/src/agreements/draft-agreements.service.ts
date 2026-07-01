@@ -26,7 +26,11 @@ export class DraftAgreementsService {
   ) {}
 
   async getAvailableTemplateAccess(platformUserId: string) {
-    const defaults = await this.catalog.getFrontendTemplateIds((await this.templateAccess.findOne({ kind: 'global-default' }))?.templateIds || []);
+    const defaultsRecord = await this.templateAccess.findOne({ kind: 'global-default' });
+    const defaultTemplateIds = Array.isArray(defaultsRecord?.templateIds) ? defaultsRecord.templateIds : [];
+    const defaults = defaultTemplateIds.length > 0
+      ? await this.catalog.getFrontendTemplateIds(defaultTemplateIds)
+      : await this.catalog.listVisibleTemplateIds();
     const whitelist = await this.catalog.getFrontendTemplateIds((await this.templateAccess.findOne({ kind: 'user-whitelist', platformUserId }))?.templateIds || []);
     return { defaultTemplateIds: defaults, whitelistedTemplateIds: whitelist };
   }

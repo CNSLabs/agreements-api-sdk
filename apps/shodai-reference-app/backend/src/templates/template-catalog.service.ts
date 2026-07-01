@@ -35,6 +35,12 @@ export class TemplateCatalogService {
     return (await this.readTemplates()).filter((template) => !allowed || allowed.has(template.metadata.templateId));
   }
 
+  async listVisibleTemplateIds() {
+    return (await this.listVisibleTemplates())
+      .map((template) => String(template.metadata?.templateId || '').trim())
+      .filter(Boolean);
+  }
+
   async getFrontendTemplateIds(templateIds: string[]) {
     const templates = await this.readTemplates();
     const byKnownId = new Map<string, string>();

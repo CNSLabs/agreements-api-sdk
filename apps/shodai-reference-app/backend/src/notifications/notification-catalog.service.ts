@@ -50,27 +50,37 @@ export class NotificationCatalogService {
 
   private async readTemplates(): Promise<NotificationTemplateRecord[]> {
     if (this.cache) return this.cache;
-    const dir = await this.resolveTemplatesDir();
-    if (!dir) {
+    const dirs = await this.resolveTemplatesDirs();
+    if (dirs.length === 0) {
       this.cache = [];
       return this.cache;
     }
-    const files = (await fs.readdir(dir))
-      .filter((file) => file.endsWith('.notifications.json'))
-      .sort();
-    this.cache = await Promise.all(files.map(async (file) => {
-      const raw = await fs.readFile(path.join(dir, file), 'utf8');
-      return JSON.parse(raw) as NotificationTemplateRecord;
-    }));
+    const templates: NotificationTemplateRecord[] = [];
+    const seenAgreementTemplateIds = new Set<string>();
+    for (const dir of dirs) {
+      const files = (await fs.readdir(dir))
+        .filter((file) => file.endsWith('.notifications.json'))
+        .sort();
+      for (const file of files) {
+        const raw = await fs.readFile(path.join(dir, file), 'utf8');
+        const template = JSON.parse(raw) as NotificationTemplateRecord;
+        const agreementTemplateId = String(template.metadata?.agreementTemplateId || '').trim();
+        if (agreementTemplateId && seenAgreementTemplateIds.has(agreementTemplateId)) continue;
+        if (agreementTemplateId) seenAgreementTemplateIds.add(agreementTemplateId);
+        templates.push(template);
+      }
+    }
+    this.cache = templates;
     return this.cache;
   }
 
-  private async resolveTemplatesDir(): Promise<string> {
+  private async resolveTemplatesDirs(): Promise<string[]> {
     const explicit = process.env.NOTIFICATION_TEMPLATES_DIR;
-    if (explicit) return explicit;
-    if (await directoryExists(DEFAULT_NOTIFICATION_TEMPLATES_DIR)) return DEFAULT_NOTIFICATION_TEMPLATES_DIR;
-    if (await directoryExists(MONOREPO_NOTIFICATION_TEMPLATES_DIR)) return MONOREPO_NOTIFICATION_TEMPLATES_DIR;
-    return '';
+    if (explicit) return [explicit];
+    const dirs: string[] = [];
+    if (await directoryExists(DEFAULT_NOTIFICATION_TEMPLATES_DIR)) dirs.push(DEFAULT_NOTIFICATION_TEMPLATES_DIR);
+    if (await directoryExists(MONOREPO_NOTIFICATION_TEMPLATES_DIR)) dirs.push(MONOREPO_NOTIFICATION_TEMPLATES_DIR);
+    return dirs;
   }
 }
 
