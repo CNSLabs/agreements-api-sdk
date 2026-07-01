@@ -32,7 +32,7 @@ For product/API behavior, load:
 
 - `https://docs.shodai.network/skill.md`
 - `https://docs.shodai.network/llms.txt`
-- relevant page-level Markdown exports such as `https://docs.shodai.network/quickstart.md`
+- relevant page-level Markdown exports such as `https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md` and `https://docs.shodai.network/sdks/quickstart-with-mcp.md`
 - `https://docs.shodai.network/openapi.json`
 
 For API-key access or key management, route to:
