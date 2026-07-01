@@ -10,6 +10,7 @@
     "build": "pnpm run prepare:sdk && vite build",
     "generate-template-pdfs": "node ./scripts/generate-template-pdfs.mjs",
     "type-check": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },

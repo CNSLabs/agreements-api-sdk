@@ -57,7 +57,7 @@ function apiErrorHint(status: number): string | undefined {
     case 401:
       return 'The API key is missing, invalid, or belongs to a different environment than the selected tool environment. Use a testnet key with environment: "testnet" and a production key with environment: "production".';
     case 402:
-      return 'This scope requires a paid entitlement for the current API principal.';
+      return 'The authenticated API principal has paid_required entitlement mode for the requested scope. Per-call x402 settlement is not implemented. Treat this as an entitlement/operator issue.';
     case 403:
       return 'The API principal lacks the entitlement for this scope. Read tools need agreements.read; validation and write tools need agreements.write.';
     case 429:

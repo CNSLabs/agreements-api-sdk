@@ -42,7 +42,14 @@ Record:
 - `EXTERNAL_API_BASE_URL=https://test-api.shodai.network`
 - `EXTERNAL_API_KEY`
 
-Create a webhook subscription for agreement transition events and record:
+Create a webhook subscription for agreement activity and notification events:
+
+```text
+agreement.transitioned
+agreement.notification.triggered
+```
+
+Record:
 
 - `SHODAI_WEBHOOK_SECRET`
 
