@@ -31,7 +31,7 @@ export default function SentryDevErrorButton() {
 
     await Sentry.startSpan(
       {
-        name: "agreements-ui.telemetry.full-stack-smoke",
+        name: "shodai-reference-frontend.telemetry.full-stack-smoke",
         op: "ui.action",
         attributes: {
           "smoke.test": true,
@@ -57,7 +57,7 @@ export default function SentryDevErrorButton() {
           });
 
           const eventId = Sentry.captureMessage(
-            `Agreements UI ${sentryEnvironment} full-stack smoke unexpectedly succeeded`,
+            `Shodai reference frontend ${sentryEnvironment} full-stack smoke unexpectedly succeeded`,
             {
               level: "warning",
               tags: {
@@ -66,7 +66,7 @@ export default function SentryDevErrorButton() {
                 smoke_path: "full_stack",
                 smoke_fail_target: deepSmokeFailTarget,
                 smoke_outcome: "unexpected_success",
-                app: "agreements-ui",
+                app: "shodai-reference-frontend",
               },
               extra: {
                 correlationId,
@@ -81,7 +81,7 @@ export default function SentryDevErrorButton() {
         } catch (error) {
           const eventId = Sentry.captureException(
             new Error(
-              `Agreements UI ${sentryEnvironment} full-stack smoke hit ${deepSmokeFailTarget} as expected`
+              `Shodai reference frontend ${sentryEnvironment} full-stack smoke hit ${deepSmokeFailTarget} as expected`
             ),
             {
               tags: {
@@ -90,14 +90,14 @@ export default function SentryDevErrorButton() {
                 smoke_path: "full_stack",
                 smoke_fail_target: deepSmokeFailTarget,
                 smoke_outcome: "expected_failure",
-                app: "agreements-ui",
+                app: "shodai-reference-frontend",
               },
               extra: {
                 correlationId,
                 href: window.location.href,
                 userAgent: window.navigator.userAgent,
                 apiBase: AGREEMENTS_API_BASE,
-                requestPath: "/agreements-api/telemetry/smoke/full-stack",
+                requestPath: "/shodai-reference-api/agreements-api/telemetry/smoke/full-stack",
                 responseStatus: axios.isAxiosError(error) ? error.response?.status : undefined,
                 responseData: axios.isAxiosError(error) ? error.response?.data : undefined,
                 originalError:
