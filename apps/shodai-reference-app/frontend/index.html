@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module">
+      import { Buffer } from 'buffer'
+      import process from 'process/browser'
+      window.Buffer = Buffer
+      window.process = process
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="llms-txt" href="/llms.txt" />
+    <link rel="service-desc" type="text/markdown" href="/skill.md" title="Shodai Reference App skill" />
+    <title>Agreements</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

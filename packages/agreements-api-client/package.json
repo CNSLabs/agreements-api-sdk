@@ -1,6 +1,6 @@
 {
   "name": "@cns-labs/agreements-api-client",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
   "author": "Agreements API Maintainers",
   "license": "Apache-2.0",
@@ -26,6 +26,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./webhooks": {
+      "types": "./dist/webhooks.d.ts",
+      "import": "./dist/webhooks.js"
     }
   },
   "files": [
@@ -34,7 +42,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "pnpm run build",
-    "lint": "tsc --noEmit -p tsconfig.json"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@cns-labs/agreements-protocol-evm": "^0.1.4",
