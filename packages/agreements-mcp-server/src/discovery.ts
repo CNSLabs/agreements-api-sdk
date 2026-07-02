@@ -2,10 +2,17 @@ import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js'
 
 import { SERVER_VERSION } from './server.js';
 
-export const PUBLIC_MCP_URL = 'https://developers.shodai.network/mcp';
-export const SERVER_CARD_PATH = '/mcp/server-card';
+export const PUBLIC_MCP_URL = 'https://shodai.network/mcp';
+export const SERVER_CARD_PATH = '/.well-known/mcp/server-card.json';
+export const MCP_JSON_SERVER_CARD_PATH = '/.well-known/mcp.json';
+export const LEGACY_SERVER_CARD_PATH = '/mcp/server-card';
+export const SERVER_CARD_PATHS = [
+  SERVER_CARD_PATH,
+  MCP_JSON_SERVER_CARD_PATH,
+  LEGACY_SERVER_CARD_PATH,
+] as const;
 export const MCP_CATALOG_PATH = '/.well-known/mcp/catalog.json';
-export const SERVER_CARD_URL = 'https://developers.shodai.network/mcp/server-card';
+export const SERVER_CARD_URL = 'https://shodai.network/.well-known/mcp/server-card.json';
 export const SERVER_CARD_MEDIA_TYPE = 'application/mcp-server-card+json';
 export const DISCOVERY_CACHE_CONTROL = 'public, max-age=3600';
 
@@ -16,7 +23,7 @@ export function createAgreementsMcpServerCard(publicMcpUrl: string = PUBLIC_MCP_
     title: 'Shodai Agreements',
     description: 'Author, validate, deploy, and operate Shodai on-chain agreements.',
     version: SERVER_VERSION,
-    websiteUrl: 'https://docs.shodai.network/sdks/connect-via-mcp',
+    websiteUrl: 'https://docs.shodai.network/sdks/quickstart-with-mcp',
     repository: {
       url: 'https://github.com/CNSLabs/agreements-api-sdk',
       source: 'github',

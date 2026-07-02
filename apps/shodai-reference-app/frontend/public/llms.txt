@@ -10,7 +10,8 @@ This app is a customer-adaptable reference surface for Shodai agreements. It is 
 - [Reference app skill](/skill.md): Agent workflow for this deployment-local app.
 - [Docs skill](https://docs.shodai.network/skill.md): Canonical agent workflow for API, SDK, agreement JSON, signing, deployment, operation, and troubleshooting.
 - [Docs llms.txt](https://docs.shodai.network/llms.txt): Complete documentation index.
-- [Quickstart](https://docs.shodai.network/quickstart.md): Default builder path.
+- [Quickstart with TypeScript SDK](https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md): Default builder path for API and SDK integrations.
+- [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp.md): Default builder path for hosted MCP integrations.
 - [OpenAPI](https://docs.shodai.network/openapi.json): Exact Agreements API routes, request bodies, response schemas, and servers.
 - [API Playground](https://developers.shodai.network/api-playground/): Browser workspace for testnet API requests.
 - [Developer Portal](https://developers.shodai.network/portal): API-key access and key management.

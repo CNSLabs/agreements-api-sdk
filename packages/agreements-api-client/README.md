@@ -290,9 +290,9 @@ console.log(inputIds);
 
 This reads `execution.inputs` keys from the parsed agreement document.
 
-### 7. Subscribe to agreement webhooks
+### 7. Subscribe to webhooks
 
-Create a webhook when your integration should receive signed push notifications for agreement transitions or triggered notification rules instead of polling state.
+Create a webhook when your integration should receive signed push notifications for agreement activity or triggered notification rules instead of polling state.
 
 ```ts
 const webhook = await client.createWebhook({
@@ -314,6 +314,8 @@ Store `webhook.secret` immediately. It is returned only in the create response a
 const webhooks = await client.listWebhooks();
 await client.testWebhook(webhooks.data[0].id);
 ```
+
+Use `deleteWebhook(webhookId)` to disable a subscription. The API returns the disabled subscription; it does not hard-delete the record.
 
 Webhook deliveries are JSON `POST` requests signed with the subscription secret. In your backend webhook route, pass the exact raw body and request headers to the server-side receiver helper before trusting or parsing the event:
 
@@ -428,7 +430,7 @@ In practice:
 
 - `getOpenApiDocument()` to inspect the raw OpenAPI document exposed by the gateway
 - `getHealth()` to check gateway reachability
-- `createWebhook()`, `listWebhooks()`, `getWebhook()`, `updateWebhook()`, `deleteWebhook()`, and `testWebhook()` to manage signed webhook subscriptions
+- `createWebhook()`, `listWebhooks()`, `getWebhook()`, `updateWebhook()`, `deleteWebhook()`, and `testWebhook()` to manage signed webhook subscriptions. `deleteWebhook()` disables the subscription.
 - `listAgreements()` and `getAgreement()` to browse agreement summaries or load full agreement records
 - `listAgreementInputs()` to inspect paged input history for an agreement
 - `validateTemplate()` and `validateDeployment()` before deploy
