@@ -42,7 +42,14 @@ Record:
 - `EXTERNAL_API_BASE_URL=https://test-api.shodai.network`
 - `EXTERNAL_API_KEY`
 
-Create a webhook subscription for agreement transition events and record:
+Create a webhook subscription for agreement activity and notification events:
+
+```text
+agreement.transitioned
+agreement.notification.triggered
+```
+
+Record:
 
 - `SHODAI_WEBHOOK_SECRET`
 
@@ -110,7 +117,7 @@ pnpm dev
 `pnpm dev` will:
 
 - start Docker MongoDB if `MONGO_URI` points at local port `27017` and nothing is already listening there
-- seed default template access from `data/agreement-templates`
+- seed an explicit default template access row from `data/agreement-templates`
 - start the backend at `http://localhost:4199`
 - start the frontend at `http://localhost:5184/agreements/`
 
@@ -122,7 +129,7 @@ pnpm dev:stop
 
 ## Template Access
 
-Fresh databases need template access rows before the Create Agreement page can show templates. The dev stack seeds all vendored templates as global defaults automatically.
+Fresh databases show all visible vendored templates on the Create Agreement page by default. The dev stack still seeds all vendored templates as explicit global defaults for parity with deployed environments.
 
 You can run the seed manually:
 

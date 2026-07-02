@@ -94,6 +94,30 @@ export class ApiClient {
     return this.requestData<AgreementInputRecord>('POST', agreementsApiPaths.agreementInput(agreementId), body, 201);
   }
 
+  async createWebhook(body: CreateWebhookRequest): Promise<CreateWebhookResponse> {
+    return this.requestData<CreateWebhookResponse>('POST', agreementsApiPaths.webhooks(), body, 201);
+  }
+
+  async listWebhooks(): Promise<ListResponse<WebhookSubscription>> {
+    return this.requestList<WebhookSubscription>('GET', agreementsApiPaths.webhooks());
+  }
+
+  async getWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('GET', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async updateWebhook(webhookId: string, body: UpdateWebhookRequest): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('PATCH', agreementsApiPaths.webhook(webhookId), body);
+  }
+
+  async deleteWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('DELETE', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async testWebhook(webhookId: string): Promise<WebhookTestResponse> {
+    return this.requestData<WebhookTestResponse>('POST', agreementsApiPaths.webhookTest(webhookId), undefined, 201);
+  }
+
   /**
    * JSON request with full response metadata (status, headers, raw body). Does not throw on HTTP error status;
    * use for debug/raw composers.

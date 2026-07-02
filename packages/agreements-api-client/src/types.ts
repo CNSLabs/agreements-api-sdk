@@ -213,8 +213,14 @@ export type NotificationRule = {
     title?: string;
     body: string;
     ctaLabel?: string;
+    attachmentStrategy?: NotificationAttachmentStrategy;
   };
   constraints?: Record<string, unknown>;
+};
+
+export type NotificationAttachmentStrategy = {
+  type: 'customerInvoicePdf';
+  variant: string;
 };
 
 export type AgreementStateResponse = {
