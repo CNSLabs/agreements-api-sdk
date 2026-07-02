@@ -108,7 +108,7 @@ npm install @cns-labs/agreements-mcp-server
 agreements-mcp-server-http   # Streamable HTTP on PORT (default 3905), endpoint /mcp
 ```
 
-HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `AGREEMENTS_API_TESTNET_BASE_URL`, `AGREEMENTS_API_PRODUCTION_BASE_URL`, and optional local `AGREEMENTS_API_BASE_URL` for single-origin testing.
+HTTP environment variables: `PORT`, `HOST`, `MCP_PATH`, `PUBLIC_MCP_URL`, `AGREEMENTS_API_TESTNET_BASE_URL`, `AGREEMENTS_API_PRODUCTION_BASE_URL`, and optional local `AGREEMENTS_API_BASE_URL` for single-origin testing. Set `PUBLIC_MCP_URL` when discovery metadata should advertise a canonical public endpoint that differs from the request host.
 
 A `Dockerfile` is included for container deployments. `GET /healthz` serves as the health endpoint.
 
