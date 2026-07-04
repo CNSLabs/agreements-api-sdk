@@ -2,12 +2,15 @@
   "name": "agreements-api-sdk",
   "version": "0.0.1",
   "private": true,
-  "description": "Open-source Agreements API client and playground for agreements integrations.",
+  "description": "Open-source Agreements API client, playground, and full-stack Shodai Reference App.",
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "build": "pnpm -r build",
     "build:client": "pnpm --filter @cns-labs/agreements-api-client build",
     "build:playground": "pnpm --filter agreements-api-playground build",
+    "build:reference-app": "pnpm --filter shodai-reference-app build",
+    "dev": "pnpm --filter shodai-reference-app dev:start",
+    "dev:stop": "pnpm --filter shodai-reference-app dev:stop",
     "dev:playground": "pnpm --filter agreements-api-playground dev",
     "lint": "pnpm -r lint"
   }

@@ -1,0 +1,30 @@
+# Shodai Reference App
+
+> Deployment-local reference implementation for templates, drafts, deployed agreements, signing, available actions, local persistence, and webhook reconciliation.
+
+This app is a customer-adaptable reference surface for Shodai agreements. It is not the canonical API or SDK documentation.
+
+## Start here
+
+- [Reference app](/agreements/): Open this deployment's product workflow surface.
+- [Reference app skill](/skill.md): Agent workflow for this deployment-local app.
+- [Docs skill](https://docs.shodai.network/skill.md): Canonical agent workflow for API, SDK, agreement JSON, signing, deployment, operation, and troubleshooting.
+- [Docs llms.txt](https://docs.shodai.network/llms.txt): Complete documentation index.
+- [Quickstart with TypeScript SDK](https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md): Default builder path for API and SDK integrations.
+- [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp.md): Default builder path for hosted MCP integrations.
+- [OpenAPI](https://docs.shodai.network/openapi.json): Exact Agreements API routes, request bodies, response schemas, and servers.
+- [API Playground](https://developers.shodai.network/api-playground/): Browser workspace for testnet API requests.
+- [Developer Portal](https://developers.shodai.network/portal): API-key access and key management.
+
+## Route by user intent
+
+- Product UI exploration: stay in this deployment's `/agreements/` app.
+- API, SDK, signing, deployment, operation, or debugging: load `https://docs.shodai.network/skill.md` first.
+- API-key access or key management: use `https://developers.shodai.network/portal`.
+- Browser API experimentation: use `https://developers.shodai.network/api-playground/`.
+
+## Notes for agents
+
+- If the user asks about visible product behavior, inspect the app UI and current route.
+- If the user asks how to build, integrate, sign, deploy, submit inputs, inspect state, or debug API behavior, continue in the docs.
+- Do not infer API routes, agreement JSON shapes, state IDs, input IDs, issuer rules, signing payloads, lifecycle behavior, credentials, or access policy from the app UI.

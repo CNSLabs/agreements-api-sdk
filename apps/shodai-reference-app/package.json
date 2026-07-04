@@ -1,0 +1,37 @@
+{
+  "name": "shodai-reference-app",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "install:all": "pnpm install",
+    "prepare:client": "pnpm --filter @cns-labs/agreements-api-client build",
+    "prebackend:start": "pnpm prepare:client",
+    "prebackend:dev": "pnpm prepare:client",
+    "prebackend:test": "pnpm prepare:client",
+    "prebackend:type-check": "pnpm prepare:client",
+    "backend:start": "pnpm --filter shodai-reference-backend start",
+    "backend:dev": "pnpm --filter shodai-reference-backend dev",
+    "backend:test": "pnpm --filter shodai-reference-backend test",
+    "backend:type-check": "pnpm --filter shodai-reference-backend type-check",
+    "frontend:dev": "pnpm --filter shodai-reference-frontend dev",
+    "frontend:dev:no-prepare": "pnpm --filter shodai-reference-frontend dev:no-prepare",
+    "frontend:lint": "pnpm --filter shodai-reference-frontend lint",
+    "frontend:type-check": "pnpm --filter shodai-reference-frontend type-check",
+    "frontend:test": "pnpm --filter shodai-reference-frontend test",
+    "frontend:build": "pnpm --filter shodai-reference-frontend build",
+    "templates:seed-defaults": "node scripts/seed-template-access.mjs",
+    "dev": "pnpm dev:start",
+    "dev:start": "bash ./scripts/dev-start.sh",
+    "dev:stop": "bash ./scripts/dev-stop.sh",
+    "notices:generate": "node scripts/generate-third-party-notices.mjs",
+    "notices:check": "node scripts/generate-third-party-notices.mjs --check",
+    "test": "pnpm backend:test && pnpm frontend:test",
+    "type-check": "pnpm backend:type-check && pnpm frontend:type-check",
+    "lint": "pnpm frontend:lint",
+    "build": "pnpm frontend:build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

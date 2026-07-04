@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "id": "ntpl:mou-v1",
+    "agreementTemplateId": "did:template:mou-v1",
+    "version": "1.0.0",
+    "name": "MOU - Notifications",
+    "description": "Test notification rules for the MOU agreement."
+  },
+  "rules": [
+    {
+      "id": "agreement-deployed",
+      "name": "Agreement Deployed",
+      "description": "Notify participants and observers when the MOU is deployed.",
+      "trigger": {
+        "type": "onTransition",
+        "inputs": ["__deploy"]
+      },
+      "recipients": ["*", "@observers"],
+      "notification": {
+        "subject": "MOU ready for review: ${agreementName}",
+        "title": "You've been invited to an MOU",
+        "body": "The MOU has been deployed and is ready for participant review.",
+        "ctaLabel": "View Agreement"
+      }
+    },
+    {
+      "id": "mou-concluded",
+      "name": "MOU Concluded",
+      "description": "Notify participants and observers when the MOU reaches a final state.",
+      "trigger": {
+        "type": "onTransition",
+        "to": ["ACCEPTED", "REJECTED"]
+      },
+      "recipients": ["*", "@observers"],
+      "notification": {
+        "subject": "MOU concluded: ${agreementName}",
+        "title": "This MOU has reached a final state",
+        "body": "The agreement moved from ${fromState} to ${toState}.",
+        "ctaLabel": "View Agreement"
+      }
+    }
+  ]
+}

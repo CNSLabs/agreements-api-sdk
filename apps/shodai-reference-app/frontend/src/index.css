@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "./subframe/theme.css";
+
+:root {
+  color-scheme: dark;
+  --shodai-fill-primary: #000000;
+  --shodai-fill-secondary: #161616;
+  --shodai-fill-tertiary: #212121;
+  --shodai-content-primary: #dae5c5;
+  --shodai-content-secondary: #969494;
+  --shodai-content-tertiary: #575a51;
+  --shodai-border: #212121;
+  --shodai-highlight: linear-gradient(
+    0deg,
+    rgba(94, 124, 206, 0) 38%,
+    rgba(105, 188, 125, 0.07) 75%,
+    rgba(205, 205, 226, 0.15) 86%,
+    rgba(211, 225, 233, 0.27) 90%,
+    rgba(183, 224, 145, 0.5) 95%,
+    rgba(220, 226, 205, 0.74) 99%,
+    rgb(220, 226, 205) 100%
+  );
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--shodai-fill-primary);
+}
+
+body {
+  margin: 0;
+  color: var(--shodai-content-primary);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--shodai-content-primary);
+  color: var(--shodai-fill-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  letter-spacing: 0;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--shodai-content-primary);
+  outline-offset: 2px;
+}
+
+.shodai-module {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--shodai-border);
+  background: var(--shodai-fill-primary);
+  overflow: hidden;
+}
+
+.shodai-module::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--shodai-highlight);
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0, 0, 0, 1);
+}
+
+.shodai-module:hover::before,
+.shodai-module:focus-within::before {
+  opacity: 0.32;
+}
+
+.shodai-grid-surface {
+  background-color: var(--shodai-fill-primary);
+  background-image:
+    linear-gradient(var(--shodai-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--shodai-border) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+.shodai-scrollbar {
+  scrollbar-color: var(--shodai-content-tertiary) var(--shodai-fill-primary);
+}
+
+.shodai-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.shodai-scrollbar::-webkit-scrollbar-track {
+  background: var(--shodai-fill-primary);
+}
+
+.shodai-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--shodai-content-tertiary);
+}

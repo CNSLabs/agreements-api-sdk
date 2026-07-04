@@ -2,7 +2,7 @@
 
 Shodai turns agreement definitions into machine-readable, verifiable coordination workflows for humans, products, and AI agents. Agreements carry readable terms plus participants, valid inputs, states, transitions, and history.
 
-This repository supports builders using the TypeScript SDK and agents or tools using MCP.
+This repository supports builders using the TypeScript SDK, agents or tools using MCP, and the canonical Shodai Reference App built on top of the SDK.
 
 ## Start Here
 
@@ -14,7 +14,7 @@ This repository supports builders using the TypeScript SDK and agents or tools u
 
 **Hosted MCP:** `https://shodai.network/mcp` is the Shodai Agreements execution MCP endpoint. It uses Streamable HTTP, bearer API-key auth, an `environment` tool argument, environment-scoped keys, and no hosted private-key custody.
 
-**Packages:** [`@cns-labs/agreements-api-client`](./packages/agreements-api-client) · [`@cns-labs/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground)
+**Packages and apps:** [`@cns-labs/agreements-api-client`](./packages/agreements-api-client) · [`@cns-labs/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app)
 
 ## Why Builders Use Shodai Agreements
 
@@ -68,6 +68,7 @@ An ordinary browser `GET` to `/mcp` may return `405` because the endpoint expect
 | `@cns-labs/agreements-api-client` | [`packages/agreements-api-client`](./packages/agreements-api-client) | Typed REST client for the Agreements API with `viem` permit-signing helpers. |
 | `@cns-labs/agreements-mcp-server` | [`packages/agreements-mcp-server`](./packages/agreements-mcp-server) | Local MCP server package aligned with the hosted Agreements execution MCP surface. |
 | `agreements-api-playground` | [`apps/agreements-api-playground`](./apps/agreements-api-playground) | Reference Vite app for browser API experimentation and SDK workflow examples. |
+| `shodai-reference-app` | [`apps/shodai-reference-app`](./apps/shodai-reference-app) | Full-stack React/Nest/Mongo reference implementation for developer platform auth, Agreements API usage, agreement lifecycle UX, signing, persistence, and webhook reconciliation. |
 
 ## Install the TypeScript SDK
 
@@ -157,12 +158,26 @@ The client still supports `baseUrl` as an advanced override for local proxies, i
 # from the repository root
 pnpm install
 pnpm build
+pnpm dev
+```
+
+The default dev command starts the Shodai Reference App. Its backend defaults to `http://localhost:4199` and its frontend defaults to `http://localhost:5184/agreements/`.
+
+Stop the reference app dev stack with:
+
+```bash
+pnpm dev:stop
+```
+
+See [`apps/shodai-reference-app/README.md`](./apps/shodai-reference-app/README.md) for the required local environment files.
+
+Run the API playground explicitly with:
+
+```bash
 pnpm dev:playground
 ```
 
-The playground defaults to `http://localhost:5176`.
-
-If that port is already in use, start the playground on another port:
+The playground defaults to `http://localhost:5176`. If that port is already in use, start the playground on another port:
 
 ```bash
 pnpm --filter agreements-api-playground exec vite --host 127.0.0.1 --port 4176

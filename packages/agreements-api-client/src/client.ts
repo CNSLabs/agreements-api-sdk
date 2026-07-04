@@ -11,16 +11,21 @@ import type {
   HealthResponse,
   ApiClientConfig,
   ApiResponse,
+  CreateWebhookRequest,
+  CreateWebhookResponse,
   ListResponse,
   ProcessInputRequest,
+  UpdateWebhookRequest,
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
+  WebhookSubscription,
+  WebhookTestResponse,
 } from './types.js';
 import { resolveApiBaseUrl } from './constants.js';
 import { agreementsApiPaths, joinUrl } from './utils.js';
 
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 
 export class ApiClient {
   private readonly baseUrl: string;
@@ -36,16 +41,16 @@ export class ApiClient {
     this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   async getOpenApiDocument(): Promise<unknown> {
     return this.request<unknown>('GET', agreementsApiPaths.openapiJson());
   }
 
   async getHealth(): Promise<HealthResponse> {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
-  }
-
-  getBaseUrl(): string {
-    return this.baseUrl;
   }
 
   async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {
@@ -87,6 +92,30 @@ export class ApiClient {
 
   async submitAgreementInput(agreementId: string, body: ProcessInputRequest): Promise<AgreementInputRecord> {
     return this.requestData<AgreementInputRecord>('POST', agreementsApiPaths.agreementInput(agreementId), body, 201);
+  }
+
+  async createWebhook(body: CreateWebhookRequest): Promise<CreateWebhookResponse> {
+    return this.requestData<CreateWebhookResponse>('POST', agreementsApiPaths.webhooks(), body, 201);
+  }
+
+  async listWebhooks(): Promise<ListResponse<WebhookSubscription>> {
+    return this.requestList<WebhookSubscription>('GET', agreementsApiPaths.webhooks());
+  }
+
+  async getWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('GET', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async updateWebhook(webhookId: string, body: UpdateWebhookRequest): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('PATCH', agreementsApiPaths.webhook(webhookId), body);
+  }
+
+  async deleteWebhook(webhookId: string): Promise<WebhookSubscription> {
+    return this.requestData<WebhookSubscription>('DELETE', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async testWebhook(webhookId: string): Promise<WebhookTestResponse> {
+    return this.requestData<WebhookTestResponse>('POST', agreementsApiPaths.webhookTest(webhookId), undefined, 201);
   }
 
   /**

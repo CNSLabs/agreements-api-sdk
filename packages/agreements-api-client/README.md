@@ -1,6 +1,6 @@
 # @cns-labs/agreements-api-client
 
-TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, and permit-based input submission.
+TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, webhook subscriptions, and permit-based input submission.
 
 The package bundles:
 
@@ -128,6 +128,7 @@ Use the HTTP client only when you want to:
 - validate deploy payloads
 - list or fetch agreements
 - inspect state and input history
+- manage webhook subscriptions
 - submit already-signed permit payloads
 
 Use the `viem` helpers when you also want the SDK to:
@@ -180,6 +181,21 @@ const deployed = await client.deployWithPermit({
   initValues,
   participants,
   observers,
+  notificationTemplate: {
+    rules: [
+      {
+        id: 'deployment-follow-up',
+        name: 'Deployment follow-up',
+        trigger: { type: 'onTransition', inputs: ['__deploy'] },
+        recipients: ['@observers'],
+        notification: {
+          channel: 'external_webhook',
+          subject: 'Agreement deployed',
+          body: 'Agreement ${agreementId} is ready for review.',
+        },
+      },
+    ],
+  },
 });
 
 console.log(deployed.id);
@@ -274,7 +290,94 @@ console.log(inputIds);
 
 This reads `execution.inputs` keys from the parsed agreement document.
 
-### 7. Submit a signed execution input
+### 7. Subscribe to webhooks
+
+Create a webhook when your integration should receive signed push notifications for agreement activity or triggered notification rules instead of polling state.
+
+```ts
+const webhook = await client.createWebhook({
+  url: 'https://example.com/shodai/webhooks',
+  eventTypes: ['agreement.transitioned', 'agreement.notification.triggered'],
+  filters: {
+    templateIds: ['did:template:service-retainer-v0-1'],
+    ruleIds: ['deployment-follow-up'],
+  },
+});
+
+console.log(webhook.id);
+console.log(webhook.secret);
+```
+
+Store `webhook.secret` immediately. It is returned only in the create response and is used to verify delivery signatures.
+
+```ts
+const webhooks = await client.listWebhooks();
+await client.testWebhook(webhooks.data[0].id);
+```
+
+Use `deleteWebhook(webhookId)` to disable a subscription. The API returns the disabled subscription; it does not hard-delete the record.
+
+Webhook deliveries are JSON `POST` requests signed with the subscription secret. In your backend webhook route, pass the exact raw body and request headers to the server-side receiver helper before trusting or parsing the event:
+
+```json
+{
+  "id": "evt_123",
+  "type": "agreement.transitioned",
+  "apiVersion": "2026-06-01",
+  "createdAt": "2026-06-02T18:00:00.000Z",
+  "data": {
+    "agreementId": "agr_123",
+    "templateId": "did:template:service-retainer-v0-1",
+    "fromState": "AWAITING_PAYMENT",
+    "toState": "WORK_IN_PROGRESS",
+    "inputId": "submitInitialPaymentProof"
+  }
+}
+```
+
+```ts
+import { createServer } from 'node:http';
+import { constructWebhookEvent, WebhookVerificationError } from '@cns-labs/agreements-api-client/webhooks';
+
+const webhookSecret = process.env.SHODAI_WEBHOOK_SECRET!;
+
+createServer((request, response) => {
+  if (request.method !== 'POST' || request.url !== '/shodai/webhooks') {
+    response.writeHead(404);
+    response.end();
+    return;
+  }
+
+  const chunks: Buffer[] = [];
+  request.on('data', chunk => chunks.push(Buffer.from(chunk)));
+  request.on('end', () => {
+    const rawBody = Buffer.concat(chunks);
+
+    try {
+      const event = constructWebhookEvent(rawBody, request.headers, webhookSecret);
+
+      if (event.type === 'agreement.transitioned') {
+        console.log(event.data.agreementId, event.data.fromState, event.data.toState);
+      }
+
+      response.writeHead(204);
+      response.end();
+    } catch (error) {
+      if (error instanceof WebhookVerificationError) {
+        response.writeHead(error.statusCode);
+        response.end(error.code);
+        return;
+      }
+      response.writeHead(500);
+      response.end('webhook_error');
+    }
+  });
+}).listen(3000);
+```
+
+Do not verify against an already parsed JSON object; signature verification depends on the original raw bytes. The SDK verifies Shodai's signature, timestamp tolerance, required headers, header/body event id consistency, and JSON event envelope shape. Your application still owns durable deduplication by the signed event `id`, queues, logging, persistence, and business side effects.
+
+### 8. Submit a signed execution input
 
 If your app already has a permit signature:
 
@@ -327,6 +430,7 @@ In practice:
 
 - `getOpenApiDocument()` to inspect the raw OpenAPI document exposed by the gateway
 - `getHealth()` to check gateway reachability
+- `createWebhook()`, `listWebhooks()`, `getWebhook()`, `updateWebhook()`, `deleteWebhook()`, and `testWebhook()` to manage signed webhook subscriptions. `deleteWebhook()` disables the subscription.
 - `listAgreements()` and `getAgreement()` to browse agreement summaries or load full agreement records
 - `listAgreementInputs()` to inspect paged input history for an agreement
 - `validateTemplate()` and `validateDeployment()` before deploy

@@ -1,0 +1,737 @@
+{
+  "metadata": {
+    "id": "did:example:customer-invoice-prototype-1",
+    "templateId": "did:template:customer-invoice-prototype-v1",
+    "version": "1.1.0",
+    "createdAt": "2026-03-10T00:00:00Z",
+    "name": "Service Provider Retainer Engagement",
+    "author": "Agreements Protocol",
+    "description": "Retainer engagement workflow with signatures, initial funding, recurring invoices, top-up requests, and a final invoice closeout flow"
+  },
+  "variables": {
+    "serviceProviderWalletAddress": {
+      "type": "address",
+      "subType": "participant",
+      "name": "Service Provider Wallet Address",
+      "helperText": "Wallet address of the service provider",
+      "description": "Participant address used when the service provider signs and submits invoices.",
+      "validation": {
+        "required": true
+      }
+    },
+    "clientWalletAddress": {
+      "type": "address",
+      "subType": "participant",
+      "name": "Client Wallet Address",
+      "helperText": "Wallet address of the client",
+      "description": "Participant address used when the client signs and reviews the retainer workflow.",
+      "validation": {
+        "required": true
+      }
+    },
+    "retainerTitle": {
+      "type": "string",
+      "name": "Retainer Title",
+      "helperText": "Enter descriptive title",
+      "description": "Primary identifier used for this retainer",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "retainerDescription": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Retainer Description",
+      "helperText": "Describe the retainer",
+      "description": "Text that helps contextualize this agreement",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "serviceProviderName": {
+      "type": "string",
+      "name": "Service Provider Name",
+      "helperText": "Name of the service provider (e.g. Example Studio)",
+      "description": "Brand name or individual name of the service provider to display on invoice and prose content.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "clientName": {
+      "type": "string",
+      "name": "Client Name",
+      "helperText": "Name of the client (e.g. the customer)",
+      "description": "Brand name or individual name of the client to display on invoice and prose content.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "retainerCeiling": {
+      "type": "number",
+      "name": "Retainer Ceiling",
+      "helperText": "Maximum value of retainer",
+      "description": "The maximum amount of value to be held in the retainer at any point in time. When a retainer topup is requested, it will fill to this amount.",
+      "validation": {
+        "required": true,
+        "min": 0
+      }
+    },
+    "retainerFloor": {
+      "type": "number",
+      "name": "Retainer Floor",
+      "helperText": "Threshold at which retainer topup requested",
+      "description": "The minimum amount expected to be held in the retainer from month to month. If an invoice would reduce the retainer below this amount, topup of the retainer should be requested.",
+      "validation": {
+        "required": true,
+        "min": 0
+      }
+    },
+    "retainerAddress": {
+      "type": "string",
+      "subType": "caip10Account",
+      "name": "Retainer Address",
+      "helperText": "Address of the account holding retainer funds",
+      "description": "CAIP-10 account identifier for the EOA, multisig, or other contract in which retainer funds are being held.",
+      "validation": {
+        "required": true
+      }
+    },
+    "currencyAddress": {
+      "type": "string",
+      "subType": "caip19Asset",
+      "name": "Currency Address",
+      "helperText": "Token address used for retainer payments",
+      "description": "CAIP-19 asset identifier for the ERC-20 token used for payments and balance calculations on the retainer.",
+      "validation": {
+        "required": true
+      }
+    },
+    "awaitingPaymentComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Additional Comments",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    },
+    "awaitingPaymentTerminationReason": {
+      "type": "string",
+      "name": "Reason for Termination",
+      "helperText": "Why is the agreement being terminated?",
+      "description": "Provide context as to why the agreement is being terminated.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "submitInvoiceComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Additional Comments",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    },
+    "topupInvoiceComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Additional Comments",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    },
+    "workInProgressTerminationReason": {
+      "type": "string",
+      "name": "Reason for Termination",
+      "helperText": "Why is the agreement being terminated?",
+      "description": "Provide context as to why the agreement is being terminated.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "invoiceSubmittedComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Additional Comments",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    },
+    "invoiceSubmittedFeedback": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Feedback",
+      "helperText": "Please provide any feedback about the invoice that may require edits or additional work.",
+      "description": "An opportunity to provide comments, feedback, or request additional information.",
+      "validation": {
+        "required": true
+      }
+    },
+    "invoiceSubmittedTerminationReason": {
+      "type": "string",
+      "name": "Reason for Termination",
+      "helperText": "Why is the agreement being terminated?",
+      "description": "Provide context as to why the agreement is being terminated.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "topupInvoiceFeedback": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Feedback",
+      "helperText": "Please provide any feedback about the invoice that may require edits or additional work.",
+      "description": "An opportunity to provide comments, feedback, or request additional information.",
+      "validation": {
+        "required": true
+      }
+    },
+    "topupInvoiceTerminationReason": {
+      "type": "string",
+      "name": "Reason for Termination",
+      "helperText": "Why is the agreement being terminated?",
+      "description": "Provide context as to why the agreement is being terminated.",
+      "validation": {
+        "required": true,
+        "minLength": 1
+      }
+    },
+    "finalInvoiceComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Additional Comments",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    },
+    "finalInvoiceFeedback": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Dispute with Feedback",
+      "helperText": "Please provide any feedback about the invoice that may require edits or additional work.",
+      "description": "An opportunity to provide comments, feedback, or request additional information.",
+      "validation": {
+        "required": true
+      }
+    },
+    "finalTerminationComment": {
+      "type": "string",
+      "subType": "longText",
+      "name": "Comment",
+      "helperText": "Please provide any additional comments that might provide context.",
+      "description": "An opportunity to provide comments, feedback, or additional information.",
+      "validation": {
+        "required": false
+      }
+    }
+  },
+  "content": {
+    "type": "md",
+    "data": "# ${variables.retainerTitle}\n\n${variables.retainerDescription}\n\n## Participants\n\n- **Service Provider:** ${variables.serviceProviderName}\n- **Client:** ${variables.clientName}\n\n## Retainer Terms\n\n- **Retainer Address:** ${variables.retainerAddress}\n- **Currency Address:** ${variables.currencyAddress}\n- **Retainer Floor:** ${variables.retainerFloor}\n- **Retainer Ceiling:** ${variables.retainerCeiling}\n\n## Working Cycle\n\n1. The service provider signs first and the client countersigns.\n2. The client funds the retainer for the first time and submits initial payment proof.\n3. While work is in progress, the service provider periodically submits invoices against the retainer.\n4. If the remaining balance stays above the floor, the service provider uses **Submit Invoice**.\n5. If the remaining balance would fall below the floor, the service provider uses **Submit Invoice With Topup**.\n6. Either party can initiate termination from the active working states, which moves the agreement into the final invoice closeout flow.\n7. The service provider submits the final invoice, the client can dispute it, and the service provider settles it by providing final payment proof."
+  },
+  "execution": {
+    "states": {
+      "AWAITING_SERVICE_PROVIDER_SIGNATURE": {
+        "name": "Awaiting Service Provider Signature",
+        "description": "Waiting for the service provider to sign the retainer engagement"
+      },
+      "AWAITING_CLIENT_SIGNATURE": {
+        "name": "Awaiting Client Signature",
+        "description": "Waiting for the client to countersign the retainer engagement"
+      },
+      "AWAITING_PAYMENT": {
+        "name": "Awaiting Payment",
+        "description": "Waiting for the client to top up the retainer wallet for the first time"
+      },
+      "WORK_IN_PROGRESS": {
+        "name": "Work in Progress",
+        "description": "Service provider is performing work and monitoring the retainer balance"
+      },
+      "INVOICE_SUBMITTED": {
+        "name": "Invoice Submitted",
+        "description": "Invoice was submitted and no retainer topup is currently required"
+      },
+      "INVOICE_SUBMITTED_WITH_TOPUP": {
+        "name": "Invoice Submitted with Topup",
+        "description": "Invoice was submitted and a retainer topup is required"
+      },
+      "PENDING_FINAL_INVOICE": {
+        "name": "Pending Final Invoice",
+        "description": "Termination has been initiated and the service provider must prepare the final invoice"
+      },
+      "FINAL_INVOICE_REVIEW": {
+        "name": "Final Invoice Review",
+        "description": "The client is reviewing the final invoice before the service provider settles and closes the retainer"
+      },
+      "INACTIVE": {
+        "name": "Inactive",
+        "description": "Agreement is terminated and inactive"
+      }
+    },
+    "initialize": {
+      "name": "Initialize Service Provider Retainer Engagement",
+      "description": "Create the retainer workflow and initialize the participants and retainer settings",
+      "initialState": "AWAITING_SERVICE_PROVIDER_SIGNATURE",
+      "data": {
+        "serviceProviderWalletAddress": "${variables.serviceProviderWalletAddress}",
+        "clientWalletAddress": "${variables.clientWalletAddress}",
+        "retainerTitle": "${variables.retainerTitle}",
+        "retainerDescription": "${variables.retainerDescription}",
+        "serviceProviderName": "${variables.serviceProviderName}",
+        "clientName": "${variables.clientName}",
+        "retainerCeiling": "${variables.retainerCeiling}",
+        "retainerFloor": "${variables.retainerFloor}",
+        "retainerAddress": "${variables.retainerAddress}",
+        "currencyAddress": "${variables.currencyAddress}"
+      }
+    },
+    "inputs": {
+      "serviceProviderSign": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Service Provider Signature",
+        "description": "Service provider signs the retainer engagement",
+        "data": {
+          "serviceProviderSignature": {
+            "type": "string",
+            "subType": "signature",
+            "name": "Service Provider Signature",
+            "helperText": "Sign to accept the retainer terms",
+            "description": "Electronic signature of the service provider.",
+            "validation": {
+              "required": true
+            }
+          }
+        },
+        "issuer": "${variables.serviceProviderWalletAddress.value}"
+      },
+      "clientSign": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Client Signature",
+        "description": "Client signs the retainer engagement",
+        "data": {
+          "clientSignature": {
+            "type": "string",
+            "subType": "signature",
+            "name": "Client Signature",
+            "helperText": "Sign to accept the retainer terms",
+            "description": "Electronic signature of the client.",
+            "validation": {
+              "required": true
+            }
+          }
+        },
+        "issuer": "${variables.clientWalletAddress.value}"
+      },
+      "submitInitialPaymentProof": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Submit Initial Payment Proof",
+        "description": "Service provider or client supplies proof that the initial retainer payment was executed",
+        "data": {
+          "awaitingPaymentPaymentLink": {
+            "type": "string",
+            "subType": "url",
+            "name": "Link to Payment Proof",
+            "helperText": "Enter transaction url",
+            "description": "Block explorer link for payment execution",
+            "validation": {
+              "required": true,
+              "minLength": 1
+            }
+          },
+          "awaitingPaymentComment": "${variables.awaitingPaymentComment}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "awaitingPaymentInitiateTermination": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Initiate Termination",
+        "description": "Service provider or client initiates termination before work begins",
+        "data": {
+          "awaitingPaymentTerminationReason": "${variables.awaitingPaymentTerminationReason}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "submitInvoice": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Submit Invoice",
+        "description": "Service provider submits an invoice while the retainer remains above the floor",
+        "data": {
+          "invoiceLineItems": {
+            "type": "string",
+            "subType": "invoice-csv",
+            "name": "Invoice Line Items",
+            "helperText": "Use our interactive tool to define individual line items",
+            "description": "Tabular data capturing the date, description, quantity, rate, and amount of each line item in the invoice.",
+            "validation": {
+              "required": true
+            }
+          },
+          "submitInvoiceComment": "${variables.submitInvoiceComment}"
+        },
+        "issuer": "${variables.serviceProviderWalletAddress.value}"
+      },
+      "submitInvoiceWithTopup": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Submit Invoice With Topup",
+        "description": "Service provider submits an invoice and indicates that a retainer topup is required",
+        "data": {
+          "topupInvoiceLineItems": {
+            "type": "string",
+            "subType": "invoice-csv",
+            "name": "Invoice Line Items",
+            "helperText": "Use our interactive tool to define individual line items",
+            "description": "Tabular data capturing the date, description, quantity, rate, and amount of each line item in the invoice.",
+            "validation": {
+              "required": true
+            }
+          },
+          "topupInvoiceComment": "${variables.topupInvoiceComment}"
+        },
+        "issuer": "${variables.serviceProviderWalletAddress.value}"
+      },
+      "workInProgressInitiateTermination": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Initiate Termination",
+        "description": "Service provider or client initiates the final invoice flow while work is in progress",
+        "data": {
+          "workInProgressTerminationReason": "${variables.workInProgressTerminationReason}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "invoiceSubmittedApprove": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Approve Invoice",
+        "description": "Service provider or client approves the currently submitted invoice",
+        "data": {
+          "invoiceSubmittedComment": "${variables.invoiceSubmittedComment}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "invoiceSubmittedReject": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Reject Invoice",
+        "description": "Service provider or client sends feedback on the currently submitted invoice",
+        "data": {
+          "invoiceSubmittedFeedback": "${variables.invoiceSubmittedFeedback}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "invoiceSubmittedInitiateTermination": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Initiate Termination",
+        "description": "Service provider or client initiates the final invoice flow from invoice review",
+        "data": {
+          "invoiceSubmittedTerminationReason": "${variables.invoiceSubmittedTerminationReason}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "topupInvoiceApprove": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Approve Topup Invoice",
+        "description": "Service provider or client supplies payment proof for the topup invoice",
+        "data": {
+          "topupInvoicePaymentLink": {
+            "type": "string",
+            "subType": "url",
+            "name": "Link to Payment Proof",
+            "helperText": "Enter transaction url",
+            "description": "Block explorer link for payment execution",
+            "validation": {
+              "required": true,
+              "minLength": 1
+            }
+          },
+          "topupInvoiceComment": "${variables.topupInvoiceComment}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "topupInvoiceReject": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Reject Topup Invoice",
+        "description": "Service provider or client sends feedback on the topup invoice",
+        "data": {
+          "topupInvoiceFeedback": "${variables.topupInvoiceFeedback}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "topupInvoiceTermination": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Initiate Termination",
+        "description": "Service provider or client initiates the final invoice flow from the topup invoice state",
+        "data": {
+          "topupInvoiceTerminationReason": "${variables.topupInvoiceTerminationReason}"
+        },
+        "issuer": [
+          "${variables.serviceProviderWalletAddress.value}",
+          "${variables.clientWalletAddress.value}"
+        ]
+      },
+      "finalInvoiceSubmit": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Submit Final Invoice",
+        "description": "Service provider submits the final invoice package for closeout",
+        "data": {
+          "finalInvoiceLineItems": {
+            "type": "string",
+            "subType": "invoice-csv",
+            "name": "Invoice Line Items",
+            "helperText": "Use our interactive tool to define individual line items",
+            "description": "Tabular data capturing the date, description, quantity, rate, and amount of each line item in the invoice.",
+            "validation": {
+              "required": true
+            }
+          },
+          "finalInvoiceComment": "${variables.finalInvoiceComment}"
+        },
+        "issuer": "${variables.serviceProviderWalletAddress.value}"
+      },
+      "disputeFinalInvoice": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Dispute Final Invoice",
+        "description": "Client disputes the final invoice and sends feedback",
+        "data": {
+          "finalInvoiceFeedback": "${variables.finalInvoiceFeedback}"
+        },
+        "issuer": "${variables.clientWalletAddress.value}"
+      },
+      "settleFinalInvoice": {
+        "type": "VerifiedCredentialEIP712",
+        "schema": "verified-credential-eip712.schema.json",
+        "displayName": "Settle Final Invoice",
+        "description": "Service provider provides final payment proof and closes the retainer",
+        "data": {
+          "finalInvoicePaymentProof": {
+            "type": "string",
+            "subType": "url",
+            "name": "Link to Payment Proof",
+            "helperText": "Enter transaction url",
+            "description": "Block explorer link for payment execution",
+            "validation": {
+              "required": true,
+              "minLength": 1
+            }
+          },
+          "finalTerminationComment": "${variables.finalTerminationComment}"
+        },
+        "issuer": "${variables.serviceProviderWalletAddress.value}"
+      }
+    },
+    "transitions": [
+      {
+        "from": "AWAITING_SERVICE_PROVIDER_SIGNATURE",
+        "to": "AWAITING_CLIENT_SIGNATURE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "serviceProviderSign"
+          }
+        ]
+      },
+      {
+        "from": "AWAITING_CLIENT_SIGNATURE",
+        "to": "AWAITING_PAYMENT",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "clientSign"
+          }
+        ]
+      },
+      {
+        "from": "AWAITING_PAYMENT",
+        "to": "WORK_IN_PROGRESS",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "submitInitialPaymentProof"
+          }
+        ]
+      },
+      {
+        "from": "AWAITING_PAYMENT",
+        "to": "PENDING_FINAL_INVOICE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "awaitingPaymentInitiateTermination"
+          }
+        ]
+      },
+      {
+        "from": "WORK_IN_PROGRESS",
+        "to": "INVOICE_SUBMITTED",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "submitInvoice"
+          }
+        ]
+      },
+      {
+        "from": "WORK_IN_PROGRESS",
+        "to": "INVOICE_SUBMITTED_WITH_TOPUP",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "submitInvoiceWithTopup"
+          }
+        ]
+      },
+      {
+        "from": "WORK_IN_PROGRESS",
+        "to": "PENDING_FINAL_INVOICE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "workInProgressInitiateTermination"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED",
+        "to": "WORK_IN_PROGRESS",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "invoiceSubmittedApprove"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED",
+        "to": "WORK_IN_PROGRESS",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "invoiceSubmittedReject"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED",
+        "to": "PENDING_FINAL_INVOICE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "invoiceSubmittedInitiateTermination"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED_WITH_TOPUP",
+        "to": "WORK_IN_PROGRESS",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "topupInvoiceApprove"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED_WITH_TOPUP",
+        "to": "WORK_IN_PROGRESS",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "topupInvoiceReject"
+          }
+        ]
+      },
+      {
+        "from": "INVOICE_SUBMITTED_WITH_TOPUP",
+        "to": "PENDING_FINAL_INVOICE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "topupInvoiceTermination"
+          }
+        ]
+      },
+      {
+        "from": "PENDING_FINAL_INVOICE",
+        "to": "FINAL_INVOICE_REVIEW",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "finalInvoiceSubmit"
+          }
+        ]
+      },
+      {
+        "from": "FINAL_INVOICE_REVIEW",
+        "to": "PENDING_FINAL_INVOICE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "disputeFinalInvoice"
+          }
+        ]
+      },
+      {
+        "from": "FINAL_INVOICE_REVIEW",
+        "to": "INACTIVE",
+        "conditions": [
+          {
+            "type": "isValid",
+            "input": "settleFinalInvoice"
+          }
+        ]
+      }
+    ]
+  }
+}

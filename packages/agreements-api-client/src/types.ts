@@ -164,6 +164,7 @@ export type ValidateDirectAgreementTemplateResponse = {
 export type DirectDeployAgreementWithPermitRequest = {
   agreement: Record<string, unknown>;
   displayName: string;
+  notificationTemplate?: NotificationTemplate;
   chainId?: number;
   docUri?: string;
   documentId?: string;
@@ -173,6 +174,53 @@ export type DirectDeployAgreementWithPermitRequest = {
   signer: string;
   deadline: number;
   signature: PermitSignature;
+};
+
+export type NotificationTemplate = {
+  metadata?: {
+    id?: string;
+    agreementTemplateId?: string;
+    version?: string;
+    name?: string;
+    description?: string;
+  };
+  rules: NotificationRule[];
+};
+
+export type NotificationRule = {
+  id: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  trigger:
+    | {
+        type: 'onTransition';
+        from?: string[];
+        to?: string[];
+        inputs?: string[];
+      }
+    | {
+        type: 'temporal';
+        states: string[];
+        condition: Record<string, unknown>;
+        checkInterval?: Record<string, unknown>;
+        fireOnce?: boolean;
+      };
+  recipients: string[];
+  notification: {
+    channel?: 'email' | 'external_webhook';
+    subject: string;
+    title?: string;
+    body: string;
+    ctaLabel?: string;
+    attachmentStrategy?: NotificationAttachmentStrategy;
+  };
+  constraints?: Record<string, unknown>;
+};
+
+export type NotificationAttachmentStrategy = {
+  type: 'customerInvoicePdf';
+  variant: string;
 };
 
 export type AgreementStateResponse = {
@@ -215,6 +263,64 @@ export type ProcessInputRequest = {
   signer: string;
   deadline: number;
   signature: PermitSignature;
+};
+
+export type WebhookEventType =
+  | 'agreement.transitioned'
+  | 'agreement.notification.triggered'
+  | 'webhook.test';
+
+export type WebhookSubscriptionEventType = Extract<
+  WebhookEventType,
+  'agreement.transitioned' | 'agreement.notification.triggered'
+>;
+
+export type WebhookSubscriptionStatus = 'active' | 'disabled';
+
+export type WebhookFilters = {
+  agreementIds?: string[];
+  templateIds?: string[];
+  inputIds?: string[];
+  fromStates?: string[];
+  toStates?: string[];
+  ruleIds?: string[];
+};
+
+export type WebhookSubscription = {
+  id: string;
+  principalId: string;
+  createdByApiKeyId?: string;
+  url: string;
+  status: WebhookSubscriptionStatus;
+  eventTypes: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateWebhookRequest = {
+  url: string;
+  eventTypes?: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+};
+
+export type CreateWebhookResponse = WebhookSubscription & {
+  secret: string;
+};
+
+export type UpdateWebhookRequest = {
+  url?: string;
+  eventTypes?: WebhookSubscriptionEventType[];
+  filters?: WebhookFilters;
+  status?: WebhookSubscriptionStatus;
+};
+
+export type WebhookTestResponse = {
+  ok: boolean;
+  deliveryId: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'retry_pending';
+  responseStatus?: number;
+  error?: string;
 };
 
 export type AgreementsApiEnvironment = 'testnet' | 'production';
