@@ -1,6 +1,6 @@
 # Hosted MCP server for the Agreements API (Streamable HTTP).
 # Build context: the agreements-api-sdk repository root.
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
@@ -25,7 +25,7 @@ COPY packages/agreements-mcp-server/content ./packages/agreements-mcp-server/con
 RUN pnpm --filter @shodai-network/agreements-api-client build \
   && pnpm --filter @shodai-network/agreements-mcp-server build
 
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 ENV NODE_ENV=production
 ENV PORT=3905
