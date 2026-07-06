@@ -10,7 +10,7 @@ COPY packages/agreements-api-client/package.json ./packages/agreements-api-clien
 COPY apps/agreements-api-playground/package.json ./apps/agreements-api-playground/
 
 RUN pnpm install --frozen-lockfile --ignore-scripts \
-  --filter @cns-labs/agreements-api-client \
+  --filter @shodai-network/agreements-api-client \
   --filter agreements-api-playground...
 
 FROM base AS build
@@ -45,7 +45,7 @@ COPY apps/agreements-api-playground/tsconfig.json ./apps/agreements-api-playgrou
 COPY apps/agreements-api-playground/tsconfig.app.json ./apps/agreements-api-playground/
 COPY apps/agreements-api-playground/tsconfig.node.json ./apps/agreements-api-playground/
 
-RUN pnpm --filter @cns-labs/agreements-api-client build
+RUN pnpm --filter @shodai-network/agreements-api-client build
 RUN pnpm --filter agreements-api-playground build
 
 FROM nginx:alpine AS production

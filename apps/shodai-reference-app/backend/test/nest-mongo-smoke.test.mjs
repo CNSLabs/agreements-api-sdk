@@ -345,7 +345,7 @@ test('Legacy migration validates exports before writes, preserves IDs, and is id
 test('Agreements API client emits the outbound external API contract used by the reference app bridge', async () => {
   const { ApiClient } = await import(pathToFileURL(path.join(
     appRoot,
-    'backend/node_modules/@cns-labs/agreements-api-client/dist/client.js',
+    'backend/node_modules/@shodai-network/agreements-api-client/dist/client.js',
   )).href);
   const calls = [];
   const client = new ApiClient({

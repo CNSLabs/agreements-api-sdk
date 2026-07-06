@@ -22,7 +22,7 @@ import { Segment } from "@/subframe/components/Segment";
 import { DialogLayout } from "@/subframe/layouts/DialogLayout";
 import { useAgreementsApi, type AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import { useNotificationsApi } from "@/hooks/useNotificationsApi";
-import type { AgreementJson } from "@cns-labs/agreements-protocol-evm";
+import type { AgreementJson } from "@shodai-network/agreements-protocol-evm";
 import { extractIssuerVariableKeys } from "@/utils/agreementsUi";
 import { getChainConfig, getDefaultChainConfig, getSupportedChainConfigs } from "@/utils/chainConfig";
 import {

@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { listDeployments } from '@cns-labs/agreements-protocol-evm';
+import { listDeployments } from '@shodai-network/agreements-protocol-evm';
 
 type AgreementsApiEnvironment = 'testnet' | 'production';
 

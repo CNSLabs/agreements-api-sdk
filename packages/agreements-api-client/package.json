@@ -1,5 +1,5 @@
 {
-  "name": "@cns-labs/agreements-api-client",
+  "name": "@shodai-network/agreements-api-client",
   "version": "0.4.0",
   "description": "TypeScript client for the Agreements API with built-in permit-signing helpers",
   "author": "Agreements API Maintainers",
@@ -46,7 +46,7 @@
     "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@cns-labs/agreements-protocol-evm": "^0.1.4",
+    "@shodai-network/agreements-protocol-evm": "^0.1.4",
     "viem": "^2.43.0"
   },
   "devDependencies": {

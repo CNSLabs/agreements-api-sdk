@@ -1,8 +1,8 @@
-# @cns-labs/agreements-mcp-server
+# @shodai-network/agreements-mcp-server
 
 [Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Configure Shodai as a remote Streamable HTTP MCP server and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
 
-The server is a pure consumer of the public `/v0` API via [`@cns-labs/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
+The server is a pure consumer of the public `/v0` API via [`@shodai-network/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
 ## Hosted endpoint
 
@@ -37,7 +37,7 @@ Get an API key from the [Developer Portal](https://developers.shodai.network). F
   "mcpServers": {
     "shodai-agreements": {
       "command": "npx",
-      "args": ["-y", "@cns-labs/agreements-mcp-server"],
+      "args": ["-y", "@shodai-network/agreements-mcp-server"],
       "env": {
         "AGREEMENTS_API_KEY": "YOUR_API_KEY",
         "AGREEMENTS_API_ENVIRONMENT": "testnet"
@@ -104,7 +104,7 @@ Hosted MCP receives signed permit fields only, never private keys. Private-key e
 ## Self-hosting
 
 ```bash
-npm install @cns-labs/agreements-mcp-server
+npm install @shodai-network/agreements-mcp-server
 agreements-mcp-server-http   # Streamable HTTP on PORT (default 3905), endpoint /mcp
 ```
 
@@ -116,8 +116,8 @@ A `Dockerfile` is included for container deployments. `GET /healthz` serves as t
 
 ```bash
 pnpm install
-pnpm --filter @cns-labs/agreements-mcp-server build
-pnpm --filter @cns-labs/agreements-mcp-server test
+pnpm --filter @shodai-network/agreements-mcp-server build
+pnpm --filter @shodai-network/agreements-mcp-server test
 ```
 
 Verify interactively with the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector):

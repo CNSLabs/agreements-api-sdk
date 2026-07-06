@@ -5,9 +5,9 @@ import type {
   ShodaiWebhookEvent,
   WebhookHeaders,
   WebhookRawBody,
-} from '@cns-labs/agreements-api-client/webhooks';
+} from '@shodai-network/agreements-api-client/webhooks';
 
-type WebhookModule = typeof import('@cns-labs/agreements-api-client/webhooks');
+type WebhookModule = typeof import('@shodai-network/agreements-api-client/webhooks');
 
 const importWebhookModule = new Function(
   'specifier',
@@ -56,7 +56,7 @@ export class WebhookReceiverService {
     }
 
     const { constructWebhookEvent, WebhookVerificationError } = await importWebhookModule(
-      '@cns-labs/agreements-api-client/webhooks',
+      '@shodai-network/agreements-api-client/webhooks',
     );
 
     try {

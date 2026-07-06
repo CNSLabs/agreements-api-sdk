@@ -100,7 +100,7 @@ pnpm --filter shodai-reference-app notices:check
 | @babel/types | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-types) |
 | @base-org/account | 1.1.1, 2.4.0 | Apache-2.0 | [link](https://github.com/base/account-sdk#readme) |
 | @borewit/text-codec | 0.2.2 | MIT | [link](https://github.com/Borewit/text-codec#readme) |
-| @cns-labs/agreements-protocol-evm | 0.1.3 | Apache-2.0 |  |
+| @shodai-network/agreements-protocol-evm | 0.1.3 | Apache-2.0 |  |
 | @coinbase/cdp-sdk | 1.51.0 | MIT | [link](https://github.com/coinbase/cdp-sdk#readme) |
 | @coinbase/wallet-sdk | 3.9.3, 4.3.7 | Apache-2.0 | [link](https://github.com/coinbase/coinbase-wallet-sdk#readme) |
 | @cspotcode/source-map-support | 0.8.1 | MIT | [link](https://github.com/cspotcode/node-source-map-support#readme) |

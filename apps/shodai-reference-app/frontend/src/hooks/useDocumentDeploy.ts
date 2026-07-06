@@ -11,7 +11,7 @@ import {
   type InputDef,
   type Transition,
   type VerifierInit,
-} from "@cns-labs/agreements-protocol-evm";
+} from "@shodai-network/agreements-protocol-evm";
 import type { UseFormReturn } from "react-hook-form";
 import type { AgreementRecordApi, ParticipantApi } from "@/hooks/useAgreementsApi";
 import { useAgreementsApi } from "@/hooks/useAgreementsApi";

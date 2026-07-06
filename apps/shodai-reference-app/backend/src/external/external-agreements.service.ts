@@ -6,11 +6,11 @@ import { AgreementInputRepository } from '../database/repositories/agreement-inp
 import { ExternalApiEventRepository } from '../database/repositories/external-api-event.repository';
 import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields } from '../agreements/agreement-utils';
 import { NotificationCatalogService } from '../notifications/notification-catalog.service';
-import type { AgreementTransitionedWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
-import type { ApiClient, AgreementInputRecord } from '@cns-labs/agreements-api-client';
+import type { AgreementTransitionedWebhookEvent } from '@shodai-network/agreements-api-client/webhooks';
+import type { ApiClient, AgreementInputRecord } from '@shodai-network/agreements-api-client';
 
-type AgreementsApiClientModule = typeof import('@cns-labs/agreements-api-client');
-type AgreementsApiHttpClientModule = typeof import('@cns-labs/agreements-api-client/client');
+type AgreementsApiClientModule = typeof import('@shodai-network/agreements-api-client');
+type AgreementsApiHttpClientModule = typeof import('@shodai-network/agreements-api-client/client');
 
 const importAgreementsApiClientModule = new Function(
   'specifier',
@@ -476,7 +476,7 @@ export class ExternalAgreementsService {
     if (!this.config.externalApiBaseUrl || !this.config.externalApiKey) {
       throw new InternalServerErrorException('EXTERNAL_API_BASE_URL and EXTERNAL_API_KEY are required for deployed agreement operations');
     }
-    const { ApiClient } = await importAgreementsApiClientModule('@cns-labs/agreements-api-client/client') as AgreementsApiHttpClientModule;
+    const { ApiClient } = await importAgreementsApiClientModule('@shodai-network/agreements-api-client/client') as AgreementsApiHttpClientModule;
     return new ApiClient({
       baseUrl: this.config.externalApiBaseUrl,
       apiKey: this.config.externalApiKey,

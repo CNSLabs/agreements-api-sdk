@@ -12,7 +12,7 @@ import { PageHeader } from "@/subframe/components/PageHeader";
 import { Segment } from "@/subframe/components/Segment";
 import { Avatar } from "@/subframe/components/Avatar";
 import { CopyToClipboardButton } from "@/subframe/components/CopyToClipboardButton";
-import { type AgreementJson } from "@cns-labs/agreements-protocol-evm";
+import { type AgreementJson } from "@shodai-network/agreements-protocol-evm";
 import { resolveStateLabel } from "@/utils/agreementsUi";
 import { SuccessDialog } from "@/components/SuccessDialog";
 import { markdownWithValuesToHtml, printDocument } from "@/utils/documentExport";

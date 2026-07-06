@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createPublicClient, http, keccak256 } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
-import { AgreementEngine, buildInputPayload, inputToBytes32, type AgreementJson } from "@cns-labs/agreements-protocol-evm";
+import { AgreementEngine, buildInputPayload, inputToBytes32, type AgreementJson } from "@shodai-network/agreements-protocol-evm";
 import { useAgreementsApi, type AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {

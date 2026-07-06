@@ -1,4 +1,4 @@
-import type { AgreementNotificationTriggeredWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
+import type { AgreementNotificationTriggeredWebhookEvent } from '@shodai-network/agreements-api-client/webhooks';
 
 export interface EmailAttachment {
   filename: string;

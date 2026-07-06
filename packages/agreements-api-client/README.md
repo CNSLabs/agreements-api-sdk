@@ -1,4 +1,4 @@
-# @cns-labs/agreements-api-client
+# @shodai-network/agreements-api-client
 
 TypeScript client for the Agreements API, including built-in helpers for agreement validation, deployment, inspection, webhook subscriptions, and permit-based input submission.
 
@@ -16,19 +16,19 @@ Maintainer workflows such as local builds and publishing live in [`DEVELOPMENT.m
 Install the client for HTTP-only usage:
 
 ```bash
-npm install @cns-labs/agreements-api-client
+npm install @shodai-network/agreements-api-client
 ```
 
 Add `viem` if you want the built-in wallet signing helpers:
 
 ```bash
-npm install @cns-labs/agreements-api-client viem
+npm install @shodai-network/agreements-api-client viem
 ```
 
 ## Create a Client
 
 ```ts
-import { ApiClient } from '@cns-labs/agreements-api-client';
+import { ApiClient } from '@shodai-network/agreements-api-client';
 
 const client = new ApiClient({
   environment: 'testnet',
@@ -210,7 +210,7 @@ Use the helper flow when you have a `walletClient` and `publicClient` available:
 import {
   computeDefaultDeadlineSeconds,
   deployAgreementWithPermit,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 
 const agreementRecord = await deployAgreementWithPermit({
   client,
@@ -282,7 +282,7 @@ Nested filters and sorts are encoded as query parameters such as `createdAt[gte]
 If you are rendering an input-submission UI from agreement JSON, use `getExecutionInputIds()`:
 
 ```ts
-import { getExecutionInputIds } from '@cns-labs/agreements-api-client';
+import { getExecutionInputIds } from '@shodai-network/agreements-api-client';
 
 const inputIds = getExecutionInputIds(agreement);
 console.log(inputIds);
@@ -337,7 +337,7 @@ Webhook deliveries are JSON `POST` requests signed with the subscription secret.
 
 ```ts
 import { createServer } from 'node:http';
-import { constructWebhookEvent, WebhookVerificationError } from '@cns-labs/agreements-api-client/webhooks';
+import { constructWebhookEvent, WebhookVerificationError } from '@shodai-network/agreements-api-client/webhooks';
 
 const webhookSecret = process.env.SHODAI_WEBHOOK_SECRET!;
 
@@ -399,7 +399,7 @@ Or sign and submit in one step with `viem`:
 import {
   computeDefaultDeadlineSeconds,
   submitAgreementInputWithPermit,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 
 const inputRecord = await submitAgreementInputWithPermit({
   client,
@@ -419,7 +419,7 @@ const inputRecord = await submitAgreementInputWithPermit({
 
 The client accepts agreement JSON as `Record<string, unknown>` for HTTP transport. This keeps the API client usable even if your app manages agreement JSON outside this package.
 
-If your application already uses typed agreement objects, the `viem` helper layer is designed to work with agreement data compatible with `AgreementJson` from `@cns-labs/agreements-protocol-evm`.
+If your application already uses typed agreement objects, the `viem` helper layer is designed to work with agreement data compatible with `AgreementJson` from `@shodai-network/agreements-protocol-evm`.
 
 In practice:
 
