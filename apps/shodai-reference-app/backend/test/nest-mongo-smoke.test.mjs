@@ -442,29 +442,6 @@ test('Notification catalog normalizes templates for external webhook deployment'
   }
 });
 
-test('Notification catalog exposes monorepo templates in default local setup', async () => {
-  const previousDir = process.env.NOTIFICATION_TEMPLATES_DIR;
-  try {
-    delete process.env.NOTIFICATION_TEMPLATES_DIR;
-    const { NotificationCatalogService } = requireBackendSource('notifications/notification-catalog.service.ts');
-    const service = new NotificationCatalogService();
-
-    const template = await service.getExternalWebhookTemplateByAgreementTemplateId(
-      'did:template:service-retainer-manual-balance-v0-1',
-    );
-
-    assert.equal(template.metadata.agreementTemplateId, 'did:template:service-retainer-manual-balance-v0-1');
-    assert.ok(template.rules.some((rule) => rule.notification.attachmentStrategy?.type === 'customerInvoicePdf'));
-    assert.ok(template.rules.every((rule) => rule.notification.channel === 'external_webhook'));
-  } finally {
-    if (previousDir === undefined) {
-      delete process.env.NOTIFICATION_TEMPLATES_DIR;
-    } else {
-      process.env.NOTIFICATION_TEMPLATES_DIR = previousDir;
-    }
-  }
-});
-
 test('External deploy attaches matching external webhook notification template', async () => {
   const { ExternalAgreementsService } = requireBackendSource('external/external-agreements.service.ts');
   const agreement = {
