@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { NotificationTemplate } from '@cns-labs/agreements-api-client';
+import type { NotificationTemplate } from '@shodai-network/agreements-api-client';
 
 const APP_ROOT = path.resolve(__dirname, '../../..');
 const DEFAULT_NOTIFICATION_TEMPLATES_DIR = path.join(APP_ROOT, 'data', 'notification-templates');

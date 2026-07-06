@@ -26,7 +26,7 @@ import * as viemChains from 'viem/chains';
 import {
   signAgreementInputPermit,
   signDeployWithPermit,
-} from '@cns-labs/agreements-api-client';
+} from '@shodai-network/agreements-api-client';
 
 /** Placeholder 65-byte signature returned by the capture account (discarded). */
 const DUMMY_SIGNATURE: Hex = `0x${'11'.repeat(64)}1b`;

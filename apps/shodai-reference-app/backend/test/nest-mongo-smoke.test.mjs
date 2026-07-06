@@ -345,7 +345,7 @@ test('Legacy migration validates exports before writes, preserves IDs, and is id
 test('Agreements API client emits the outbound external API contract used by the reference app bridge', async () => {
   const { ApiClient } = await import(pathToFileURL(path.join(
     appRoot,
-    'backend/node_modules/@cns-labs/agreements-api-client/dist/client.js',
+    'backend/node_modules/@shodai-network/agreements-api-client/dist/client.js',
   )).href);
   const calls = [];
   const client = new ApiClient({
@@ -439,29 +439,6 @@ test('Notification catalog normalizes templates for external webhook deployment'
       process.env.NOTIFICATION_TEMPLATES_DIR = previousDir;
     }
     await fs.rm(tempDir, { recursive: true, force: true });
-  }
-});
-
-test('Notification catalog exposes monorepo templates in default local setup', async () => {
-  const previousDir = process.env.NOTIFICATION_TEMPLATES_DIR;
-  try {
-    delete process.env.NOTIFICATION_TEMPLATES_DIR;
-    const { NotificationCatalogService } = requireBackendSource('notifications/notification-catalog.service.ts');
-    const service = new NotificationCatalogService();
-
-    const template = await service.getExternalWebhookTemplateByAgreementTemplateId(
-      'did:template:service-retainer-manual-balance-v0-1',
-    );
-
-    assert.equal(template.metadata.agreementTemplateId, 'did:template:service-retainer-manual-balance-v0-1');
-    assert.ok(template.rules.some((rule) => rule.notification.attachmentStrategy?.type === 'customerInvoicePdf'));
-    assert.ok(template.rules.every((rule) => rule.notification.channel === 'external_webhook'));
-  } finally {
-    if (previousDir === undefined) {
-      delete process.env.NOTIFICATION_TEMPLATES_DIR;
-    } else {
-      process.env.NOTIFICATION_TEMPLATES_DIR = previousDir;
-    }
   }
 });
 

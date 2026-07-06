@@ -5,7 +5,7 @@ import { AgreementRepository } from '../database/repositories/agreement.reposito
 import { NotificationDeliveryRepository } from '../database/repositories/notification-delivery.repository';
 import { wrapNotificationHtml } from './notification-email-html';
 import { resolveNotificationAttachments, type EmailAttachment } from './notification-attachments';
-import type { AgreementNotificationTriggeredWebhookEvent } from '@cns-labs/agreements-api-client/webhooks';
+import type { AgreementNotificationTriggeredWebhookEvent } from '@shodai-network/agreements-api-client/webhooks';
 
 @Injectable()
 export class NotificationEmailService {

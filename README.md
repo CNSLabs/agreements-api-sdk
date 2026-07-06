@@ -14,7 +14,7 @@ This repository supports builders using the TypeScript SDK, agents or tools usin
 
 **Hosted MCP:** `https://shodai.network/mcp` is the Shodai Agreements execution MCP endpoint. It uses Streamable HTTP, bearer API-key auth, an `environment` tool argument, environment-scoped keys, and no hosted private-key custody.
 
-**Packages and apps:** [`@cns-labs/agreements-api-client`](./packages/agreements-api-client) · [`@cns-labs/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app)
+**Packages and apps:** [`@shodai-network/agreements-api-client`](./packages/agreements-api-client) · [`@shodai-network/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app)
 
 ## Why Builders Use Shodai Agreements
 
@@ -65,8 +65,8 @@ An ordinary browser `GET` to `/mcp` may return `405` because the endpoint expect
 
 | Package or app | Location | Purpose |
 | --- | --- | --- |
-| `@cns-labs/agreements-api-client` | [`packages/agreements-api-client`](./packages/agreements-api-client) | Typed REST client for the Agreements API with `viem` permit-signing helpers. |
-| `@cns-labs/agreements-mcp-server` | [`packages/agreements-mcp-server`](./packages/agreements-mcp-server) | Local MCP server package aligned with the hosted Agreements execution MCP surface. |
+| `@shodai-network/agreements-api-client` | [`packages/agreements-api-client`](./packages/agreements-api-client) | Typed REST client for the Agreements API with `viem` permit-signing helpers. |
+| `@shodai-network/agreements-mcp-server` | [`packages/agreements-mcp-server`](./packages/agreements-mcp-server) | Local MCP server package aligned with the hosted Agreements execution MCP surface. |
 | `agreements-api-playground` | [`apps/agreements-api-playground`](./apps/agreements-api-playground) | Reference Vite app for browser API experimentation and SDK workflow examples. |
 | `shodai-reference-app` | [`apps/shodai-reference-app`](./apps/shodai-reference-app) | Full-stack React/Nest/Mongo reference implementation for developer platform auth, Agreements API usage, agreement lifecycle UX, signing, persistence, and webhook reconciliation. |
 
@@ -75,13 +75,13 @@ An ordinary browser `GET` to `/mcp` may return `405` because the endpoint expect
 Most TypeScript consumers should install the published npm package rather than this monorepo:
 
 ```bash
-npm install @cns-labs/agreements-api-client
+npm install @shodai-network/agreements-api-client
 ```
 
 Add `viem` if you want the built-in permit-signing helpers for deploy and input submission:
 
 ```bash
-npm install @cns-labs/agreements-api-client viem
+npm install @shodai-network/agreements-api-client viem
 ```
 
 Create a client with a named Shodai environment:
@@ -104,7 +104,7 @@ Use the published MCP package for local stdio clients:
   "mcpServers": {
     "shodai-agreements": {
       "command": "npx",
-      "args": ["-y", "@cns-labs/agreements-mcp-server"],
+      "args": ["-y", "@shodai-network/agreements-mcp-server"],
       "env": {
         "AGREEMENTS_API_KEY": "YOUR_API_KEY",
         "AGREEMENTS_API_ENVIRONMENT": "testnet"
@@ -188,8 +188,8 @@ For local browser development, the playground is environment-first and defaults 
 Optional package-specific validation commands:
 
 ```bash
-pnpm --filter @cns-labs/agreements-api-client run lint
-pnpm --filter @cns-labs/agreements-mcp-server test
+pnpm --filter @shodai-network/agreements-api-client run lint
+pnpm --filter @shodai-network/agreements-mcp-server test
 ```
 
 See [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playground/README.md) for the full environment configuration.

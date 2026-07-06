@@ -1,5 +1,5 @@
 import StateMachineFlowViewer from "@/components/StateMachineFlowViewer";
-import type { AgreementJson } from "@cns-labs/agreements-protocol-evm";
+import type { AgreementJson } from "@shodai-network/agreements-protocol-evm";
 
 export interface DocumentStateMachineTabProps {
   agreementJson: AgreementJson;

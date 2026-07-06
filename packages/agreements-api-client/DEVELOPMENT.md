@@ -1,6 +1,6 @@
 # Agreements API Client Development
 
-Maintainer notes for `@cns-labs/agreements-api-client`.
+Maintainer notes for `@shodai-network/agreements-api-client`.
 
 ## Role in the Repository
 
@@ -21,13 +21,13 @@ Primary files to check:
 Build:
 
 ```bash
-pnpm --filter @cns-labs/agreements-api-client run build
+pnpm --filter @shodai-network/agreements-api-client run build
 ```
 
 Typecheck:
 
 ```bash
-pnpm --filter @cns-labs/agreements-api-client run lint
+pnpm --filter @shodai-network/agreements-api-client run lint
 ```
 
 ## Publishing
@@ -37,7 +37,7 @@ Release from `packages/agreements-api-client`:
 ```bash
 npm version <new-version> --no-git-tag-version
 pnpm pack
-tar -xOf cns-labs-agreements-api-client-<new-version>.tgz package/package.json
+tar -xOf shodai-network-agreements-api-client-<new-version>.tgz package/package.json
 pnpm publish --access public --no-git-checks
 ```
 

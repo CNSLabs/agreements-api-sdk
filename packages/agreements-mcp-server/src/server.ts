@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApiClient, type ApiClientConfig } from '@cns-labs/agreements-api-client';
+import { ApiClient, type ApiClientConfig } from '@shodai-network/agreements-api-client';
 
 import { registerReadTools, type ClientResolver, type ToolEnvironmentMode } from './tools.js';
 import { registerWriteTools } from './write-tools.js';

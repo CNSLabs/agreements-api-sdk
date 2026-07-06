@@ -2,7 +2,7 @@
 
 Full-stack React/Nest/Mongo reference implementation for Shodai agreements. The app connects developer platform auth, Agreements API access, agreement lifecycle UX, wallet signing, local persistence, and webhook reconciliation in one deployable reference surface for custom deployments and open-source review.
 
-It runs independently of internal services, keeps Shodai API keys server-side in the Nest backend, uses the workspace `@cns-labs/agreements-api-client`, and receives signed Shodai agreement transition webhooks at `/shodai/webhooks`.
+It runs independently of internal services, keeps Shodai API keys server-side in the Nest backend, uses the workspace `@shodai-network/agreements-api-client`, and receives signed Shodai agreement transition webhooks at `/shodai/webhooks`.
 
 ## Requirements
 
@@ -134,7 +134,7 @@ pnpm --filter shodai-reference-app frontend:build
 
 ## External API
 
-Deployment, state reads, input listing, and input submission use `@cns-labs/agreements-api-client` against `EXTERNAL_API_BASE_URL`. Runtime mock external API mode is test-only and must not be used for local or production-like validation.
+Deployment, state reads, input listing, and input submission use `@shodai-network/agreements-api-client` against `EXTERNAL_API_BASE_URL`. Runtime mock external API mode is test-only and must not be used for local or production-like validation.
 
 ## Webhooks
 

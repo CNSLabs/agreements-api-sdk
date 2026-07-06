@@ -22,29 +22,29 @@ pnpm --filter shodai-reference-app notices:check
 | (MIT OR Apache-2.0) | 1 |
 | (Unlicense OR Apache-2.0) | 1 |
 | 0BSD | 2 |
-| Apache-2.0 | 84 |
+| Apache-2.0 | 115 |
 | BlueOak-1.0.0 | 6 |
 | BSD | 1 |
-| BSD-2-Clause | 11 |
-| BSD-3-Clause | 29 |
+| BSD-2-Clause | 12 |
+| BSD-3-Clause | 30 |
 | CC-BY-4.0 | 1 |
 | CC0-1.0 | 1 |
 | FSL-1.1-MIT | 2 |
-| ISC | 65 |
+| ISC | 69 |
 | LGPL-3.0-only | 1 |
 | LGPL-3.0-or-later | 1 |
-| MIT | 879 |
+| MIT | 928 |
 | MIT AND ISC | 1 |
 | MPL-2.0 | 6 |
 | Python-2.0 | 1 |
-| Unknown | 13 |
+| Unknown | 28 |
 
 ## Licenses Requiring Human Review
 
 | Package | Versions | License | Homepage |
 | --- | --- | --- | --- |
-| @dynamic-labs-sdk/assert-package-version | 1.6.0 | Unknown |  |
-| @dynamic-labs-sdk/client | 1.6.0 | Unknown |  |
+| @dynamic-labs-sdk/assert-package-version | 1.12.1 | Unknown |  |
+| @dynamic-labs-sdk/client | 1.12.1 | Unknown |  |
 | @ethereumjs/rlp | 4.0.1 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/rlp#readme) |
 | @ethereumjs/tx | 4.2.0 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#readme) |
 | @ethereumjs/util | 8.1.0 | MPL-2.0 | [link](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/util#readme) |
@@ -58,8 +58,23 @@ pnpm --filter shodai-reference-app notices:check
 | @metamask/sdk | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/sdk-communication-layer | 0.33.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/sdk-install-modal-web | 0.32.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
+| @reown/appkit | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-common | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-controllers | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-pay | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-polyfills | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-scaffold-ui | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-ui | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-utils | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-wallet | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @sentry/cli | 2.58.6 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
 | @sentry/cli-darwin | 2.58.6 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
+| @walletconnect/core | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/ethereum-provider | 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/sign-client | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/types | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/universal-provider | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/utils | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | argparse | 2.0.1 | Python-2.0 | [link](https://github.com/nodeca/argparse#readme) |
 | caniuse-lite | 1.0.30001790 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
 | eyes | 0.1.8 | Unknown |  |
@@ -74,10 +89,32 @@ pnpm --filter shodai-reference-app notices:check
 
 | Package | Versions | License | Homepage |
 | --- | --- | --- | --- |
-| @0no-co/graphql.web | 1.2.0 | MIT | [link](https://github.com/0no-co/graphql.web#readme) |
-| @0no-co/graphqlsp | 1.15.4 | MIT | [link](https://github.com/0no-co/GraphQLSP#readme) |
+| @0no-co/graphql.web | 1.3.2 | MIT | [link](https://github.com/0no-co/graphql.web#readme) |
+| @0no-co/graphqlsp | 1.17.3 | MIT | [link](https://github.com/0no-co/GraphQLSP#readme) |
 | @ably/msgpack-js | 0.4.1 | Apache-2.0 | [link](https://github.com/ably-forks/msgpack-js#readme) |
 | @adraffy/ens-normalize | 1.11.1 | MIT | [link](https://github.com/adraffy/ens-normalize.js#readme) |
+| @aws-crypto/crc32 | 5.2.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-crypto-helpers/tree/master/packages/crc32) |
+| @aws-crypto/sha256-browser | 5.2.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-crypto-helpers/tree/master/packages/sha256-browser) |
+| @aws-crypto/sha256-js | 5.2.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-crypto-helpers/tree/master/packages/sha256-js) |
+| @aws-crypto/supports-web-crypto | 5.2.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-crypto-helpers/tree/master/packages/supports-web-crypto) |
+| @aws-crypto/util | 5.2.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-crypto-helpers/tree/master/packages/util) |
+| @aws-sdk/client-sesv2 | 3.1075.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/clients/client-sesv2) |
+| @aws-sdk/core | 3.974.23 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/core) |
+| @aws-sdk/credential-provider-env | 3.972.49 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-env) |
+| @aws-sdk/credential-provider-http | 3.972.51 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-http) |
+| @aws-sdk/credential-provider-ini | 3.972.56 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-ini) |
+| @aws-sdk/credential-provider-login | 3.972.55 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-login) |
+| @aws-sdk/credential-provider-node | 3.972.58 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-node) |
+| @aws-sdk/credential-provider-process | 3.972.49 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-process) |
+| @aws-sdk/credential-provider-sso | 3.972.55 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-sso) |
+| @aws-sdk/credential-provider-web-identity | 3.972.55 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-web-identity) |
+| @aws-sdk/nested-clients | 3.997.23 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages/nested-clients) |
+| @aws-sdk/signature-v4-multi-region | 3.996.35 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages/signature-v4-multi-region) |
+| @aws-sdk/token-providers | 3.1074.0 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages/token-providers) |
+| @aws-sdk/types | 3.973.13 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/types) |
+| @aws-sdk/util-locate-window | 3.965.8 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/util-locate-window) |
+| @aws-sdk/xml-builder | 3.972.31 | Apache-2.0 | [link](https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/xml-builder) |
+| @aws/lambda-invoke-store | 0.2.4 | Apache-2.0 | [link](https://github.com/awslabs/aws-lambda-invoke-store) |
 | @babel/code-frame | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-code-frame) |
 | @babel/compat-data | 7.29.0 | MIT | [link](https://github.com/babel/babel#readme) |
 | @babel/core | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-core) |
@@ -100,44 +137,43 @@ pnpm --filter shodai-reference-app notices:check
 | @babel/types | 7.29.0 | MIT | [link](https://babel.dev/docs/en/next/babel-types) |
 | @base-org/account | 1.1.1, 2.4.0 | Apache-2.0 | [link](https://github.com/base/account-sdk#readme) |
 | @borewit/text-codec | 0.2.2 | MIT | [link](https://github.com/Borewit/text-codec#readme) |
-| @cns-labs/agreements-protocol-evm | 0.1.3 | Apache-2.0 |  |
-| @coinbase/cdp-sdk | 1.51.0 | MIT | [link](https://github.com/coinbase/cdp-sdk#readme) |
+| @coinbase/cdp-sdk | 1.51.2 | MIT | [link](https://github.com/coinbase/cdp-sdk#readme) |
 | @coinbase/wallet-sdk | 3.9.3, 4.3.7 | Apache-2.0 | [link](https://github.com/coinbase/coinbase-wallet-sdk#readme) |
 | @cspotcode/source-map-support | 0.8.1 | MIT | [link](https://github.com/cspotcode/node-source-map-support#readme) |
 | @date-fns/tz | 1.5.0 | MIT | [link](https://github.com/date-fns/date-fns#readme) |
-| @dynamic-labs-connectors/base-account-evm | 4.6.7 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
-| @dynamic-labs-connectors/metamask-evm | 4.6.7 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
-| @dynamic-labs-sdk/assert-package-version | 1.6.0 | Unknown |  |
-| @dynamic-labs-sdk/client | 1.6.0 | Unknown |  |
-| @dynamic-labs-wallet/browser-wallet-client | 1.0.7, 1.0.13 | MIT |  |
-| @dynamic-labs-wallet/core | 1.0.7, 1.0.13 | MIT |  |
-| @dynamic-labs-wallet/forward-mpc-client | 0.10.1 | MIT | [link](https://github.com/dynamic-labs/forward-mpc-client#readme) |
+| @dynamic-labs-connectors/base-account-evm | 4.6.8 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
+| @dynamic-labs-connectors/metamask-evm | 4.6.8 | MIT | [link](https://github.com/dynamic-labs-oss/public-wallet-connectors#readme) |
+| @dynamic-labs-sdk/assert-package-version | 1.12.1 | Unknown |  |
+| @dynamic-labs-sdk/client | 1.12.1 | Unknown |  |
+| @dynamic-labs-wallet/browser-wallet-client | 1.0.39, 1.0.42 | MIT |  |
+| @dynamic-labs-wallet/core | 1.0.39, 1.0.42 | MIT |  |
+| @dynamic-labs-wallet/forward-mpc-client | 0.12.0 | MIT | [link](https://github.com/dynamic-labs/forward-mpc-client#readme) |
 | @dynamic-labs-wallet/forward-mpc-shared | 0.7.0 | MIT |  |
-| @dynamic-labs-wallet/primitives | 1.0.7, 1.0.13 | MIT |  |
-| @dynamic-labs/assert-package-version | 4.87.2 | MIT | [link](https://github.com/dynamic-labs/DynamicAuth/main/packages/assert-package-version#readme) |
-| @dynamic-labs/embedded-wallet | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/embedded-wallet-evm | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/ethereum | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/ethereum-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/iconic | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/locale | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/logger | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/message-transport | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/multi-wallet | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/rpc-providers | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/sdk-api-core | 0.0.984, 0.0.1015 | Apache-2.0 | [link](https://dynamic.xyz) |
-| @dynamic-labs/sdk-react-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/solana-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/store | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/sui-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/types | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/utils | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/waas | 4.87.2 | MIT |  |
-| @dynamic-labs/waas-evm | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wagmi-connector | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wallet-book | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/wallet-connector-core | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
-| @dynamic-labs/webauthn | 4.87.2 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs-wallet/primitives | 1.0.39, 1.0.42 | MIT |  |
+| @dynamic-labs/assert-package-version | 4.90.0 | MIT | [link](https://github.com/dynamic-labs/DynamicAuth/main/packages/assert-package-version#readme) |
+| @dynamic-labs/embedded-wallet | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/embedded-wallet-evm | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/ethereum | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/ethereum-core | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/iconic | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/locale | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/logger | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/message-transport | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/multi-wallet | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/rpc-providers | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/sdk-api-core | 0.0.984, 0.0.1046 | Apache-2.0 | [link](https://dynamic.xyz) |
+| @dynamic-labs/sdk-react-core | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/solana-core | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/store | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/sui-core | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/types | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/utils | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/waas | 4.90.0 | MIT |  |
+| @dynamic-labs/waas-evm | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wagmi-connector | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wallet-book | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/wallet-connector-core | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
+| @dynamic-labs/webauthn | 4.90.0 | MIT | [link](https://www.dynamic.xyz/) |
 | @ecies/ciphers | 0.2.6 | MIT | [link](https://github.com/ecies/js-ciphers#readme) |
 | @esbuild-plugins/node-globals-polyfill | 0.2.3 | ISC | [link](https://github.com/remorses/esbuild-plugins#readme) |
 | @esbuild-plugins/node-modules-polyfill | 0.2.2 | ISC | [link](https://github.com/remorses/esbuild-plugins#readme) |
@@ -161,10 +197,11 @@ pnpm --filter shodai-reference-app notices:check
 | @floating-ui/react-dom | 2.1.8 | MIT | [link](https://floating-ui.com/docs/react-dom) |
 | @floating-ui/utils | 0.2.11 | MIT | [link](https://floating-ui.com) |
 | @gemini-wallet/core | 0.3.2 | MIT | [link](https://keys.gemini.com) |
-| @gql.tada/cli-utils | 1.7.3 | MIT | [link](https://gql-tada.0no.co/) |
-| @gql.tada/internal | 1.0.9 | MIT | [link](https://gql-tada.0no.co/) |
+| @gql.tada/cli-utils | 1.9.2 | MIT | [link](https://gql-tada.0no.co/) |
+| @gql.tada/internal | 1.2.1 | MIT | [link](https://gql-tada.0no.co/) |
 | @graphql-typed-document-node/core | 3.2.0 | MIT | [link](https://github.com/dotansimha/graphql-typed-document-node#readme) |
 | @hcaptcha/react-hcaptcha | 1.4.4 | MIT | [link](https://github.com/hCaptcha/react-hcaptcha#readme) |
+| @hono/node-server | 1.19.14 | MIT | [link](https://github.com/honojs/node-server) |
 | @hpke/chacha20poly1305 | 1.8.0 | MIT | [link](https://github.com/dajiaji/hpke-js/tree/main/packages/chacha20poly1305#readme) |
 | @hpke/common | 1.10.1 | MIT | [link](https://github.com/dajiaji/hpke-js/tree/main/common#readme) |
 | @hpke/core | 1.9.0 | MIT | [link](https://github.com/dajiaji/hpke-js/tree/main/core#readme) |
@@ -184,6 +221,7 @@ pnpm --filter shodai-reference-app notices:check
 | @jridgewell/sourcemap-codec | 1.5.5 | MIT | [link](https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec) |
 | @jridgewell/trace-mapping | 0.3.9, 0.3.31 | MIT | [link](https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping) |
 | @lit-labs/ssr-dom-shim | 1.6.0 | BSD-3-Clause | [link](https://github.com/lit/lit/tree/main/packages/labs/ssr-dom-shim) |
+| @lit/react | 1.0.8 | BSD-3-Clause | [link](https://lit.dev/) |
 | @lit/reactive-element | 2.1.2 | BSD-3-Clause | [link](https://lit.dev/) |
 | @lukeed/csprng | 1.1.0 | MIT | [link](https://github.com/lukeed/csprng#readme) |
 | @metamask/analytics | 0.5.0 | Unknown | [link](https://github.com/MetaMask/connect-monorepo/tree/main/packages/analytics#readme) |
@@ -207,24 +245,25 @@ pnpm --filter shodai-reference-app notices:check
 | @metamask/sdk-install-modal-web | 0.32.1 | Unknown | [link](https://github.com/MetaMask/metamask-sdk#readme) |
 | @metamask/superstruct | 3.2.1 | MIT | [link](https://github.com/MetaMask/superstruct#readme) |
 | @metamask/utils | 5.0.2, 8.5.0, 9.3.0, 11.11.0 | ISC | [link](https://github.com/MetaMask/utils#readme) |
+| @modelcontextprotocol/sdk | 1.29.0 | MIT | [link](https://modelcontextprotocol.io) |
 | @mongodb-js/saslprep | 1.4.11 | MIT | [link](https://github.com/mongodb-js/devtools-shared/tree/main/packages/saslprep) |
 | @msgpack/msgpack | 3.1.2 | ISC | [link](https://msgpack.org/) |
 | @mysten/bcs | 1.9.2 | Apache-2.0 | [link](https://sdk.mystenlabs.com/bcs) |
 | @mysten/sui | 1.45.2 | Apache-2.0 | [link](https://sdk.mystenlabs.com) |
 | @mysten/utils | 0.2.0 | Apache-2.0 | [link](https://github.com/MystenLabs/ts-sdks/tree/main/packages/utils#readme) |
 | @mysten/wallet-standard | 0.19.9 | Apache-2.0 |  |
-| @nestjs/common | 11.1.24 | MIT | [link](https://nestjs.com) |
+| @nestjs/common | 11.1.27 | MIT | [link](https://nestjs.com) |
 | @nestjs/config | 4.0.4 | MIT | [link](https://github.com/nestjs/config#readme) |
-| @nestjs/core | 11.1.24 | MIT | [link](https://nestjs.com) |
-| @nestjs/platform-express | 11.1.24 | MIT | [link](https://nestjs.com) |
+| @nestjs/core | 11.1.27 | MIT | [link](https://nestjs.com) |
+| @nestjs/platform-express | 11.1.27 | MIT | [link](https://nestjs.com) |
 | @noble/ciphers | 0.4.1, 1.2.1, 1.3.0 | MIT | [link](https://paulmillr.com/noble/) |
-| @noble/curves | 1.4.2, 1.8.0, 1.8.1, 1.9.0, 1.9.1, 1.9.2, 1.9.4, 1.9.7, 2.0.1 | MIT | [link](https://paulmillr.com/noble/) |
+| @noble/curves | 1.4.2, 1.8.0, 1.8.1, 1.9.0, 1.9.1, 1.9.4, 1.9.7, 2.0.1 | MIT | [link](https://paulmillr.com/noble/) |
 | @noble/hashes | 1.4.0, 1.7.0, 1.7.1, 1.8.0, 2.0.1, 2.2.0 | MIT | [link](https://paulmillr.com/noble/) |
 | @noble/post-quantum | 0.5.4 | MIT | [link](https://paulmillr.com/noble/) |
-| @nuxt/opencollective | 0.4.1 | MIT | [link](https://github.com/nuxt-contrib/opencollective#readme) |
 | @opentelemetry/api | 1.9.1 | Apache-2.0 | [link](https://github.com/open-telemetry/opentelemetry-js/tree/main/api) |
 | @openzeppelin/contracts | 4.9.6 | MIT | [link](https://openzeppelin.com/contracts/) |
 | @paulmillr/qr | 0.2.1 | (MIT OR Apache-2.0) | [link](https://github.com/paulmillr/qr) |
+| @phosphor-icons/webcomponents | 2.1.5 | MIT | [link](https://github.com/phosphor-icons/webcomponents#readme) |
 | @pkgjs/parseargs | 0.11.0 | MIT | [link](https://github.com/pkgjs/parseargs#readme) |
 | @protobuf-ts/grpcweb-transport | 2.11.1 | Apache-2.0 | [link](https://github.com/timostamm/protobuf-ts) |
 | @protobuf-ts/runtime | 2.11.1 | (Apache-2.0 AND BSD-3-Clause) | [link](https://github.com/timostamm/protobuf-ts) |
@@ -235,66 +274,87 @@ pnpm --filter shodai-reference-app notices:check
 | @protobufjs/eventemitter | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @protobufjs/fetch | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @protobufjs/float | 1.0.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
-| @protobufjs/inquire | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @protobufjs/path | 1.1.2 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @protobufjs/pool | 1.1.0 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
 | @protobufjs/utf8 | 1.1.1 | BSD-3-Clause | [link](https://github.com/dcodeIO/protobuf.js#readme) |
-| @radix-ui/number | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/primitive | 1.1.3 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-accordion | 1.2.12 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-arrow | 1.1.7 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-avatar | 1.1.11 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-checkbox | 1.3.3 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-collapsible | 1.1.12 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-collection | 1.1.7 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-compose-refs | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-context | 1.1.2, 1.1.3 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-context-menu | 2.2.16 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-dialog | 1.1.15 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-direction | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-dismissable-layer | 1.1.11 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-dropdown-menu | 2.1.16 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-focus-guards | 1.1.3 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-focus-scope | 1.1.7 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-hover-card | 1.1.15 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-id | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-label | 2.1.8 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-menu | 2.1.16 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-popover | 1.1.15 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-popper | 1.2.8 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-portal | 1.1.9 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-presence | 1.1.5 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-primitive | 2.1.3, 2.1.4 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-progress | 1.1.8 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-radio-group | 1.3.8 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-roving-focus | 1.1.11 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-select | 2.2.6 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-slider | 1.3.6 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-slot | 1.2.3, 1.2.4 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-switch | 1.2.6 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-toggle | 1.1.10 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-toggle-group | 1.1.11 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-tooltip | 1.2.8 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-callback-ref | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-controllable-state | 1.2.2 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-effect-event | 0.0.2 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-escape-keydown | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-is-hydrated | 0.1.0 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-layout-effect | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-previous | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-rect | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-use-size | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/react-visually-hidden | 1.2.3, 1.2.4 | MIT | [link](https://radix-ui.com/primitives) |
-| @radix-ui/rect | 1.1.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/number | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/primitive | 1.1.4 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-accordion | 1.2.14 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-arrow | 1.1.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-avatar | 1.2.0 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-checkbox | 1.3.5 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-collapsible | 1.1.14 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-collection | 1.1.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-compose-refs | 1.1.3 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-context | 1.1.4 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-context-menu | 2.3.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-dialog | 1.1.17 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-direction | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-dismissable-layer | 1.1.13 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-dropdown-menu | 2.1.18 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-focus-guards | 1.1.4 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-focus-scope | 1.1.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-hover-card | 1.1.17 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-id | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-label | 2.1.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-menu | 2.1.18 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-popover | 1.1.17 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-popper | 1.3.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-portal | 1.1.12 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-presence | 1.1.6 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-primitive | 2.1.6 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-progress | 1.1.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-radio-group | 1.4.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-roving-focus | 1.1.13 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-select | 2.3.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-slider | 1.4.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-slot | 1.3.0 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-switch | 1.3.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-toggle | 1.1.12 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-toggle-group | 1.1.13 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-tooltip | 1.2.10 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-callback-ref | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-controllable-state | 1.2.3 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-effect-event | 0.0.3 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-escape-keydown | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-is-hydrated | 0.1.1 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-layout-effect | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-previous | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-rect | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-use-size | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/react-visually-hidden | 1.2.6 | MIT | [link](https://radix-ui.com/primitives) |
+| @radix-ui/rect | 1.1.2 | MIT | [link](https://radix-ui.com/primitives) |
+| @react-pdf/fns | 3.1.3 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/font | 4.0.8 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/image | 3.1.0 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/layout | 4.6.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/pdfkit | 5.1.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/primitives | 4.3.0 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/reconciler | 2.0.0 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/render | 4.5.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/renderer | 4.5.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/stylesheet | 6.2.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/svg | 1.1.0 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/textkit | 6.3.0 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
+| @react-pdf/types | 2.11.1 | MIT | [link](https://github.com/diegomura/react-pdf#readme) |
 | @reown/appkit | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-common | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-common | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-controllers | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-controllers | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-pay | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-pay | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-polyfills | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-polyfills | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-scaffold-ui | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-scaffold-ui | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-ui | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-ui | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-utils | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-utils | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @reown/appkit-wallet | 1.7.8 | Apache-2.0 | [link](https://github.com/reown-com/appkit) |
+| @reown/appkit-wallet | 1.8.11 | Unknown | [link](https://github.com/reown-com/appkit) |
 | @rolldown/pluginutils | 1.0.0-beta.27 | MIT | [link](https://github.com/rolldown/rolldown#readme) |
 | @rollup/pluginutils | 5.4.0 | MIT | [link](https://github.com/rollup/plugins/tree/master/packages/pluginutils#readme) |
 | @rollup/rollup-darwin-arm64 | 4.60.2 | MIT | [link](https://rollupjs.org/) |
@@ -304,21 +364,31 @@ pnpm --filter shodai-reference-app notices:check
 | @scure/base | 1.1.9, 1.2.6 | MIT | [link](https://paulmillr.com/noble/#scure) |
 | @scure/bip32 | 1.4.0, 1.6.2, 1.7.0 | MIT | [link](https://paulmillr.com/noble/#scure) |
 | @scure/bip39 | 1.3.0, 1.5.4, 1.6.0 | MIT | [link](https://paulmillr.com/) |
-| @sentry-internal/browser-utils | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser-utils) |
-| @sentry-internal/feedback | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/feedback) |
-| @sentry-internal/replay | 10.56.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
-| @sentry-internal/replay-canvas | 10.56.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
 | @sentry/babel-plugin-component-annotate | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/babel-plugin-component-annotate) |
-| @sentry/browser | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser) |
+| @sentry/browser | 10.59.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser) |
+| @sentry/browser-utils | 10.59.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/browser-utils) |
 | @sentry/bundler-plugin-core | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/bundler-plugin-core) |
 | @sentry/cli | 2.58.6 | FSL-1.1-MIT | [link](https://docs.sentry.io/hosted/learn/cli/) |
 | @sentry/cli-darwin | 2.58.6 | FSL-1.1-MIT | [link](https://github.com/getsentry/sentry-cli#readme) |
-| @sentry/core | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/core) |
-| @sentry/react | 10.56.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/react) |
+| @sentry/core | 10.59.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/core) |
+| @sentry/feedback | 10.59.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/feedback) |
+| @sentry/react | 10.59.0 | MIT | [link](https://github.com/getsentry/sentry-javascript/tree/master/packages/react) |
+| @sentry/replay | 10.59.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
+| @sentry/replay-canvas | 10.59.0 | MIT | [link](https://docs.sentry.io/platforms/javascript/session-replay/) |
 | @sentry/vite-plugin | 4.9.1 | MIT | [link](https://github.com/getsentry/sentry-javascript-bundler-plugins/tree/main/packages/vite-plugin) |
+| @shodai-network/agreements-protocol-evm | 0.1.4 | Apache-2.0 |  |
 | @simplewebauthn/browser | 13.1.0 | MIT | [link](https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/browser#readme) |
 | @simplewebauthn/types | 12.0.0 | MIT | [link](https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/types#readme) |
 | @sindresorhus/is | 4.6.0 | MIT | [link](https://github.com/sindresorhus/is#readme) |
+| @smithy/core | 3.26.0 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/core) |
+| @smithy/credential-provider-imds | 4.4.2 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/credential-provider-imds) |
+| @smithy/fetch-http-handler | 5.5.2 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/fetch-http-handler) |
+| @smithy/is-array-buffer | 2.2.0 | Apache-2.0 | [link](https://github.com/awslabs/smithy-typescript/tree/main/packages/is-array-buffer) |
+| @smithy/node-http-handler | 4.8.2 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/node-http-handler) |
+| @smithy/signature-v4 | 5.5.2 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/signature-v4) |
+| @smithy/types | 4.15.0 | Apache-2.0 | [link](https://github.com/smithy-lang/smithy-typescript/tree/main/packages/types) |
+| @smithy/util-buffer-from | 2.2.0 | Apache-2.0 | [link](https://github.com/awslabs/smithy-typescript/tree/main/packages/util-buffer-from) |
+| @smithy/util-utf8 | 2.3.0 | Apache-2.0 | [link](https://github.com/awslabs/smithy-typescript/tree/main/packages/util-utf8) |
 | @socket.io/component-emitter | 3.1.2 | MIT | [link](https://github.com/socketio/emitter#readme) |
 | @solana-program/system | 0.10.0 | Apache-2.0 | [link](https://github.com/solana-program/system#readme) |
 | @solana-program/token | 0.9.0 | Apache-2.0 | [link](https://github.com/solana-program/token#readme) |
@@ -383,10 +453,10 @@ pnpm --filter shodai-reference-app notices:check
 | @swc/helpers | 0.5.23 | Apache-2.0 | [link](https://swc.rs) |
 | @szmarczak/http-timer | 4.0.6 | MIT | [link](https://github.com/szmarczak/http-timer#readme) |
 | @tabby_ai/hijri-converter | 1.0.5 | MIT |  |
-| @tailwindcss/node | 4.3.0 | MIT | [link](https://tailwindcss.com) |
-| @tailwindcss/oxide | 4.3.0 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
-| @tailwindcss/oxide-darwin-arm64 | 4.3.0 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
-| @tailwindcss/vite | 4.3.0 | MIT | [link](https://tailwindcss.com) |
+| @tailwindcss/node | 4.3.1 | MIT | [link](https://tailwindcss.com) |
+| @tailwindcss/oxide | 4.3.1 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
+| @tailwindcss/oxide-darwin-arm64 | 4.3.1 | MIT | [link](https://github.com/tailwindlabs/tailwindcss#readme) |
+| @tailwindcss/vite | 4.3.1 | MIT | [link](https://tailwindcss.com) |
 | @tanstack/query-core | 5.101.0 | MIT | [link](https://tanstack.com/query) |
 | @tanstack/react-query | 5.101.0 | MIT | [link](https://tanstack.com/query) |
 | @thumbmarkjs/thumbmarkjs | 0.16.0 | MIT |  |
@@ -441,7 +511,7 @@ pnpm --filter shodai-reference-app notices:check
 | @types/lodash | 4.17.24 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash) |
 | @types/mdast | 4.0.4 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdast) |
 | @types/ms | 2.1.0 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ms) |
-| @types/node | 12.20.55, 20.19.39, 22.19.19 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node) |
+| @types/node | 12.20.55, 20.19.39, 22.20.0 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node) |
 | @types/prop-types | 15.7.15 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/prop-types) |
 | @types/qs | 6.15.1 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/qs) |
 | @types/range-parser | 1.2.7 | MIT | [link](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/range-parser) |
@@ -468,8 +538,8 @@ pnpm --filter shodai-reference-app notices:check
 | @typescript-eslint/visitor-keys | 8.59.0 | MIT | [link](https://typescript-eslint.io) |
 | @ungap/structured-clone | 1.3.1 | ISC | [link](https://github.com/ungap/structured-clone#readme) |
 | @vitejs/plugin-react | 4.7.0 | MIT | [link](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#readme) |
-| @vue/reactivity | 3.5.35 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/reactivity#readme) |
-| @vue/shared | 3.5.35 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/shared#readme) |
+| @vue/reactivity | 3.5.38 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/reactivity#readme) |
+| @vue/shared | 3.5.38 | MIT | [link](https://github.com/vuejs/core/tree/main/packages/shared#readme) |
 | @wagmi/connectors | 6.2.0 | MIT | [link](https://github.com/wevm/wagmi#readme) |
 | @wagmi/core | 2.22.1 | MIT | [link](https://github.com/wevm/wagmi#readme) |
 | @wallet-standard/app | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
@@ -477,10 +547,12 @@ pnpm --filter shodai-reference-app notices:check
 | @wallet-standard/core | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
 | @wallet-standard/errors | 0.1.2 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
 | @wallet-standard/features | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @wallet-standard/wallet | 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
-| @walletconnect/core | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @wallet-standard/wallet | 1.1.0, 1.1.1 | Apache-2.0 | [link](https://github.com/wallet-standard/wallet-standard#readme) |
+| @walletconnect/core | 2.21.0, 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/core | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/environment | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @walletconnect/ethereum-provider | 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/ethereum-provider | 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/ethereum-provider | 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/events | 1.0.1 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
 | @walletconnect/heartbeat | 1.2.2 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/jsonrpc-http-connection | 1.0.8 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
@@ -489,28 +561,34 @@ pnpm --filter shodai-reference-app notices:check
 | @walletconnect/jsonrpc-utils | 1.0.8 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
 | @walletconnect/jsonrpc-ws-connection | 1.0.16 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
 | @walletconnect/keyvaluestorage | 1.1.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @walletconnect/logger | 2.1.2 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
+| @walletconnect/logger | 2.1.2, 3.0.0, 3.0.2 | MIT | [link](https://github.com/WalletConnect/walletconnect-utils/) |
 | @walletconnect/relay-api | 1.0.11 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/relay-auth | 1.1.0 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/safe-json | 1.0.2 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @walletconnect/sign-client | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/sign-client | 2.21.0, 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/sign-client | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/time | 1.0.2 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @walletconnect/types | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
-| @walletconnect/universal-provider | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
-| @walletconnect/utils | 2.21.0, 2.21.1, 2.21.5 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/types | 2.21.0, 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/types | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/universal-provider | 2.21.0, 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/universal-provider | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/utils | 2.21.0, 2.21.1 | Apache-2.0 | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
+| @walletconnect/utils | 2.22.4, 2.23.2 | Unknown | [link](https://github.com/walletconnect/walletconnect-monorepo/) |
 | @walletconnect/window-getters | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
 | @walletconnect/window-metadata | 1.0.1 | MIT | [link](https://github.com/walletconnect/walletconnect-utils) |
-| @xyflow/react | 12.11.0 | MIT | [link](https://reactflow.dev) |
-| @xyflow/system | 0.0.77 | MIT | [link](https://github.com/xyflow/xyflow#readme) |
+| @xyflow/react | 12.11.1 | MIT | [link](https://reactflow.dev) |
+| @xyflow/system | 0.0.78 | MIT | [link](https://github.com/xyflow/xyflow#readme) |
 | abitype | 1.0.6, 1.0.8, 1.2.3 | MIT | [link](https://github.com/wevm/abitype#readme) |
 | ably | 2.17.1 | Apache-2.0 | [link](https://github.com/ably/ably-js#readme) |
+| abs-svg-path | 0.1.1 | MIT | [link](https://github.com/jkroso/abs-svg-path#readme) |
 | accepts | 2.0.0 | MIT | [link](https://github.com/jshttp/accepts#readme) |
 | acorn | 8.16.0 | MIT | [link](https://github.com/acornjs/acorn) |
 | acorn-jsx | 5.3.2 | MIT | [link](https://github.com/acornjs/acorn-jsx) |
 | acorn-walk | 8.3.5 | MIT | [link](https://github.com/acornjs/acorn) |
 | agent-base | 6.0.2 | MIT | [link](https://github.com/TooTallNate/node-agent-base#readme) |
 | agentkeepalive | 4.6.0 | MIT | [link](https://github.com/node-modules/agentkeepalive#readme) |
-| ajv | 6.15.0 | MIT | [link](https://github.com/ajv-validator/ajv) |
+| ajv | 6.15.0, 8.20.0 | MIT | [link](https://ajv.js.org) |
+| ajv-formats | 3.0.1 | MIT | [link](https://github.com/ajv-validator/ajv-formats#readme) |
 | ansi-regex | 5.0.1, 6.2.2 | MIT | [link](https://github.com/chalk/ansi-regex#readme) |
 | ansi-styles | 4.3.0 | MIT | [link](https://github.com/chalk/ansi-styles#readme) |
 | anymatch | 3.1.3 | ISC | [link](https://github.com/micromatch/anymatch) |
@@ -522,13 +600,14 @@ pnpm --filter shodai-reference-app notices:check
 | asynckit | 0.4.0 | MIT | [link](https://github.com/alexindigo/asynckit#readme) |
 | atomic-sleep | 1.0.0 | MIT | [link](https://github.com/davidmarkclements/atomic-sleep#readme) |
 | available-typed-arrays | 1.0.7 | MIT | [link](https://github.com/inspect-js/available-typed-arrays#readme) |
-| axios | 1.15.2, 1.16.0, 1.17.0 | MIT | [link](https://axios-http.com) |
+| axios | 1.16.0, 1.18.1 | MIT | [link](https://axios-http.com) |
 | axios-retry | 4.5.0 | Apache-2.0 | [link](https://github.com/softonic/axios-retry) |
 | bail | 2.0.2 | MIT | [link](https://github.com/wooorm/bail#readme) |
 | balanced-match | 1.0.2, 4.0.4 | MIT | [link](https://github.com/juliangruber/balanced-match#readme) |
 | base-x | 3.0.11, 4.0.1, 5.0.1 | MIT | [link](https://github.com/cryptocoinjs/base-x) |
-| base64-js | 1.0.2, 1.5.1 | MIT | [link](https://github.com/beatgammit/base64-js) |
+| base64-js | 0.0.8, 1.0.2, 1.5.1 | MIT | [link](https://github.com/beatgammit/base64-js) |
 | baseline-browser-mapping | 2.10.21 | Apache-2.0 | [link](https://github.com/web-platform-dx/baseline-browser-mapping#readme) |
+| bidi-js | 1.0.3 | MIT | [link](https://github.com/lojjic/bidi-js#readme) |
 | big.js | 6.2.2 | MIT | [link](https://github.com/MikeMcl/big.js#readme) |
 | bigint-buffer | 1.1.5 | Apache-2.0 | [link](https://github.com/no2chem/bigint-buffer#readme) |
 | bignumber.js | 9.3.1 | MIT | [link](https://github.com/MikeMcl/bignumber.js#readme) |
@@ -542,6 +621,8 @@ pnpm --filter shodai-reference-app notices:check
 | bowser | 2.14.1 | MIT | [link](https://github.com/bowser-js/bowser) |
 | brace-expansion | 1.1.14, 2.1.1, 5.0.5 | MIT | [link](https://github.com/juliangruber/brace-expansion#readme) |
 | braces | 3.0.3 | MIT | [link](https://github.com/micromatch/braces) |
+| brotli | 1.3.3 | MIT | [link](https://github.com/devongovett/brotli.js) |
+| browserify-zlib | 0.2.0 | MIT | [link](https://github.com/devongovett/browserify-zlib) |
 | browserslist | 4.28.2 | MIT | [link](https://github.com/browserslist/browserslist#readme) |
 | bs58 | 4.0.1, 5.0.0, 6.0.0 | MIT | [link](https://github.com/cryptocoinjs/bs58#readme) |
 | bs58check | 4.0.0 | MIT | [link](https://github.com/bitcoinjs/bs58check) |
@@ -560,7 +641,7 @@ pnpm --filter shodai-reference-app notices:check
 | camelcase | 5.3.1, 6.3.0 | MIT | [link](https://github.com/sindresorhus/camelcase#readme) |
 | caniuse-lite | 1.0.30001790 | CC-BY-4.0 | [link](https://github.com/browserslist/caniuse-lite#readme) |
 | ccount | 2.0.1 | MIT | [link](https://github.com/wooorm/ccount#readme) |
-| centrifuge | 5.6.0 | MIT | [link](https://github.com/centrifugal/centrifuge-js) |
+| centrifuge | 5.7.0 | MIT | [link](https://github.com/centrifugal/centrifuge-js) |
 | chalk | 4.1.2, 5.6.2 | MIT | [link](https://github.com/chalk/chalk#readme) |
 | character-entities | 2.0.2 | MIT | [link](https://github.com/wooorm/character-entities#readme) |
 | character-entities-html4 | 2.1.0 | MIT | [link](https://github.com/wooorm/character-entities-html4#readme) |
@@ -572,18 +653,18 @@ pnpm --filter shodai-reference-app notices:check
 | classcat | 5.0.5 | MIT | [link](https://github.com/jorgebucaran/classcat#readme) |
 | classnames | 2.5.1 | MIT | [link](https://github.com/JedWatson/classnames#readme) |
 | cliui | 6.0.0 | ISC | [link](https://github.com/yargs/cliui#readme) |
+| clone | 2.1.2 | MIT | [link](https://github.com/pvorb/node-clone#readme) |
 | clone-response | 1.0.3 | MIT | [link](https://github.com/sindresorhus/clone-response#readme) |
 | clsx | 1.2.1, 2.1.1 | MIT | [link](https://github.com/lukeed/clsx#readme) |
 | color | 4.2.3 | MIT | [link](https://github.com/Qix-/color#readme) |
 | color-convert | 2.0.1 | MIT | [link](https://github.com/Qix-/color-convert#readme) |
-| color-name | 1.1.4 | MIT | [link](https://github.com/colorjs/color-name) |
-| color-string | 1.9.1 | MIT | [link](https://github.com/Qix-/color-string#readme) |
+| color-name | 1.1.4, 2.1.0 | MIT | [link](https://github.com/colorjs/color-name) |
+| color-string | 1.9.1, 2.1.4 | MIT | [link](https://github.com/Qix-/color-string#readme) |
 | combined-stream | 1.0.8 | MIT | [link](https://github.com/felixge/node-combined-stream) |
 | comma-separated-tokens | 2.0.3 | MIT | [link](https://github.com/wooorm/comma-separated-tokens#readme) |
 | commander | 2.20.3, 12.1.0, 13.1.0, 14.0.2, 14.0.3 | MIT | [link](https://github.com/tj/commander.js#readme) |
 | concat-map | 0.0.1 | MIT | [link](https://github.com/substack/node-concat-map#readme) |
 | concat-stream | 2.0.0 | MIT | [link](https://github.com/maxogden/concat-stream#readme) |
-| consola | 3.4.2 | MIT | [link](https://github.com/unjs/consola#readme) |
 | content-disposition | 1.1.0 | MIT | [link](https://github.com/jshttp/content-disposition#readme) |
 | content-type | 1.0.5, 2.0.0 | MIT | [link](https://github.com/jshttp/content-type#readme) |
 | convert-source-map | 2.0.0 | MIT | [link](https://github.com/thlorenz/convert-source-map) |
@@ -642,6 +723,7 @@ pnpm --filter shodai-reference-app notices:check
 | detect-libc | 2.1.2 | Apache-2.0 | [link](https://github.com/lovell/detect-libc#readme) |
 | detect-node-es | 1.1.0 | MIT | [link](https://github.com/thekashey/detect-node) |
 | devlop | 1.1.0 | MIT | [link](https://github.com/wooorm/devlop#readme) |
+| dfa | 1.2.0 | MIT | [link](https://github.com/devongovett/dfa#readme) |
 | diff | 4.0.4 | BSD-3-Clause | [link](https://github.com/kpdecker/jsdiff#readme) |
 | dijkstrajs | 1.0.3 | MIT | [link](https://github.com/tcort/dijkstrajs) |
 | dom-helpers | 5.2.1 | MIT | [link](https://github.com/react-bootstrap/dom-helpers#readme) |
@@ -655,12 +737,13 @@ pnpm --filter shodai-reference-app notices:check
 | ee-first | 1.1.1 | MIT | [link](https://github.com/jonathanong/ee-first#readme) |
 | electron-to-chromium | 1.5.344 | ISC | [link](https://github.com/Kilian/electron-to-chromium#readme) |
 | emoji-regex | 8.0.0, 9.2.2 | MIT | [link](https://mths.be/emoji-regex) |
+| emoji-regex-xs | 1.0.0 | MIT | [link](https://github.com/slevithan/emoji-regex-xs#readme) |
 | encode-utf8 | 1.0.3 | MIT | [link](https://github.com/LinusU/encode-utf8#readme) |
 | encodeurl | 2.0.0 | MIT | [link](https://github.com/pillarjs/encodeurl#readme) |
 | end-of-stream | 1.4.5 | MIT | [link](https://github.com/mafintosh/end-of-stream) |
-| engine.io-client | 6.6.5 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-client#readme) |
+| engine.io-client | 6.6.6 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-client#readme) |
 | engine.io-parser | 5.2.3 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/engine.io-parser#readme) |
-| enhanced-resolve | 5.22.2 | MIT | [link](http://github.com/webpack/enhanced-resolve) |
+| enhanced-resolve | 5.21.6 | MIT | [link](http://github.com/webpack/enhanced-resolve) |
 | entities | 4.5.0, 6.0.1 | BSD-2-Clause | [link](https://github.com/fb55/entities#readme) |
 | error-ex | 1.3.4 | MIT | [link](https://github.com/qix-/node-error-ex#readme) |
 | es-define-property | 1.0.1 | MIT | [link](https://github.com/ljharb/es-define-property#readme) |
@@ -696,7 +779,10 @@ pnpm --filter shodai-reference-app notices:check
 | eventemitter2 | 6.4.9 | MIT | [link](https://github.com/hij1nx/EventEmitter2#readme) |
 | eventemitter3 | 4.0.7, 5.0.1 | MIT | [link](https://github.com/primus/eventemitter3#readme) |
 | events | 3.3.0 | MIT | [link](https://github.com/Gozala/events#readme) |
+| eventsource | 3.0.7 | MIT | [link](https://github.com/EventSource/eventsource#readme) |
+| eventsource-parser | 3.1.0 | MIT | [link](https://github.com/rexxars/eventsource-parser#readme) |
 | express | 5.2.1 | MIT | [link](https://expressjs.com/) |
+| express-rate-limit | 8.5.2 | MIT | [link](https://github.com/express-rate-limit/express-rate-limit) |
 | extend | 3.0.2 | MIT | [link](https://github.com/justmoon/node-extend#readme) |
 | extension-port-stream | 3.0.0 | ISC | [link](https://github.com/MetaMask/extension-port-stream#readme) |
 | eyes | 0.1.8 | Unknown |  |
@@ -707,8 +793,10 @@ pnpm --filter shodai-reference-app notices:check
 | fast-redact | 3.5.0 | MIT | [link](https://github.com/davidmarkclements/fast-redact#readme) |
 | fast-safe-stringify | 2.1.1 | MIT | [link](https://github.com/davidmarkclements/fast-safe-stringify#readme) |
 | fast-stable-stringify | 1.0.0 | MIT | [link](https://github.com/nickyout/fast-stable-stringify#readme) |
+| fast-uri | 3.1.2 | BSD-3-Clause | [link](https://github.com/fastify/fast-uri) |
 | fastestsmallesttextencoderdecoder | 1.0.22 | CC0-1.0 | [link](https://github.com/anonyco/FastestSmallestTextEncoderDecoder#quick-start) |
 | fdir | 6.5.0 | MIT | [link](https://github.com/thecodrr/fdir#readme) |
+| fflate | 0.8.3 | MIT | [link](https://101arrowz.github.io/fflate) |
 | file-entry-cache | 8.0.0 | MIT | [link](https://github.com/jaredwray/file-entry-cache#readme) |
 | file-type | 21.3.4 | MIT | [link](https://github.com/sindresorhus/file-type#readme) |
 | file-uri-to-path | 1.0.0 | MIT | [link](https://github.com/TooTallNate/file-uri-to-path) |
@@ -720,9 +808,10 @@ pnpm --filter shodai-reference-app notices:check
 | flatted | 3.4.2 | ISC | [link](https://github.com/WebReflection/flatted#readme) |
 | focus-lock | 1.3.6 | MIT | [link](https://github.com/theKashey/focus-lock#readme) |
 | follow-redirects | 1.16.0 | MIT | [link](https://github.com/follow-redirects/follow-redirects) |
+| fontkit | 2.0.4 | MIT | [link](https://github.com/foliojs/fontkit#readme) |
 | for-each | 0.3.5 | MIT | [link](https://github.com/Raynos/for-each) |
 | foreground-child | 3.3.1 | ISC | [link](https://github.com/tapjs/foreground-child#readme) |
-| form-data | 4.0.5 | MIT | [link](https://github.com/form-data/form-data#readme) |
+| form-data | 4.0.6 | MIT | [link](https://github.com/form-data/form-data#readme) |
 | formik | 2.2.9 | Apache-2.0 | [link](https://formik.org) |
 | forwarded | 0.2.0 | MIT | [link](https://github.com/jshttp/forwarded#readme) |
 | fp-ts | 2.16.11 | MIT | [link](https://github.com/gcanti/fp-ts) |
@@ -741,9 +830,9 @@ pnpm --filter shodai-reference-app notices:check
 | globals | 14.0.0, 15.15.0 | MIT | [link](https://github.com/sindresorhus/globals#readme) |
 | gopd | 1.2.0 | MIT | [link](https://github.com/ljharb/gopd#readme) |
 | got | 11.8.6 | MIT | [link](https://github.com/sindresorhus/got#readme) |
-| gql.tada | 1.9.2 | MIT | [link](https://gql-tada.0no.co/) |
+| gql.tada | 1.11.2 | MIT | [link](https://gql-tada.0no.co/) |
 | graceful-fs | 4.2.11 | ISC | [link](https://github.com/isaacs/node-graceful-fs#readme) |
-| graphql | 16.14.1 | MIT | [link](https://github.com/graphql/graphql-js) |
+| graphql | 16.14.2 | MIT | [link](https://github.com/graphql/graphql-js) |
 | h3 | 1.15.11 | MIT | [link](https://github.com/h3js/h3#readme) |
 | has-flag | 4.0.0 | MIT | [link](https://github.com/sindresorhus/has-flag#readme) |
 | has-property-descriptors | 1.0.2 | MIT | [link](https://github.com/inspect-js/has-property-descriptors#readme) |
@@ -759,8 +848,10 @@ pnpm --filter shodai-reference-app notices:check
 | hast-util-whitespace | 3.0.0 | MIT | [link](https://github.com/syntax-tree/hast-util-whitespace#readme) |
 | hastscript | 9.0.1 | MIT | [link](https://github.com/syntax-tree/hastscript#readme) |
 | hoist-non-react-statics | 3.3.2 | BSD-3-Clause | [link](https://github.com/mridgway/hoist-non-react-statics#readme) |
-| hono | 4.12.23 | MIT | [link](https://hono.dev) |
+| hono | 4.12.25 | MIT | [link](https://hono.dev) |
 | hpke-js | 1.8.0 | MIT | [link](https://github.com/dajiaji/hpke-js#readme) |
+| hsl-to-hex | 1.0.0 | MIT | [link](https://github.com/davidmarkclements/hsl-to-hex#readme) |
+| hsl-to-rgb-for-reals | 1.1.1 | ISC | [link](https://github.com/davidmarkclements/hsl_rgb_converter/) |
 | html-parse-stringify | 3.0.1 | MIT | [link](https://github.com/henrikjoreteg/html-parse-stringify) |
 | html-url-attributes | 3.0.1 | MIT | [link](https://github.com/rehypejs/rehype-minify/tree/main#readme) |
 | html-void-elements | 3.0.0 | MIT | [link](https://github.com/wooorm/html-void-elements#readme) |
@@ -769,6 +860,7 @@ pnpm --filter shodai-reference-app notices:check
 | http2-wrapper | 1.0.3 | MIT | [link](https://github.com/szmarczak/http2-wrapper#readme) |
 | https-proxy-agent | 5.0.1 | MIT | [link](https://github.com/TooTallNate/node-https-proxy-agent#readme) |
 | humanize-ms | 1.2.1 | MIT | [link](https://github.com/node-modules/humanize-ms#readme) |
+| hyphen | 1.14.1 | ISC | [link](https://ytiurin.github.io/hyphen) |
 | i18next | 23.4.6 | MIT | [link](https://www.i18next.com) |
 | iconv-lite | 0.7.2 | MIT | [link](https://github.com/pillarjs/iconv-lite) |
 | idb-keyval | 6.2.1, 6.2.5 | Apache-2.0 | [link](https://github.com/jakearchibald/idb-keyval#readme) |
@@ -780,6 +872,7 @@ pnpm --filter shodai-reference-app notices:check
 | inline-style-parser | 0.2.7 | MIT | [link](https://github.com/remarkablemark/inline-style-parser#readme) |
 | internmap | 2.0.3 | ISC | [link](https://github.com/mbostock/internmap/) |
 | io-ts | 2.2.22 | MIT | [link](https://github.com/gcanti/io-ts) |
+| ip-address | 10.2.0 | MIT | [link](https://github.com/beaugunderson/ip-address#readme) |
 | ipaddr.js | 1.9.1 | MIT | [link](https://github.com/whitequark/ipaddr.js#readme) |
 | iron-webcrypto | 1.2.1 | MIT | [link](https://github.com/brc-dd/iron-webcrypto#readme) |
 | is-alphabetical | 2.0.1 | MIT | [link](https://github.com/wooorm/is-alphabetical#readme) |
@@ -802,15 +895,18 @@ pnpm --filter shodai-reference-app notices:check
 | is-retry-allowed | 2.2.0 | MIT | [link](https://github.com/sindresorhus/is-retry-allowed#readme) |
 | is-stream | 2.0.1 | MIT | [link](https://github.com/sindresorhus/is-stream#readme) |
 | is-typed-array | 1.1.15 | MIT | [link](https://github.com/inspect-js/is-typed-array#readme) |
+| is-url | 1.2.4 | MIT | [link](https://github.com/segmentio/is-url#readme) |
 | isarray | 1.0.0, 2.0.5 | MIT | [link](https://github.com/juliangruber/isarray) |
 | isexe | 2.0.0 | ISC | [link](https://github.com/isaacs/isexe#readme) |
 | isomorphic-ws | 4.0.1 | MIT | [link](https://github.com/heineiuo/isomorphic-ws#readme) |
 | isows | 1.0.6, 1.0.7 | MIT | [link](https://github.com/wevm/isows#readme) |
 | iterare | 1.2.1 | ISC | [link](https://github.com/felixfbecker/iterare#readme) |
 | jackspeak | 3.4.3 | BlueOak-1.0.0 | [link](https://github.com/isaacs/jackspeak#readme) |
+| jay-peg | 1.1.1 | MIT |  |
 | jayson | 4.3.0 | MIT | [link](https://jayson.tedeh.net) |
 | jiti | 2.7.0 | MIT | [link](https://github.com/unjs/jiti#readme) |
 | jose | 5.10.0, 6.2.3 | MIT | [link](https://github.com/panva/jose) |
+| js-md5 | 0.8.3 | MIT | [link](https://github.com/emn178/js-md5) |
 | js-tokens | 4.0.0 | MIT | [link](https://github.com/lydell/js-tokens#readme) |
 | js-yaml | 4.1.1 | MIT | [link](https://github.com/nodeca/js-yaml#readme) |
 | jsesc | 3.1.0 | MIT | [link](https://mths.be/jsesc) |
@@ -818,7 +914,8 @@ pnpm --filter shodai-reference-app notices:check
 | json-parse-even-better-errors | 2.3.1 | MIT | [link](https://github.com/npm/json-parse-even-better-errors#readme) |
 | json-rpc-engine | 6.1.0 | ISC | [link](https://github.com/MetaMask/json-rpc-engine#readme) |
 | json-rpc-random-id | 1.0.1 | ISC | [link](https://github.com/kumavis/json-rpc-random-id#readme) |
-| json-schema-traverse | 0.4.1 | MIT | [link](https://github.com/epoberezkin/json-schema-traverse#readme) |
+| json-schema-traverse | 0.4.1, 1.0.0 | MIT | [link](https://github.com/epoberezkin/json-schema-traverse#readme) |
+| json-schema-typed | 8.0.2 | BSD-2-Clause | [link](https://github.com/RemyRylan/json-schema-typed/tree/main/dist/node) |
 | json-stable-stringify-without-jsonify | 1.0.1 | MIT | [link](https://github.com/samn/json-stable-stringify) |
 | json-stringify-safe | 5.0.1 | ISC | [link](https://github.com/isaacs/json-stringify-safe) |
 | json5 | 2.2.3 | MIT | [link](http://json5.org/) |
@@ -828,6 +925,7 @@ pnpm --filter shodai-reference-app notices:check
 | levn | 0.4.1 | MIT | [link](https://github.com/gkz/levn) |
 | lightningcss | 1.32.0 | MPL-2.0 | [link](https://github.com/parcel-bundler/lightningcss#readme) |
 | lightningcss-darwin-arm64 | 1.32.0 | MPL-2.0 | [link](https://github.com/parcel-bundler/lightningcss#readme) |
+| linebreak | 1.1.0 | MIT | [link](https://github.com/devongovett/linebreaker) |
 | lines-and-columns | 1.2.4 | MIT | [link](https://github.com/eventualbuddha/lines-and-columns#readme) |
 | lit | 3.3.0 | BSD-3-Clause | [link](https://lit.dev/) |
 | lit-element | 4.2.2 | BSD-3-Clause | [link](https://lit.dev/) |
@@ -866,6 +964,7 @@ pnpm --filter shodai-reference-app notices:check
 | mdast-util-to-hast | 13.2.1 | MIT | [link](https://github.com/syntax-tree/mdast-util-to-hast#readme) |
 | mdast-util-to-markdown | 2.1.2 | MIT | [link](https://github.com/syntax-tree/mdast-util-to-markdown#readme) |
 | mdast-util-to-string | 4.0.0 | MIT | [link](https://github.com/syntax-tree/mdast-util-to-string#readme) |
+| media-engine | 1.0.3 | MIT |  |
 | media-typer | 0.3.0, 1.1.0 | MIT | [link](https://github.com/jshttp/media-typer#readme) |
 | memory-pager | 1.5.0 | MIT | [link](https://github.com/mafintosh/memory-pager) |
 | merge-descriptors | 2.0.0 | MIT | [link](https://github.com/sindresorhus/merge-descriptors#readme) |
@@ -923,27 +1022,30 @@ pnpm --filter shodai-reference-app notices:check
 | node-mock-http | 1.0.4 | MIT | [link](https://github.com/unjs/node-mock-http#readme) |
 | node-releases | 2.0.38 | MIT | [link](https://github.com/chicoxyzzy/node-releases#readme) |
 | normalize-path | 3.0.0 | MIT | [link](https://github.com/jonschlinkert/normalize-path) |
+| normalize-svg-path | 1.1.0 | MIT | [link](https://github.com/jkroso/normalize-svg-path#readme) |
 | normalize-url | 6.1.0 | MIT | [link](https://github.com/sindresorhus/normalize-url#readme) |
 | obj-multiplex | 1.0.0 | ISC |  |
 | object-assign | 4.1.1 | MIT | [link](https://github.com/sindresorhus/object-assign#readme) |
 | object-inspect | 1.13.4 | MIT | [link](https://github.com/inspect-js/object-inspect) |
 | ofetch | 1.5.1 | MIT | [link](https://github.com/unjs/ofetch#readme) |
-| on-exit-leak-free | 0.2.0 | MIT | [link](https://github.com/mcollina/on-exit-or-gc#readme) |
+| on-exit-leak-free | 0.2.0, 2.1.2 | MIT | [link](https://github.com/mcollina/on-exit-or-gc#readme) |
 | on-finished | 2.4.1 | MIT | [link](https://github.com/jshttp/on-finished#readme) |
 | once | 1.4.0 | ISC | [link](https://github.com/isaacs/once#readme) |
 | openapi-fetch | 0.13.8 | MIT | [link](https://openapi-ts.dev) |
 | openapi-typescript-helpers | 0.0.15 | MIT | [link](https://openapi-ts.dev) |
 | optionator | 0.9.4 | MIT | [link](https://github.com/gkz/optionator) |
-| ox | 0.6.7, 0.6.9, 0.7.1, 0.9.17, 0.10.6, 0.14.29 | MIT | [link](https://wevm.dev) |
+| ox | 0.6.7, 0.6.9, 0.9.3, 0.9.17, 0.10.6, 0.14.29 | MIT | [link](https://wevm.dev) |
 | p-cancelable | 2.1.1 | MIT | [link](https://github.com/sindresorhus/p-cancelable#readme) |
 | p-limit | 2.3.0, 3.1.0 | MIT | [link](https://github.com/sindresorhus/p-limit#readme) |
 | p-locate | 4.1.0, 5.0.0 | MIT | [link](https://github.com/sindresorhus/p-locate#readme) |
 | p-try | 2.2.0 | MIT | [link](https://github.com/sindresorhus/p-try#readme) |
 | package-json-from-dist | 1.0.1 | BlueOak-1.0.0 | [link](https://github.com/isaacs/package-json-from-dist#readme) |
-| pako | 2.1.0 | (MIT AND Zlib) | [link](https://github.com/nodeca/pako#readme) |
+| pako | 1.0.11, 2.2.0 | (MIT AND Zlib) | [link](https://github.com/nodeca/pako#readme) |
+| pako | 0.2.9 | MIT | [link](https://github.com/nodeca/pako) |
 | parent-module | 1.0.1 | MIT | [link](https://github.com/sindresorhus/parent-module#readme) |
 | parse-entities | 4.0.2 | MIT | [link](https://github.com/wooorm/parse-entities#readme) |
 | parse-json | 5.2.0 | MIT | [link](https://github.com/sindresorhus/parse-json#readme) |
+| parse-svg-path | 0.1.2 | MIT | [link](https://github.com/jkroso/parse-svg-path#readme) |
 | parse5 | 7.3.0 | MIT | [link](https://parse5.js.org) |
 | parseurl | 1.3.3 | MIT | [link](https://github.com/pillarjs/parseurl#readme) |
 | path-exists | 4.0.0 | MIT | [link](https://github.com/sindresorhus/path-exists#readme) |
@@ -954,11 +1056,13 @@ pnpm --filter shodai-reference-app notices:check
 | picocolors | 1.1.1 | ISC | [link](https://github.com/alexeyraspopov/picocolors#readme) |
 | picomatch | 2.3.2, 4.0.4 | MIT | [link](https://github.com/micromatch/picomatch) |
 | pify | 3.0.0, 5.0.0 | MIT | [link](https://github.com/sindresorhus/pify#readme) |
-| pino | 7.11.0 | MIT | [link](http://getpino.io) |
-| pino-abstract-transport | 0.5.0 | MIT | [link](https://github.com/pinojs/pino-abstract-transport#readme) |
-| pino-std-serializers | 4.0.0 | MIT | [link](https://github.com/pinojs/pino-std-serializers#readme) |
-| playwright | 1.60.0 | Apache-2.0 | [link](https://playwright.dev) |
-| playwright-core | 1.60.0 | Apache-2.0 | [link](https://playwright.dev) |
+| pino | 7.11.0, 10.0.0 | MIT | [link](https://getpino.io) |
+| pino-abstract-transport | 0.5.0, 2.0.0 | MIT | [link](https://github.com/pinojs/pino-abstract-transport#readme) |
+| pino-std-serializers | 4.0.0, 7.1.0 | MIT | [link](https://github.com/pinojs/pino-std-serializers#readme) |
+| pkce-challenge | 5.0.1 | MIT | [link](https://github.com/crouchcd/pkce-challenge#readme) |
+| playwright | 1.61.0 | Apache-2.0 | [link](https://playwright.dev) |
+| playwright-core | 1.61.0 | Apache-2.0 | [link](https://playwright.dev) |
+| png-js | 2.0.0 | MIT | [link](https://github.com/devongovett/png.js#readme) |
 | pngjs | 5.0.0 | MIT | [link](https://github.com/lukeapage/pngjs) |
 | pnglib | 0.0.1 | BSD | [link](https://github.com/GeorgeChan/pnglib#readme) |
 | pony-cause | 2.1.11 | 0BSD | [link](http://github.com/voxpelli/pony-cause) |
@@ -966,18 +1070,19 @@ pnpm --filter shodai-reference-app notices:check
 | poseidon-lite | 0.2.1 | MIT | [link](https://github.com/vimwitch/poseidon-lite#readme) |
 | possible-typed-array-names | 1.1.0 | MIT | [link](https://github.com/ljharb/possible-typed-array-names#readme) |
 | postcss | 8.5.10 | MIT | [link](https://postcss.org/) |
+| postcss-value-parser | 4.2.0 | MIT | [link](https://github.com/TrySound/postcss-value-parser) |
 | preact | 10.24.2, 10.29.2 | MIT | [link](https://preactjs.com) |
 | prelude-ls | 1.2.1 | MIT | [link](http://preludels.com) |
 | process | 0.11.10 | MIT | [link](https://github.com/shtylman/node-process#readme) |
 | process-nextick-args | 2.0.1 | MIT | [link](https://github.com/calvinmetcalf/process-nextick-args) |
-| process-warning | 1.0.0 | MIT | [link](https://github.com/fastify/fastify-warning#readme) |
+| process-warning | 1.0.0, 5.0.0 | MIT | [link](https://github.com/fastify/fastify-warning#readme) |
 | progress | 2.0.3 | MIT | [link](https://github.com/visionmedia/node-progress#readme) |
 | prop-types | 15.8.1 | MIT | [link](https://facebook.github.io/react/) |
 | property-expr | 2.0.6 | MIT | [link](https://github.com/jquense/expr#readme) |
 | property-information | 7.2.0 | MIT | [link](https://github.com/wooorm/property-information#readme) |
-| protobufjs | 7.6.2 | BSD-3-Clause | [link](https://protobufjs.github.io/protobuf.js/) |
+| protobufjs | 7.6.4 | BSD-3-Clause | [link](https://protobufjs.github.io/protobuf.js/) |
 | proxy-addr | 2.0.7 | MIT | [link](https://github.com/jshttp/proxy-addr#readme) |
-| proxy-compare | 2.6.0 | MIT | [link](https://github.com/dai-shi/proxy-compare#readme) |
+| proxy-compare | 2.6.0, 3.0.1 | MIT | [link](https://github.com/dai-shi/proxy-compare#readme) |
 | proxy-from-env | 1.1.0, 2.1.0 | MIT | [link](https://github.com/Rob--W/proxy-from-env#readme) |
 | pump | 3.0.4 | MIT | [link](https://github.com/mafintosh/pump#readme) |
 | punycode | 1.3.2, 2.3.1 | MIT | [link](https://mths.be/punycode) |
@@ -987,6 +1092,7 @@ pnpm --filter shodai-reference-app notices:check
 | qs | 6.15.2 | BSD-3-Clause | [link](https://github.com/ljharb/qs) |
 | query-string | 7.1.3 | MIT | [link](https://github.com/sindresorhus/query-string#readme) |
 | querystring | 0.2.0 | MIT | [link](https://github.com/Gozala/querystring#readme) |
+| queue | 6.0.2 | MIT | [link](https://github.com/jessetane/queue#readme) |
 | quick-format-unescaped | 4.0.4 | MIT | [link](https://github.com/davidmarkclements/quick-format#readme) |
 | quick-lru | 5.1.1 | MIT | [link](https://github.com/sindresorhus/quick-lru#readme) |
 | radix3 | 1.1.2 | MIT | [link](https://github.com/unjs/radix3#readme) |
@@ -998,7 +1104,7 @@ pnpm --filter shodai-reference-app notices:check
 | react-dom | 18.3.1 | MIT | [link](https://reactjs.org/) |
 | react-fast-compare | 2.0.4 | MIT | [link](https://github.com/FormidableLabs/react-fast-compare) |
 | react-focus-lock | 2.13.6 | MIT | [link](https://github.com/theKashey/react-focus-lock#readme) |
-| react-hook-form | 7.77.0 | MIT | [link](https://react-hook-form.com) |
+| react-hook-form | 7.80.0 | MIT | [link](https://react-hook-form.com) |
 | react-i18next | 13.5.0 | MIT | [link](https://github.com/i18next/react-i18next) |
 | react-international-phone | 4.5.0 | MIT | [link](https://react-international-phone-docs.vercel.app/) |
 | react-is | 16.13.1, 18.3.1 | MIT | [link](https://reactjs.org/) |
@@ -1006,14 +1112,14 @@ pnpm --filter shodai-reference-app notices:check
 | react-refresh | 0.17.0 | MIT | [link](https://react.dev/) |
 | react-remove-scroll | 2.7.2 | MIT | [link](https://github.com/theKashey/react-remove-scroll#readme) |
 | react-remove-scroll-bar | 2.3.8 | MIT | [link](https://github.com/theKashey/react-remove-scroll-bar#readme) |
-| react-router | 7.17.0 | MIT | [link](https://github.com/remix-run/react-router#readme) |
+| react-router | 7.18.0 | MIT | [link](https://github.com/remix-run/react-router#readme) |
 | react-smooth | 4.0.4 | MIT | [link](https://github.com/recharts/react-smooth#readme) |
 | react-style-singleton | 2.2.3 | MIT | [link](https://github.com/theKashey/react-style-singleton#readme) |
 | react-transition-group | 4.4.5 | BSD-3-Clause | [link](https://github.com/reactjs/react-transition-group#readme) |
 | react-virtualized-auto-sizer | 1.0.26 | MIT | [link](https://github.com/bvaughn/react-virtualized-auto-sizer#readme) |
 | readable-stream | 2.3.8, 3.6.2 | MIT | [link](https://github.com/nodejs/readable-stream#readme) |
 | readdirp | 3.6.0, 5.0.0 | MIT | [link](https://github.com/paulmillr/readdirp) |
-| real-require | 0.1.0 | MIT | [link](https://github.com/pinojs/real-require) |
+| real-require | 0.1.0, 0.2.0 | MIT | [link](https://github.com/pinojs/real-require) |
 | recharts | 2.15.4 | MIT | [link](https://github.com/recharts/recharts) |
 | recharts-scale | 0.4.5 | MIT | [link](https://github.com/recharts/recharts-scale) |
 | reflect-metadata | 0.2.2 | Apache-2.0 | [link](http://rbuckton.github.io/reflect-metadata) |
@@ -1024,10 +1130,12 @@ pnpm --filter shodai-reference-app notices:check
 | remark-rehype | 11.1.2 | MIT | [link](https://github.com/remarkjs/remark-rehype#readme) |
 | remark-stringify | 11.0.0 | MIT | [link](https://remark.js.org) |
 | require-directory | 2.1.1 | MIT | [link](https://github.com/troygoode/node-require-directory/) |
+| require-from-string | 2.0.2 | MIT | [link](https://github.com/floatdrop/require-from-string#readme) |
 | require-main-filename | 2.0.0 | ISC | [link](https://github.com/yargs/require-main-filename#readme) |
 | resolve-alpn | 1.2.1 | MIT | [link](https://github.com/szmarczak/resolve-alpn#readme) |
 | resolve-from | 4.0.0 | MIT | [link](https://github.com/sindresorhus/resolve-from#readme) |
 | responselike | 2.0.1 | MIT | [link](https://github.com/sindresorhus/responselike#readme) |
+| restructure | 3.0.2 | MIT | [link](https://github.com/devongovett/restructure) |
 | rollup | 4.60.2 | MIT | [link](https://rollupjs.org/) |
 | rollup-plugin-inject | 3.0.2 | MIT | [link](https://github.com/rollup/rollup-plugin-inject#readme) |
 | rollup-plugin-node-polyfills | 0.2.1 | MIT | [link](https://github.com/ionic-team/rollup-plugin-node-polyfills#readme) |
@@ -1039,8 +1147,8 @@ pnpm --filter shodai-reference-app notices:check
 | safe-regex-test | 1.1.0 | MIT | [link](https://github.com/ljharb/safe-regex-test#readme) |
 | safe-stable-stringify | 2.5.0 | MIT | [link](https://github.com/BridgeAR/safe-stable-stringify#readme) |
 | safer-buffer | 2.1.2 | MIT | [link](https://github.com/ChALkeR/safer-buffer#readme) |
-| scheduler | 0.23.2 | MIT | [link](https://reactjs.org/) |
-| semver | 6.3.1, 7.7.4 | ISC | [link](https://github.com/npm/node-semver#readme) |
+| scheduler | 0.23.2, 0.25.0-rc-603e6108-20241029 | MIT | [link](https://react.dev/) |
+| semver | 6.3.1, 7.7.2, 7.7.4 | ISC | [link](https://github.com/npm/node-semver#readme) |
 | send | 1.2.1 | MIT | [link](https://github.com/pillarjs/send#readme) |
 | serve-static | 2.2.1 | MIT | [link](https://github.com/expressjs/serve-static#readme) |
 | set-blocking | 2.0.0 | ISC | [link](https://github.com/yargs/set-blocking#readme) |
@@ -1052,16 +1160,17 @@ pnpm --filter shodai-reference-app notices:check
 | sharp | 0.33.5 | Apache-2.0 | [link](https://sharp.pixelplumbing.com) |
 | shebang-command | 2.0.0 | MIT | [link](https://github.com/kevva/shebang-command#readme) |
 | shebang-regex | 3.0.0 | MIT | [link](https://github.com/sindresorhus/shebang-regex#readme) |
-| side-channel | 1.1.0 | MIT | [link](https://github.com/ljharb/side-channel#readme) |
+| side-channel | 1.1.1 | MIT | [link](https://github.com/ljharb/side-channel#readme) |
 | side-channel-list | 1.0.1 | MIT | [link](https://github.com/ljharb/side-channel-list#readme) |
 | side-channel-map | 1.0.1 | MIT | [link](https://github.com/ljharb/side-channel-map#readme) |
 | side-channel-weakmap | 1.0.2 | MIT | [link](https://github.com/ljharb/side-channel-weakmap#readme) |
 | signal-exit | 4.1.0 | ISC | [link](https://github.com/tapjs/signal-exit#readme) |
 | simple-swizzle | 0.2.4 | MIT | [link](https://github.com/qix-/node-simple-swizzle#readme) |
+| slow-redact | 0.3.2 | MIT | [link](https://github.com/pinojs/slow-redact#readme) |
 | snake-case | 3.0.4 | MIT | [link](https://github.com/blakeembrey/change-case/tree/master/packages/snake-case#readme) |
 | socket.io-client | 4.8.3 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/socket.io-client#readme) |
 | socket.io-parser | 4.2.6 | MIT | [link](https://github.com/socketio/socket.io/tree/main/packages/socket.io-client#readme) |
-| sonic-boom | 2.8.0 | MIT | [link](https://github.com/pinojs/sonic-boom#readme) |
+| sonic-boom | 2.8.0, 4.2.1 | MIT | [link](https://github.com/pinojs/sonic-boom#readme) |
 | sonner | 2.0.7 | MIT | [link](https://sonner.emilkowal.ski/) |
 | source-map-js | 1.2.1 | BSD-3-Clause | [link](https://github.com/7rulnik/source-map-js) |
 | sourcemap-codec | 1.4.8 | MIT | [link](https://github.com/Rich-Harris/sourcemap-codec) |
@@ -1086,14 +1195,16 @@ pnpm --filter shodai-reference-app notices:check
 | style-to-object | 1.0.14 | MIT | [link](https://github.com/remarkablemark/style-to-object#readme) |
 | superstruct | 1.0.4, 2.0.2 | MIT | [link](https://github.com/ianstormtaylor/superstruct#readme) |
 | supports-color | 7.2.0 | MIT | [link](https://github.com/chalk/supports-color#readme) |
+| svg-arc-to-cubic-bezier | 3.2.0 | ISC | [link](https://github.com/colinmeinke/svg-arc-to-cubic-bezier#readme) |
 | svg-parser | 2.0.4 | MIT | [link](https://github.com/Rich-Harris/svg-parser#README) |
 | tailwind-merge | 2.6.1, 3.6.0 | MIT | [link](https://github.com/dcastil/tailwind-merge) |
-| tailwindcss | 4.3.0 | MIT | [link](https://tailwindcss.com) |
+| tailwindcss | 4.3.1 | MIT | [link](https://tailwindcss.com) |
 | tailwindcss-animate | 1.0.7 | MIT |  |
 | tapable | 2.3.3 | MIT | [link](https://github.com/webpack/tapable) |
 | text-encoding | 0.7.0 | (Unlicense OR Apache-2.0) | [link](https://github.com/inexorabletash/text-encoding) |
 | text-encoding-utf-8 | 1.0.2 | Unknown | [link](https://github.com/arv/text-encoding-utf-8) |
-| thread-stream | 0.15.2 | MIT | [link](https://github.com/mcollina/thread-stream#readme) |
+| thread-stream | 0.15.2, 3.2.0 | MIT | [link](https://github.com/mcollina/thread-stream#readme) |
+| tiny-inflate | 1.0.3 | MIT | [link](https://github.com/devongovett/tiny-inflate) |
 | tiny-invariant | 1.3.3 | MIT | [link](https://github.com/alexreardon/tiny-invariant#readme) |
 | tiny-warning | 1.0.3 | MIT | [link](https://github.com/alexreardon/tiny-warning#readme) |
 | tinyglobby | 0.2.16 | MIT | [link](https://superchupu.dev/tinyglobby) |
@@ -1126,7 +1237,9 @@ pnpm --filter shodai-reference-app notices:check
 | uint8arrays | 3.1.0, 3.1.1 | MIT | [link](https://github.com/achingbrain/uint8arrays) |
 | ulid | 2.4.0 | MIT | [link](https://github.com/ulid/javascript#readme) |
 | uncrypto | 0.1.3 | MIT | [link](https://github.com/unjs/uncrypto#readme) |
-| undici-types | 6.21.0, 7.27.1 | MIT | [link](https://undici.nodejs.org) |
+| undici-types | 6.21.0, 7.28.0 | MIT | [link](https://undici.nodejs.org) |
+| unicode-properties | 1.4.1 | MIT | [link](https://github.com/devongovett/unicode-properties) |
+| unicode-trie | 2.0.0 | MIT | [link](https://github.com/devongovett/unicode-trie) |
 | unified | 11.0.5 | MIT | [link](https://unifiedjs.com) |
 | unist-util-is | 6.0.1 | MIT | [link](https://github.com/syntax-tree/unist-util-is#readme) |
 | unist-util-position | 5.0.0 | MIT | [link](https://github.com/syntax-tree/unist-util-position#readme) |
@@ -1145,17 +1258,18 @@ pnpm --filter shodai-reference-app notices:check
 | utf-8-validate | 5.0.10, 6.0.6 | MIT | [link](https://github.com/websockets/utf-8-validate) |
 | util | 0.12.5 | MIT | [link](https://github.com/browserify/node-util) |
 | util-deprecate | 1.0.2 | MIT | [link](https://github.com/TooTallNate/util-deprecate) |
-| uuid | 8.3.2, 9.0.1, 11.1.0, 11.1.1, 14.0.0 | MIT | [link](https://github.com/uuidjs/uuid#readme) |
+| uuid | 8.3.2, 9.0.1, 11.1.0, 11.1.1, 14.0.1 | MIT | [link](https://github.com/uuidjs/uuid#readme) |
 | v8-compile-cache-lib | 3.0.1 | MIT | [link](https://github.com/cspotcode/v8-compile-cache-lib#readme) |
 | valibot | 1.4.1 | MIT | [link](https://valibot.dev) |
-| valtio | 1.13.2 | MIT | [link](https://github.com/pmndrs/valtio) |
+| valtio | 1.13.2, 2.1.7 | MIT | [link](https://github.com/pmndrs/valtio) |
 | vary | 1.1.2 | MIT | [link](https://github.com/jshttp/vary#readme) |
 | vfile | 6.0.3 | MIT | [link](https://github.com/vfile/vfile#readme) |
 | vfile-location | 5.0.3 | MIT | [link](https://github.com/vfile/vfile-location#readme) |
 | vfile-message | 4.0.3 | MIT | [link](https://github.com/vfile/vfile-message#readme) |
 | victory-vendor | 36.9.2 | MIT AND ISC | [link](https://commerce.nearform.com/open-source/victory) |
-| viem | 2.23.2, 2.31.0, 2.43.2, 2.52.2 | MIT | [link](https://viem.sh) |
+| viem | 2.23.2, 2.43.2, 2.53.1 | MIT | [link](https://viem.sh) |
 | vite | 5.4.21 | MIT | [link](https://vite.dev) |
+| vite-compatible-readable-stream | 3.6.1 | MIT | [link](https://github.com/TechInSite/readable-stream#readme) |
 | vite-plugin-svgr | 4.5.0 | MIT | [link](https://github.com/pd4d10/vite-plugin-svgr#readme) |
 | void-elements | 3.1.0 | MIT | [link](https://github.com/jadejs/void-elements) |
 | wagmi | 2.19.5 | MIT | [link](https://github.com/wevm/wagmi#readme) |
@@ -1167,11 +1281,11 @@ pnpm --filter shodai-reference-app notices:check
 | whatwg-url | 5.0.0, 14.2.0 | MIT | [link](https://github.com/jsdom/whatwg-url#readme) |
 | which | 2.0.2 | ISC | [link](https://github.com/isaacs/node-which#readme) |
 | which-module | 2.0.1 | ISC | [link](https://github.com/nexdrew/which-module#readme) |
-| which-typed-array | 1.1.21 | MIT | [link](https://github.com/inspect-js/which-typed-array#readme) |
+| which-typed-array | 1.1.22 | MIT | [link](https://github.com/inspect-js/which-typed-array#readme) |
 | word-wrap | 1.2.5 | MIT | [link](https://github.com/jonschlinkert/word-wrap) |
 | wrap-ansi | 6.2.0, 7.0.0 | MIT | [link](https://github.com/chalk/wrap-ansi#readme) |
 | wrappy | 1.0.2 | ISC | [link](https://github.com/npm/wrappy) |
-| ws | 7.5.11, 8.18.0, 8.18.2, 8.18.3, 8.20.1, 8.21.0 | MIT | [link](https://github.com/websockets/ws) |
+| ws | 7.5.11, 8.18.0, 8.18.3, 8.20.1, 8.21.0 | MIT | [link](https://github.com/websockets/ws) |
 | xmlhttprequest-ssl | 2.1.2 | MIT | [link](https://github.com/mjwwit/node-XMLHttpRequest#readme) |
 | xtend | 4.0.2 | MIT | [link](https://github.com/Raynos/xtend) |
 | y18n | 4.0.3 | ISC | [link](https://github.com/yargs/y18n) |
@@ -1180,7 +1294,9 @@ pnpm --filter shodai-reference-app notices:check
 | yargs-parser | 18.1.3 | ISC | [link](https://github.com/yargs/yargs-parser#readme) |
 | yn | 3.1.1 | MIT | [link](https://github.com/sindresorhus/yn#readme) |
 | yocto-queue | 0.1.0 | MIT | [link](https://github.com/sindresorhus/yocto-queue#readme) |
+| yoga-layout | 3.2.1 | MIT | [link](https://yogalayout.dev/) |
 | yup | 0.32.11 | MIT | [link](https://github.com/jquense/yup) |
 | zod | 3.22.4, 3.25.76, 4.0.5, 4.4.3 | MIT | [link](https://zod.dev) |
+| zod-to-json-schema | 3.25.2 | ISC | [link](https://github.com/StefanTerdell/zod-to-json-schema#readme) |
 | zustand | 4.5.7, 5.0.0, 5.0.3, 5.0.14 | MIT | [link](https://github.com/pmndrs/zustand) |
 | zwitch | 2.0.4 | MIT | [link](https://github.com/wooorm/zwitch#readme) |

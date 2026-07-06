@@ -9,7 +9,7 @@ import type {
   AgreementNotificationTriggeredWebhookEvent,
   AgreementTransitionedWebhookEvent,
   ShodaiWebhookEvent,
-} from '@cns-labs/agreements-api-client/webhooks';
+} from '@shodai-network/agreements-api-client/webhooks';
 
 @Injectable()
 export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {

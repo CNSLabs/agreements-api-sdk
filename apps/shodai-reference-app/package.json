@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "install:all": "pnpm install",
-    "prepare:client": "pnpm --filter @cns-labs/agreements-api-client build",
+    "prepare:client": "pnpm --filter @shodai-network/agreements-api-client build",
     "prebackend:start": "pnpm prepare:client",
     "prebackend:dev": "pnpm prepare:client",
     "prebackend:test": "pnpm prepare:client",
