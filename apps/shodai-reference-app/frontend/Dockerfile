@@ -4,13 +4,20 @@ RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
 WORKDIR /workspace
 
+# Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/shodai-reference-app/frontend/package.json ./apps/shodai-reference-app/frontend/
 
-RUN pnpm install --frozen-lockfile --ignore-scripts --filter shodai-reference-frontend...
+# Install dependencies from package metadata only for better Docker layer caching.
+RUN pnpm install --frozen-lockfile --filter shodai-reference-frontend...
 
 FROM base AS build
 
+# Vite needs more than Node's default heap when rendering the wallet-heavy
+# production bundle in Docker.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
+# Accept build arguments for Vite environment variables
 ARG VITE_DYNAMIC_ENVIRONMENT_ID
 ARG VITE_AGREEMENTS_API_BASE_URL
 ARG VITE_AUTH_API_URL
@@ -33,6 +40,7 @@ ARG VITE_SENTRY_TRACES_SAMPLE_RATE
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 
+# Set as environment variables for Vite build
 ENV VITE_DYNAMIC_ENVIRONMENT_ID=$VITE_DYNAMIC_ENVIRONMENT_ID
 ENV VITE_AGREEMENTS_API_BASE_URL=$VITE_AGREEMENTS_API_BASE_URL
 ENV VITE_AUTH_API_URL=$VITE_AUTH_API_URL
@@ -55,9 +63,17 @@ ENV VITE_SENTRY_TRACES_SAMPLE_RATE=$VITE_SENTRY_TRACES_SAMPLE_RATE
 ENV SENTRY_ORG=$SENTRY_ORG
 ENV SENTRY_PROJECT=$SENTRY_PROJECT
 
+# Remove node_modules and dist to avoid conflicts when copying source.
+RUN rm -rf apps/shodai-reference-app/frontend/node_modules apps/shodai-reference-app/frontend/dist
+
+# Copy source code
 COPY apps/shodai-reference-app/frontend ./apps/shodai-reference-app/frontend
+
+# Reinstall after source copy, matching the existing frontend image pattern.
+RUN pnpm install --frozen-lockfile --filter shodai-reference-frontend...
 RUN pnpm rebuild @sentry/cli
 
+# Build the application using workspace filter.
 RUN --mount=type=secret,id=sentry_auth_token,required=false \
   export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" && \
   pnpm --filter shodai-reference-frontend build
@@ -65,8 +81,10 @@ RUN find /workspace/apps/shodai-reference-app/frontend/dist -type f -name '*.map
 
 FROM nginx:alpine AS production
 
+# Copy built assets
 COPY --from=build /workspace/apps/shodai-reference-app/frontend/dist /usr/share/nginx/html
 
+# Copy nginx configuration
 COPY apps/shodai-reference-app/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

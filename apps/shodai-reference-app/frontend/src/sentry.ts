@@ -17,8 +17,8 @@ if (sentryEnabled) {
     integrations: [
       Sentry.browserTracingIntegration({
         tracePropagationTargets: [
-          /^\/(auth-api|agreements-api)/,
-          /^https?:\/\/[^/]+\/(auth-api|agreements-api)/,
+          /^\/(shodai-reference-api|auth-api|agreements-api)/,
+          /^https?:\/\/[^/]+\/(shodai-reference-api|auth-api|agreements-api)/,
         ],
       }),
     ],
@@ -27,7 +27,7 @@ if (sentryEnabled) {
       : 0,
     initialScope: {
       tags: {
-        app: 'agreements-ui',
+        app: 'shodai-reference-frontend',
       },
     },
   });

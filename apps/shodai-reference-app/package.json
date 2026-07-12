@@ -11,6 +11,8 @@
     "prebackend:test": "pnpm prepare:client",
     "prebackend:type-check": "pnpm prepare:client",
     "backend:start": "pnpm --filter shodai-reference-backend start",
+    "backend:start:prod": "pnpm --filter shodai-reference-backend start:prod",
+    "backend:build": "pnpm --filter shodai-reference-backend build",
     "backend:dev": "pnpm --filter shodai-reference-backend dev",
     "backend:test": "pnpm --filter shodai-reference-backend test",
     "backend:type-check": "pnpm --filter shodai-reference-backend type-check",
