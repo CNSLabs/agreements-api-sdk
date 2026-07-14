@@ -64,18 +64,17 @@ const permitFields = {
     .int()
     .optional()
     .describe('Permit deadline in unix seconds. Must match the signed payload.'),
-  signatureV: z.number().int().optional().describe('Permit signature v component (27 or 28).'),
-  signatureR: z.string().optional().describe('Permit signature r component (0x... 32 bytes).'),
-  signatureS: z.string().optional().describe('Permit signature s component (0x... 32 bytes).'),
+  signature: z
+    .string()
+    .optional()
+    .describe('Opaque EOA or ERC-1271 permit signature bytes as a 0x-prefixed hex string.'),
 };
 
 type PermitArgs = {
   environment?: AgreementsApiEnvironment;
   signer?: string;
   deadline?: number;
-  signatureV?: number;
-  signatureR?: string;
-  signatureS?: string;
+  signature?: string;
 };
 
 type DeployPreflightArgs = {
@@ -112,17 +111,11 @@ async function preflightDeployPayload(client: ApiClient, args: DeployPreflightAr
 function extractPermit(args: PermitArgs):
   | { signer: string; deadline: number; signature: PermitSignature }
   | undefined {
-  if (
-    args.signer &&
-    args.deadline !== undefined &&
-    args.signatureV !== undefined &&
-    args.signatureR &&
-    args.signatureS
-  ) {
+  if (args.signer && args.deadline !== undefined && args.signature) {
     return {
       signer: args.signer,
       deadline: args.deadline,
-      signature: { v: args.signatureV, r: args.signatureR, s: args.signatureS },
+      signature: args.signature,
     };
   }
   return undefined;
@@ -131,7 +124,7 @@ function extractPermit(args: PermitArgs):
 function missingPermitError(prepareTool: string): ReturnType<typeof errorResult> {
   return errorResult(
     new Error(
-      `No permit provided and no local signer configured. Either (a) call ${prepareTool} to get the EIP-712 payload, sign it with the participant wallet (e.g. viem signTypedData or the playground at ${PLAYGROUND_URL}), then retry with signer/deadline/signatureV/signatureR/signatureS; or (b) in local stdio mode, set AGREEMENTS_SIGNER_PRIVATE_KEY in the server environment (dev/testnet only).`,
+      `No permit provided and no local signer configured. Either (a) call ${prepareTool} to get the EIP-712 payload, sign it with the participant wallet or smart account (e.g. viem signTypedData or the playground at ${PLAYGROUND_URL}), then retry with signer/deadline/signature; or (b) in local stdio mode, set AGREEMENTS_SIGNER_PRIVATE_KEY in the server environment (dev/testnet only).`,
     ),
   );
 }
@@ -162,11 +155,11 @@ function environmentNextStepPrefix(environment: AgreementsApiEnvironment | undef
 }
 
 export function deploymentPermitNextStep(environment?: AgreementsApiEnvironment): string {
-  return `Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call deploy_agreement with ${environmentNextStepPrefix(environment)}the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, documentId, plus signer, deadline, signatureV, signatureR, signatureS.`;
+  return `Sign typedData with the signer wallet or smart account, then call deploy_agreement with ${environmentNextStepPrefix(environment)}the same agreement, chainId, normalizedInitValues as initValues, normalizedParticipants as participants, normalizedObservers as observers, docUri, documentId, plus signer, deadline, and the opaque signature bytes.`;
 }
 
 export function inputPermitNextStep(environment?: AgreementsApiEnvironment): string {
-  return `Sign typedData with the signer wallet (eth_signTypedData_v4), split the 65-byte signature into v/r/s, then call submit_input with ${environmentNextStepPrefix(environment)}the same agreementId, inputId, values, plus signer, deadline, signatureV, signatureR, signatureS.`;
+  return `Sign typedData with the signer wallet or smart account, then call submit_input with ${environmentNextStepPrefix(environment)}the same agreementId, inputId, values, plus signer, deadline, and the opaque signature bytes.`;
 }
 
 export function registerWriteTools(
@@ -323,7 +316,7 @@ export function registerWriteTools(
     {
       title: 'Prepare deployment permit typed data',
       description:
-        'Builds the exact EIP-712 payload that must be signed to authorize deployment of the given agreement JSON. Sign the returned typedData with the deploying wallet (eth_signTypedData_v4 / viem signTypedData), then call deploy_agreement with signer, deadline, and the signature components. No transaction is sent and nothing is stored. Reads the signer nonce from the target chain.',
+        'Builds the exact EIP-712 payload that must be signed to authorize deployment of the given agreement JSON. Sign the returned typedData with the deploying wallet or smart account, then call deploy_agreement with signer, deadline, and the opaque signature bytes. No transaction is sent and nothing is stored. Reads the signer nonce from the target chain.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
         ...environmentInputSchema(options),
@@ -375,7 +368,7 @@ export function registerWriteTools(
     {
       title: 'Prepare input permit typed data',
       description:
-        'Builds the exact EIP-712 payload that must be signed to authorize submitting an input to a deployed agreement. Sign the returned typedData with a wallet allowed by the input definition, then call submit_input with signer, deadline, and the signature components. No transaction is sent and nothing is stored. Reads the agreement record and signer nonce.',
+        'Builds the exact EIP-712 payload that must be signed to authorize submitting an input to a deployed agreement. Sign the returned typedData with an allowed wallet or smart account, then call submit_input with signer, deadline, and the opaque signature bytes. No transaction is sent and nothing is stored. Reads the agreement record and signer nonce.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
         ...environmentInputSchema(options),

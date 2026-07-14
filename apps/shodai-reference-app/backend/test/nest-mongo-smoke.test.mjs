@@ -374,7 +374,7 @@ test('Agreements API client emits the outbound external API contract used by the
     },
   });
 
-  const deployResult = await client.deployWithPermit({ agreement: { metadata: { id: 'template-1' } }, displayName: 'SDK contract test', chainId: 59141, signer: '0x1111111111111111111111111111111111111111', deadline: 1, signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` } });
+  const deployResult = await client.deployWithPermit({ agreement: { metadata: { id: 'template-1' } }, displayName: 'SDK contract test', chainId: 59141, signer: '0x1111111111111111111111111111111111111111', deadline: 1, signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b` });
   const inputResult = await client.submitAgreementInput('agr_1', { inputId: 'submit', values: { ok: true }, signer: '0x1111111111111111111111111111111111111111' });
   const agreementResult = await client.getAgreement('agr_1');
   const stateResult = await client.getAgreementState('agr_1');
@@ -500,7 +500,7 @@ test('External deploy attaches matching external webhook notification template',
   await service.deployWithPermit('draft-with-notifications-1', {
     signer: '0x1111111111111111111111111111111111111111',
     deadline: 1,
-    signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+    signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b`,
   }, {
     wallets: [{ address: '0x1111111111111111111111111111111111111111' }],
   });
@@ -1296,7 +1296,7 @@ test('Nest backend persists template access through Mongo-backed admin module', 
       body: JSON.stringify({
         signer: '0x1111111111111111111111111111111111111111',
         deadline: Math.floor(Date.now() / 1000) + 3600,
-        signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+        signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b`,
       }),
     });
     const deployBody = await readJsonResponse(deployResponse);
@@ -1315,7 +1315,7 @@ test('Nest backend persists template access through Mongo-backed admin module', 
         values: { note: 'hello' },
         signer: '0x1111111111111111111111111111111111111111',
         deadline: Math.floor(Date.now() / 1000) + 3600,
-        signature: { v: 27, r: `0x${'3'.repeat(64)}`, s: `0x${'4'.repeat(64)}` },
+        signature: `0x${'3'.repeat(64)}${'4'.repeat(64)}1b`,
       }),
     });
     const inputBody = await readJsonResponse(inputResponse);
@@ -1694,7 +1694,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
       body: JSON.stringify({
         signer: owner,
         deadline: Math.floor(Date.now() / 1000) + 3600,
-        signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+        signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b`,
         docUri: 'ipfs://agreement/signed-doc-uri',
         initValues: { invoiceTotal: '2000', signedOnly: 'yes' },
       }),
@@ -1729,7 +1729,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
         values: { invoiceNumber: 'INV-1' },
         signer: owner,
         deadline: Math.floor(Date.now() / 1000) + 3600,
-        signature: { v: 27, r: `0x${'3'.repeat(64)}`, s: `0x${'4'.repeat(64)}` },
+        signature: `0x${'3'.repeat(64)}${'4'.repeat(64)}1b`,
       }),
     });
     const submitBody = await readJsonResponse(submitResponse);
@@ -1772,7 +1772,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
         values: { invoiceNumber: 'INV-STATE-FAIL' },
         signer: owner,
         deadline: Math.floor(Date.now() / 1000) + 3600,
-        signature: { v: 27, r: `0x${'8'.repeat(64)}`, s: `0x${'9'.repeat(64)}` },
+        signature: `0x${'8'.repeat(64)}${'9'.repeat(64)}1b`,
       }),
     });
     const stateFailureSubmitBody = await readJsonResponse(stateFailureSubmitResponse);

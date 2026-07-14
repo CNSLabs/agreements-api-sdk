@@ -50,14 +50,14 @@ await request('PUT', `/agreements-api/agreements/${draft.id}/observers`, { obser
 const deployed = await request('POST', `/agreements-api/agreements/${draft.id}/deploy-with-permit`, {
   signer: wallet,
   deadline: Math.floor(Date.now() / 1000) + 3600,
-  signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+  signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b`,
 });
 await request('POST', `/agreements-api/agreements/${draft.id}/input`, {
   inputId: 'verifyInput',
   values: { verification: true },
   signer: wallet,
   deadline: Math.floor(Date.now() / 1000) + 3600,
-  signature: { v: 27, r: `0x${'3'.repeat(64)}`, s: `0x${'4'.repeat(64)}` },
+  signature: `0x${'3'.repeat(64)}${'4'.repeat(64)}1b`,
 });
 await request('GET', `/agreements-api/agreements/${draft.id}/state`);
 await request('GET', `/agreements-api/agreements/${draft.id}/inputs`);

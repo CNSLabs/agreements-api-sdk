@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@shodai-network/agreements-api-client": "workspace:*",
-    "@shodai-network/agreements-protocol-evm": "^0.1.4",
+    "@shodai-network/agreements-protocol-evm": ">=0.1.4 <0.3.0",
     "@opentelemetry/api": "^1.9.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

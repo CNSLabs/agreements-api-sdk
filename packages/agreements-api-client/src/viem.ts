@@ -67,6 +67,34 @@ export type SignInputPermitResult = {
 /** Default permit lifetime used in the Agreements API playground (1 hour). */
 export const DEFAULT_PERMIT_DEADLINE_SECONDS = 3600;
 
+/**
+ * Normalize the legacy SDK's split ECDSA result and the 0.2 SDK's opaque
+ * result to the wire format accepted by EOA and ERC-1271 permit paths.
+ */
+export function normalizePermitSignature(signature: unknown): string {
+  if (typeof signature === 'string' && /^0x(?:[0-9a-fA-F]{2})+$/.test(signature)) {
+    return signature;
+  }
+
+  if (signature && typeof signature === 'object') {
+    const candidate = signature as { v?: unknown; r?: unknown; s?: unknown };
+    const normalizedV = candidate.v === 0 || candidate.v === 1
+      ? candidate.v + 27
+      : candidate.v;
+    if (
+      (normalizedV === 27 || normalizedV === 28) &&
+      typeof candidate.r === 'string' &&
+      /^0x[0-9a-fA-F]{64}$/.test(candidate.r) &&
+      typeof candidate.s === 'string' &&
+      /^0x[0-9a-fA-F]{64}$/.test(candidate.s)
+    ) {
+      return `${candidate.r}${candidate.s.slice(2)}${normalizedV.toString(16)}`;
+    }
+  }
+
+  throw new Error('Permit signature must be opaque 0x-prefixed bytes or legacy v/r/s components.');
+}
+
 export function computeDefaultDeadlineSeconds(offsetSeconds: number = DEFAULT_PERMIT_DEADLINE_SECONDS): number {
   return Math.floor(Date.now() / 1000) + offsetSeconds;
 }
@@ -94,7 +122,7 @@ export async function signDeployWithPermit(params: SignDeployPermitParams): Prom
   );
 
   return {
-    signature,
+    signature: normalizePermitSignature(signature),
     signerAddress,
     deadline: params.deadline,
   };
@@ -121,7 +149,7 @@ export async function signAgreementInputPermit(params: SignInputPermitParams): P
   );
 
   return {
-    signature,
+    signature: normalizePermitSignature(signature),
     signerAddress,
     deadline: params.deadline,
   };

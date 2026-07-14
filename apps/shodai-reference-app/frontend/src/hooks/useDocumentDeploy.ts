@@ -561,9 +561,8 @@ export function useDocumentDeploy({
             signerAddress,
             deadline,
             signatureShape: {
-              v: signature.v,
-              rPreview: `${signature.r.slice(0, 10)}...${signature.r.slice(-6)}`,
-              sPreview: `${signature.s.slice(0, 10)}...${signature.s.slice(-6)}`,
+              byteLength: (signature.length - 2) / 2,
+              preview: `${signature.slice(0, 12)}...${signature.slice(-8)}`,
             },
           },
         };

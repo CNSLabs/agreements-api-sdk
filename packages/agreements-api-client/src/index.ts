@@ -57,6 +57,7 @@ export {
   createAgreementDocumentId,
   DEFAULT_PERMIT_DEADLINE_SECONDS,
   deployAgreementWithPermit,
+  normalizePermitSignature,
   signAgreementInputPermit,
   signDeployWithPermit,
   submitAgreementInputWithPermit,

@@ -11,7 +11,7 @@
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1075.0",
     "@shodai-network/agreements-api-client": "workspace:*",
-    "@shodai-network/agreements-protocol-evm": "^0.1.4",
+    "@shodai-network/agreements-protocol-evm": ">=0.1.4 <0.3.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",

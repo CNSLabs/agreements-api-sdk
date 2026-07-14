@@ -3,11 +3,8 @@
  * Agreement JSON follows `@shodai-network/agreements-protocol-evm` `AgreementJson` at runtime.
  */
 
-export type PermitSignature = {
-  v: number;
-  r: string;
-  s: string;
-};
+/** Opaque EOA or ERC-1271 signature bytes encoded as a 0x-prefixed hex string. */
+export type PermitSignature = string;
 
 export type DirectParticipantRecord = {
   variableKey: string;
