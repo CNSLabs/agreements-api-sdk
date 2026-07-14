@@ -19,6 +19,8 @@ import type {
   ValidateDirectAgreementRequest,
   ValidateDirectAgreementResponse,
   ValidateDirectAgreementTemplateResponse,
+  ValidateAgreementPackageRequest,
+  ValidateAgreementPackageResponse,
   WebhookSubscription,
   WebhookTestResponse,
 } from './types.js';
@@ -72,6 +74,15 @@ export class ApiClient {
 
   async validateDeployment(body: ValidateDirectAgreementRequest): Promise<ValidateDirectAgreementResponse> {
     return this.requestData<ValidateDirectAgreementResponse>('POST', agreementsApiPaths.agreementsValidate(), body, 201);
+  }
+
+  async validatePackage(body: ValidateAgreementPackageRequest): Promise<ValidateAgreementPackageResponse> {
+    return this.requestData<ValidateAgreementPackageResponse>(
+      'POST',
+      agreementsApiPaths.agreementsValidatePackage(),
+      body,
+      201,
+    );
   }
 
   async deployWithPermit(body: DirectDeployAgreementWithPermitRequest): Promise<AgreementRecord> {

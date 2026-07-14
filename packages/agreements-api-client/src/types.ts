@@ -161,6 +161,44 @@ export type ValidateDirectAgreementTemplateResponse = {
   warnings: string[];
 };
 
+export type ValidateAgreementPackageRequest = {
+  agreementPackage: Record<string, unknown>;
+  docUri?: string;
+};
+
+export type AgreementPackageCompilationIssue = {
+  code: string;
+  path: string;
+  message: string;
+};
+
+export type ValidateAgreementPackageResponse = {
+  manifest: {
+    schemaVersion: string;
+    profile: {
+      id: string;
+      version: string;
+      compiler: string;
+    };
+    packageDigest: string;
+    targetChainId: string;
+    docUri: string;
+    canonicalUtf8Length: number;
+    compiled: {
+      inputDefs: number;
+      transitions: number;
+      initVars: number;
+      verifiers: number;
+      actions: number;
+    };
+  };
+  lossReport: AgreementPackageCompilationIssue[];
+  deployment: {
+    docHash: string;
+    initialState: string;
+  };
+};
+
 export type DirectDeployAgreementWithPermitRequest = {
   agreement: Record<string, unknown>;
   displayName: string;

@@ -17,6 +17,55 @@ function successEnvelope(data, requestId = 'req_test') {
 }
 
 describe('ApiClient agreement requests', () => {
+  it('validates a canonical agreement package through the dedicated strict path', async () => {
+    const calls = [];
+    const expected = {
+      manifest: {
+        schemaVersion: '0.1',
+        profile: {
+          id: 'shodai.evm.agreement-engine',
+          version: '0.1',
+          compiler: '@shodai-network/agreements-protocol-evm/package-compiler-0.1',
+        },
+        packageDigest: `0x${'1'.repeat(64)}`,
+        targetChainId: '59141',
+        docUri: 'ipfs://package/client-test',
+        canonicalUtf8Length: 123,
+        compiled: { inputDefs: 0, transitions: 0, initVars: 0, verifiers: 0, actions: 0 },
+      },
+      lossReport: [],
+      deployment: {
+        docHash: `0x${'1'.repeat(64)}`,
+        initialState: `0x${'2'.repeat(64)}`,
+      },
+    };
+    const client = new ApiClient({
+      baseUrl: 'https://external-api.example.test',
+      apiKey: 'external-key',
+      fetch: async (url, init = {}) => {
+        calls.push({
+          url: String(url),
+          method: init.method,
+          body: init.body ? JSON.parse(String(init.body)) : undefined,
+        });
+        return jsonResponse(201, successEnvelope(expected));
+      },
+    });
+
+    const body = {
+      agreementPackage: { schemaVersion: '0.1' },
+      docUri: 'ipfs://package/client-test',
+    };
+    const result = await client.validatePackage(body);
+
+    assert.deepEqual(result, expected);
+    assert.deepEqual(calls, [{
+      url: 'https://external-api.example.test/v0/agreements/validate-package',
+      method: 'POST',
+      body,
+    }]);
+  });
+
   it('preserves chainId in deployment validation and deploy-with-permit bodies', async () => {
     const calls = [];
     const client = new ApiClient({
