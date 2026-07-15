@@ -29,6 +29,7 @@ export type {
   ParticipantRecord,
   ApiClientConfig,
   AgreementsApiEnvironment,
+  BearerTokenProvider,
   CreateWebhookRequest,
   CreateWebhookResponse,
   DirectParticipantRecord,

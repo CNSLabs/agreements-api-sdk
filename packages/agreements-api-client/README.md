@@ -68,8 +68,30 @@ When `baseUrl` is provided, it wins over the environment host mapping.
 
 - `apiKey` is sent as `X-API-Key`
 - use the API key issued for your API principal by your deployment operator
+- `tokenProvider` sends `Authorization: Bearer <token>` instead of an API key (see [OAuth client credentials](#oauth-client-credentials-agents) below); `apiKey` and `tokenProvider` are mutually exclusive
 - `headers` lets you attach correlation IDs, telemetry headers, or other request metadata
 - `fetch` can be overridden if your runtime does not provide a compatible global `fetch`
+
+### OAuth client credentials (agents)
+
+Agent identities provisioned with an OAuth client (`cns_oa_...`) can authenticate with short-lived bearer tokens instead of an API key. The Node-only `/oauth` subpath export signs `private_key_jwt` client assertions with your private ES256 JWK, mints tokens via the `client_credentials` grant, caches them, and refreshes them shortly before expiry:
+
+```ts
+import { ApiClient } from '@shodai-network/agreements-api-client';
+import { createClientCredentialsTokenProvider } from '@shodai-network/agreements-api-client/oauth';
+
+const client = new ApiClient({
+  baseUrl: process.env.EXTERNAL_API_BASE_URL,
+  tokenProvider: createClientCredentialsTokenProvider({
+    clientId: process.env.OAUTH_CLIENT_ID,
+    privateJwk: process.env.OAUTH_CLIENT_PRIVATE_JWK, // JSON string or object
+    issuer: process.env.OAUTH_ISSUER_URL, // token endpoint discovered via .well-known
+    scope: 'agreements.read agreements.write', // optional; defaults to the client's allowed scopes
+  }),
+});
+```
+
+Pass `tokenUrl` instead of `issuer` to skip metadata discovery. The private JWK must never ship to a browser; browser apps should pass a custom `tokenProvider` that fetches tokens from a backend holding the key. The `/oauth` module uses `node:crypto`, so importing it requires Node 18+.
 
 ## Response Envelopes and Query Results
 

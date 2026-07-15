@@ -30,15 +30,30 @@ type HttpMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST';
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly apiKey?: string;
+  private readonly tokenProvider?: ApiClientConfig['tokenProvider'];
   private readonly extraHeaders?: ApiClientConfig['headers'];
   private readonly fetchImpl: typeof fetch;
 
   constructor(config: ApiClientConfig) {
     this.baseUrl = resolveConfiguredBaseUrl(config);
     this.apiKey = config.apiKey?.trim() || undefined;
+    this.tokenProvider = config.tokenProvider;
+    if (this.apiKey && this.tokenProvider) {
+      throw new Error('ApiClient accepts either `apiKey` or `tokenProvider`, not both.');
+    }
     this.extraHeaders = config.headers;
     // Default `fetch` must be bound; assigning `fetch` unbound breaks with "Illegal invocation" in browsers.
     this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
+  }
+
+  private async buildHeaders(hasBody: boolean): Promise<Record<string, string>> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (this.apiKey) headers['X-API-Key'] = this.apiKey;
+    if (this.tokenProvider) headers['Authorization'] = `Bearer ${await this.tokenProvider()}`;
+    const extra = typeof this.extraHeaders === 'function' ? this.extraHeaders() : this.extraHeaders;
+    if (extra) Object.assign(headers, extra);
+    if (hasBody) headers['Content-Type'] = 'application/json';
+    return headers;
   }
 
   getBaseUrl(): string {
@@ -134,11 +149,7 @@ export class ApiClient {
     parsedBody: unknown;
   }> {
     const url = joinUrl(this.baseUrl, path);
-    const requestHeaders: Record<string, string> = { Accept: 'application/json' };
-    if (this.apiKey) requestHeaders['X-API-Key'] = this.apiKey;
-    const extra = typeof this.extraHeaders === 'function' ? this.extraHeaders() : this.extraHeaders;
-    if (extra) Object.assign(requestHeaders, extra);
-    if (body !== undefined) requestHeaders['Content-Type'] = 'application/json';
+    const requestHeaders = await this.buildHeaders(body !== undefined);
 
     const res = await this.fetchImpl(url, {
       method,
@@ -173,11 +184,7 @@ export class ApiClient {
    */
   async request<T>(method: HttpMethod, path: string, body?: unknown, okStatus: number = 200): Promise<T> {
     const url = joinUrl(this.baseUrl, path);
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (this.apiKey) headers['X-API-Key'] = this.apiKey;
-    const extra = typeof this.extraHeaders === 'function' ? this.extraHeaders() : this.extraHeaders;
-    if (extra) Object.assign(headers, extra);
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const headers = await this.buildHeaders(body !== undefined);
 
     const res = await this.fetchImpl(url, {
       method,

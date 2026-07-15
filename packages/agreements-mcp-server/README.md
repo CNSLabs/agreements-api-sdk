@@ -51,7 +51,10 @@ Stdio environment variables:
 
 | Variable | Use |
 | --- | --- |
-| `AGREEMENTS_API_KEY` (or `API_KEY`) | API key used for tool calls. Required. |
+| `AGREEMENTS_API_KEY` (or `API_KEY`) | API key used for tool calls. Required unless OAuth client credentials are configured. |
+| `OAUTH_CLIENT_ID` / `OAUTH_CLIENT_PRIVATE_JWK` | OAuth client-credentials auth for agent identities; the server mints and refreshes bearer tokens itself. Alternative to `AGREEMENTS_API_KEY` (which wins if both are set). |
+| `OAUTH_ISSUER_URL` (or `OAUTH_TOKEN_URL`) | Authorization server issuer for token-endpoint discovery, or the explicit token endpoint. Required with OAuth client credentials. |
+| `OAUTH_SCOPE` | Optional space-separated scopes to request on minted tokens. |
 | `AGREEMENTS_API_ENVIRONMENT` | `testnet` (default) or `production`. |
 | `AGREEMENTS_API_BASE_URL` | Explicit gateway origin override. Wins over the environment. |
 | `AGREEMENTS_SIGNER_PRIVATE_KEY` | Optional local permit signer for write tools (dev/testnet only). |
