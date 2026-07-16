@@ -18,6 +18,42 @@ export type DirectParticipantRecord = {
   walletBinding?: 'verified_via_auth' | 'partner_asserted';
 };
 
+export type AgreementChainSyncMetadata = {
+  status: 'pending' | 'fresh' | 'stale' | 'degraded';
+  source: 'goldsky';
+  indexedBlockNumber?: number;
+  indexedBlockHash?: string;
+  observedHeadBlockNumber?: number;
+  lagBlocks?: number;
+  finality?: 'observed' | 'safe' | 'finalized';
+  projectedAt?: string;
+  staleSince?: string;
+  reason?: string;
+};
+
+export type AgreementChainProvenance = {
+  source: 'goldsky';
+  sourceDeployment: string;
+  generation: string;
+  indexedBlockNumber: number;
+  indexedBlockHash: string;
+  deployment?: {
+    occurrenceId: string;
+    transactionHash: string;
+    blockNumber: number;
+    blockHash: string;
+    factoryAddress: string;
+  };
+  input?: {
+    occurrenceId: string;
+    orderKey: string;
+    transactionHash: string;
+    blockNumber: number;
+    blockHash: string;
+    logIndex: number;
+  };
+};
+
 export type AgreementRecord = {
   id: string;
   address?: string;
@@ -38,6 +74,8 @@ export type AgreementRecord = {
   participants?: ParticipantRecord[];
   observers?: string[];
   onChain?: Record<string, unknown>;
+  chainSync?: AgreementChainSyncMetadata;
+  provenance?: AgreementChainProvenance;
 };
 
 export type AgreementSummary = {
@@ -55,6 +93,8 @@ export type AgreementSummary = {
   owner?: string;
   docUri?: string;
   documentId?: string;
+  chainSync?: AgreementChainSyncMetadata;
+  provenance?: AgreementChainProvenance;
 };
 
 export type ParticipantRecord = {
@@ -226,6 +266,8 @@ export type NotificationAttachmentStrategy = {
 export type AgreementStateResponse = {
   status: 'Draft' | 'Deployed';
   state: string | null;
+  chainSync?: AgreementChainSyncMetadata;
+  provenance?: AgreementChainProvenance;
 };
 
 export type AgreementDocumentResponse = {
@@ -242,6 +284,10 @@ export type AgreementDocumentResponse = {
 };
 
 export type AgreementInputRecord = {
+  submissionId?: string;
+  occurrenceId?: string;
+  sourceEventId?: string;
+  orderKey?: string;
   agreementId: string;
   agreementAddress: string;
   chainId: number;
@@ -255,6 +301,7 @@ export type AgreementInputRecord = {
   createdAt: string;
   updatedAt: string;
   status: 'PENDING' | 'MINED' | 'FAILED';
+  provenance?: AgreementChainProvenance;
 };
 
 export type ProcessInputRequest = {
