@@ -1,0 +1,28 @@
+{
+  "name": "oauth-connect-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CLI that connects a public OAuth app to a Shodai user via authorization_code + PKCE and stores a refreshable session for the Agreements API.",
+  "type": "module",
+  "bin": {
+    "shodai-oauth": "./dist/cli.js"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @shodai-network/agreements-api-client run build",
+    "build": "tsc -p tsconfig.json",
+    "prestart": "pnpm run build",
+    "start": "node dist/cli.js",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "shodai-oauth": "pnpm run build && node dist/cli.js"
+  },
+  "dependencies": {
+    "@shodai-network/agreements-api-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "~5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -93,6 +93,33 @@ const client = new ApiClient({
 
 Pass `tokenUrl` instead of `issuer` to skip metadata discovery. The private JWK must never ship to a browser; browser apps should pass a custom `tokenProvider` that fetches tokens from a backend holding the key. The `/oauth` module uses `node:crypto`, so importing it requires Node 18+.
 
+### OAuth delegated access (on behalf of a user)
+
+Public clients (CLIs, desktop tools) can use `authorization_code` + PKCE so a human consents in the browser and the app receives tokens whose `sub` is that user. `OauthDelegatedSession` handles loopback callback (RFC 8252), code exchange, access-token caching, refresh-token rotation, and revoke:
+
+```ts
+import { ApiClient } from '@shodai-network/agreements-api-client';
+import { OauthDelegatedSession } from '@shodai-network/agreements-api-client/oauth';
+
+const session = new OauthDelegatedSession({
+  clientId: process.env.OAUTH_CLIENT_ID!,
+  issuer: process.env.OAUTH_ISSUER_URL, // discovers authorize/token/revoke via .well-known
+  scope: 'agreements.read agreements.write',
+  onTokensUpdated: async (tokens) => {
+    // persist tokens.refreshToken securely
+  },
+});
+
+await session.loginWithLoopback(); // opens browser; register redirect http://127.0.0.1/callback
+
+const client = new ApiClient({
+  baseUrl: process.env.EXTERNAL_API_BASE_URL,
+  tokenProvider: session.tokenProvider(),
+});
+```
+
+Register the OAuth app in the developer portal (**Profile → OAuth apps**) with redirect URI `http://127.0.0.1/callback`. For a ready-made CLI that stores the session under `~/.config/shodai/`, see [`apps/oauth-connect-cli`](../../apps/oauth-connect-cli).
+
 ## Response Envelopes and Query Results
 
 The Agreements API wraps successful JSON responses in an envelope so every response can carry request metadata:

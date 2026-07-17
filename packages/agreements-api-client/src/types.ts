@@ -359,7 +359,7 @@ export type ApiClientConfig =
     })
   | (ApiClientSharedConfig & {
       /**
-       * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
+       * Explicit gateway origin override (no trailing slash), e.g. `https://api.shodai.network`.
        * Prefer `environment` for standard Shodai hosts.
        */
       baseUrl: string;
