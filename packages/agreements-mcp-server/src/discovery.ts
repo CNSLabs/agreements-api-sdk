@@ -16,6 +16,55 @@ export const SERVER_CARD_URL = 'https://shodai.network/.well-known/mcp/server-ca
 export const SERVER_CARD_MEDIA_TYPE = 'application/mcp-server-card+json';
 export const DISCOVERY_CACHE_CONTROL = 'public, max-age=3600';
 
+/** RFC 9728 OAuth Protected Resource Metadata (MCP authorization discovery). */
+export const OAUTH_PROTECTED_RESOURCE_PATH = '/.well-known/oauth-protected-resource';
+export const OAUTH_PROTECTED_RESOURCE_MCP_PATH = '/.well-known/oauth-protected-resource/mcp';
+export const OAUTH_PROTECTED_RESOURCE_PATHS = [
+  OAUTH_PROTECTED_RESOURCE_PATH,
+  OAUTH_PROTECTED_RESOURCE_MCP_PATH,
+] as const;
+
+export const MCP_OAUTH_SCOPES_SUPPORTED = [
+  'agreements.read',
+  'agreements.write',
+  'webhooks.read',
+  'webhooks.write',
+] as const;
+
+export type ProtectedResourceMetadata = {
+  resource: string;
+  authorization_servers: string[];
+  scopes_supported: string[];
+  bearer_methods_supported: string[];
+};
+
+/**
+ * Build RFC 9728 protected-resource metadata for the hosted MCP endpoint.
+ * `authorizationServers` are issuer base URLs (e.g. `https://host/auth-api`).
+ */
+export function createProtectedResourceMetadata(options: {
+  resource: string;
+  authorizationServers: string[];
+  scopesSupported?: readonly string[];
+}): ProtectedResourceMetadata {
+  const servers = options.authorizationServers
+    .map(server => server.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  if (servers.length === 0) {
+    throw new Error('authorizationServers must include at least one issuer URL');
+  }
+  return {
+    resource: options.resource.replace(/\/+$/, ''),
+    authorization_servers: [...new Set(servers)],
+    scopes_supported: [...(options.scopesSupported ?? MCP_OAUTH_SCOPES_SUPPORTED)],
+    bearer_methods_supported: ['header'],
+  };
+}
+
+export function isOauthProtectedResourcePath(pathname: string): boolean {
+  return (OAUTH_PROTECTED_RESOURCE_PATHS as readonly string[]).includes(pathname);
+}
+
 export function createAgreementsMcpServerCard(publicMcpUrl: string = PUBLIC_MCP_URL) {
   return {
     $schema: 'https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json',
@@ -37,13 +86,15 @@ export function createAgreementsMcpServerCard(publicMcpUrl: string = PUBLIC_MCP_
         headers: [
           {
             name: 'Authorization',
-            description: 'Bearer API key for the Shodai MCP endpoint.',
+            description:
+              'Bearer credentials for the Shodai MCP endpoint: an API key (`cns_pk_…`) or an OAuth access token from the authorization server advertised in protected-resource metadata.',
             isRequired: true,
             isSecret: true,
             value: 'Bearer {token}',
             variables: {
               token: {
-                description: 'Shodai API key beginning with cns_pk_',
+                description:
+                  'Shodai API key (`cns_pk_…`) or OAuth access token from the Agreements authorization server',
                 isRequired: true,
                 isSecret: true,
               },

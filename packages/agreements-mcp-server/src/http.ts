@@ -10,8 +10,12 @@ import { createAgreementsMcpServer } from './server.js';
 import {
   createAgreementsMcpCatalog,
   createAgreementsMcpServerCard,
+  createProtectedResourceMetadata,
   DISCOVERY_CACHE_CONTROL,
+  isOauthProtectedResourcePath,
   MCP_CATALOG_PATH,
+  MCP_OAUTH_SCOPES_SUPPORTED,
+  OAUTH_PROTECTED_RESOURCE_PATH,
   PUBLIC_MCP_URL,
   SERVER_CARD_MEDIA_TYPE,
   SERVER_CARD_PATH,
@@ -33,6 +37,18 @@ export type AgreementsMcpHttpOptions = {
   baseUrl?: string;
   /** Explicit upstream gateway origins for selectable hosted environments. */
   baseUrls?: Partial<Record<AgreementsApiEnvironment, string>>;
+  /**
+   * Authorization server issuer URLs (RFC 8414 issuers). When non-empty, the
+   * server advertises OAuth protected-resource metadata, challenges
+   * unauthenticated MCP POSTs with WWW-Authenticate, and accepts OAuth
+   * access tokens in addition to API keys.
+   */
+  authorizationServers?: string[];
+  /**
+   * RFC 9728 `resource` identifier. Defaults to `publicMcpUrl` or the
+   * request-derived MCP URL.
+   */
+  oauthResource?: string;
 };
 
 const CORS_HEADERS: Record<string, string> = {
@@ -49,74 +65,120 @@ function applyCors(res: ServerResponse): void {
   }
 }
 
-export type McpCallerCredentials = { kind: 'api-key'; apiKey: string };
+export type McpCallerCredentials =
+  | { kind: 'api-key'; apiKey: string }
+  | { kind: 'oauth'; accessToken: string };
 
 const API_KEY_PREFIX = 'cns_pk_';
-const SUPPORTED_CREDENTIALS_HINT =
+const API_KEY_CREDENTIALS_HINT =
   'Send `X-API-Key: cns_pk_...` (canonical) or `Authorization: Bearer cns_pk_...` for clients that only support bearer-style headers.';
+const OAUTH_CREDENTIALS_HINT =
+  'Or send `Authorization: Bearer <access_token>` from the authorization server advertised in OAuth protected-resource metadata.';
 
 type CredentialExtractionResult =
   | { ok: true; credentials?: McpCallerCredentials }
   | { ok: false; message: string };
 
 /**
- * Extracts the caller's Agreements API key. Hosted MCP authentication remains
- * API-key-only; bearer auth is accepted only as an API-key compatibility alias.
+ * Extracts the caller's credentials. API keys are always accepted. When OAuth
+ * is enabled for the server (`authorizationServers` configured), JWT-shaped
+ * Bearer tokens are accepted and forwarded upstream; otherwise they are rejected.
  */
-export function extractCredentials(req: IncomingMessage): McpCallerCredentials | undefined {
-  const result = extractCredentialResult(req);
+export function extractCredentials(
+  req: IncomingMessage,
+  options: { oauthEnabled?: boolean } = {},
+): McpCallerCredentials | undefined {
+  const result = extractCredentialResult(req, options);
   return result.ok ? result.credentials : undefined;
 }
 
-/** Backwards-compatible helper: returns the raw credential string, if any. */
+/** Backwards-compatible helper: returns the API key string, if any. */
 export function extractApiKey(req: IncomingMessage): string | undefined {
   const credentials = extractCredentials(req);
-  return credentials?.apiKey;
+  return credentials?.kind === 'api-key' ? credentials.apiKey : undefined;
 }
 
-function extractCredentialResult(req: IncomingMessage): CredentialExtractionResult {
+function credentialsHint(oauthEnabled: boolean): string {
+  return oauthEnabled
+    ? `${API_KEY_CREDENTIALS_HINT} ${OAUTH_CREDENTIALS_HINT}`
+    : API_KEY_CREDENTIALS_HINT;
+}
+
+function extractCredentialResult(
+  req: IncomingMessage,
+  options: { oauthEnabled?: boolean } = {},
+): CredentialExtractionResult {
+  const oauthEnabled = options.oauthEnabled === true;
+  const hint = credentialsHint(oauthEnabled);
   const headerApiKey = readHeaderValue(req.headers['x-api-key']);
   const authorization = readHeaderValue(req.headers.authorization);
-  const bearerApiKey = authorization ? extractBearerApiKey(authorization) : undefined;
+  const bearer = authorization ? extractBearerCredential(authorization, oauthEnabled, hint) : undefined;
 
-  if (bearerApiKey && !bearerApiKey.ok) {
-    return bearerApiKey;
+  if (bearer && !bearer.ok) {
+    return bearer;
   }
 
-  if (headerApiKey && bearerApiKey?.apiKey && headerApiKey !== bearerApiKey.apiKey) {
-    return {
-      ok: false,
-      message: `Conflicting Agreements API credentials were provided. ${SUPPORTED_CREDENTIALS_HINT}`,
-    };
+  if (headerApiKey && bearer?.ok && bearer.credentials) {
+    if (bearer.credentials.kind === 'oauth') {
+      return {
+        ok: false,
+        message: `Conflicting Agreements API credentials were provided. ${hint}`,
+      };
+    }
+    if (headerApiKey !== bearer.credentials.apiKey) {
+      return {
+        ok: false,
+        message: `Conflicting Agreements API credentials were provided. ${hint}`,
+      };
+    }
   }
 
-  const apiKey = headerApiKey || bearerApiKey?.apiKey;
-  return apiKey ? { ok: true, credentials: { kind: 'api-key', apiKey } } : { ok: true };
+  if (headerApiKey) {
+    return { ok: true, credentials: { kind: 'api-key', apiKey: headerApiKey } };
+  }
+  if (bearer?.ok && bearer.credentials) {
+    return { ok: true, credentials: bearer.credentials };
+  }
+  return { ok: true };
 }
 
-function extractBearerApiKey(authorization: string): { ok: true; apiKey?: string } | { ok: false; message: string } {
+function extractBearerCredential(
+  authorization: string,
+  oauthEnabled: boolean,
+  hint: string,
+):
+  | { ok: true; credentials?: McpCallerCredentials }
+  | { ok: false; message: string } {
   const match = /^Bearer\s+(.+)$/i.exec(authorization);
   if (!match) {
     return {
       ok: false,
-      message: `Unsupported Authorization header for Agreements API credentials. ${SUPPORTED_CREDENTIALS_HINT}`,
+      message: `Unsupported Authorization header for Agreements API credentials. ${hint}`,
     };
   }
 
   const token = match[1]?.trim() ?? '';
   if (!token) {
-    return { ok: false, message: `Missing bearer API key. ${SUPPORTED_CREDENTIALS_HINT}` };
+    return { ok: false, message: `Missing bearer credential. ${hint}` };
   }
 
-  if (!token.startsWith(API_KEY_PREFIX)) {
-    const bearerType = isJwtShaped(token) ? 'JWT bearer tokens' : 'Bearer values that are not Agreements API keys';
-    return {
-      ok: false,
-      message: `${bearerType} are not supported by hosted MCP. ${SUPPORTED_CREDENTIALS_HINT}`,
-    };
+  if (token.startsWith(API_KEY_PREFIX)) {
+    return { ok: true, credentials: { kind: 'api-key', apiKey: token } };
   }
 
-  return { ok: true, apiKey: token };
+  if (oauthEnabled && isJwtShaped(token)) {
+    return { ok: true, credentials: { kind: 'oauth', accessToken: token } };
+  }
+
+  const bearerType = isJwtShaped(token)
+    ? 'JWT bearer tokens'
+    : 'Bearer values that are not Agreements API keys';
+  return {
+    ok: false,
+    message: oauthEnabled
+      ? `${bearerType} that are not JWT access tokens are not supported. ${hint}`
+      : `${bearerType} are not supported by hosted MCP. ${hint}`,
+  };
 }
 
 function readHeaderValue(value: string | string[] | undefined): string {
@@ -261,11 +323,24 @@ function resolveEnvironmentBaseUrl(
 export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions = {}): Server {
   const mcpPath = normalizeHttpPath(options.mcpPath ?? '/mcp');
   const publicMcpUrl = resolvePublicMcpUrl(options.publicMcpUrl, mcpPath);
+  const authorizationServers = (options.authorizationServers ?? [])
+    .map(server => server.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  const oauthEnabled = authorizationServers.length > 0;
+  const configuredOauthResource = options.oauthResource?.trim().replace(/\/+$/, '') || undefined;
 
   return createServer(async (req, res) => {
     applyCors(res);
 
     const url = new URL(req.url ?? '/', 'http://localhost');
+    const discoveryUrls = publicMcpUrl
+      ? configuredPublicDiscoveryUrls(publicMcpUrl)
+      : publicDiscoveryUrls(req, mcpPath);
+    const oauthResource = configuredOauthResource || discoveryUrls.publicMcpUrl;
+    const protectedResourceMetadataUrl = new URL(
+      OAUTH_PROTECTED_RESOURCE_PATH,
+      `${new URL(oauthResource).origin}/`,
+    ).toString();
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -279,9 +354,6 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     }
 
     if (req.method === 'GET' && isServerCardPath(url.pathname)) {
-      const discoveryUrls = publicMcpUrl
-        ? configuredPublicDiscoveryUrls(publicMcpUrl)
-        : publicDiscoveryUrls(req, mcpPath);
       sendJson(res, 200, createAgreementsMcpServerCard(discoveryUrls.publicMcpUrl), {
         'Content-Type': SERVER_CARD_MEDIA_TYPE,
         'Cache-Control': DISCOVERY_CACHE_CONTROL,
@@ -290,12 +362,26 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
     }
 
     if (req.method === 'GET' && url.pathname === MCP_CATALOG_PATH) {
-      const discoveryUrls = publicMcpUrl
-        ? configuredPublicDiscoveryUrls(publicMcpUrl)
-        : publicDiscoveryUrls(req, mcpPath);
       sendJson(res, 200, createAgreementsMcpCatalog(discoveryUrls.serverCardUrl), {
         'Cache-Control': DISCOVERY_CACHE_CONTROL,
       });
+      return;
+    }
+
+    if (req.method === 'GET' && isOauthProtectedResourcePath(url.pathname)) {
+      if (!oauthEnabled) {
+        sendJson(res, 404, { error: 'not_found', message: 'OAuth protected-resource metadata is not enabled.' });
+        return;
+      }
+      sendJson(
+        res,
+        200,
+        createProtectedResourceMetadata({
+          resource: oauthResource,
+          authorizationServers,
+        }),
+        { 'Cache-Control': DISCOVERY_CACHE_CONTROL },
+      );
       return;
     }
 
@@ -311,8 +397,13 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       return;
     }
 
-    const credentialResult = extractCredentialResult(req);
+    const credentialResult = extractCredentialResult(req, { oauthEnabled });
     const credentials = credentialResult.ok ? credentialResult.credentials : undefined;
+
+    if (oauthEnabled && credentialResult.ok && !credentials) {
+      sendUnauthorizedChallenge(res, protectedResourceMetadataUrl);
+      return;
+    }
 
     const server = createAgreementsMcpServer({
       toolEnvironmentMode: 'required',
@@ -321,17 +412,12 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
           throw new Error(credentialResult.message);
         }
         if (!credentials) {
-          throw new Error(
-            `Missing Agreements API credentials. ${SUPPORTED_CREDENTIALS_HINT}`,
-          );
+          throw new Error(`Missing Agreements API credentials. ${credentialsHint(oauthEnabled)}`);
         }
         if (environment !== 'testnet' && environment !== 'production') {
           throw new Error('Missing Agreements API environment. Set environment to "testnet" or "production" on this tool call.');
         }
-        return new ApiClient({
-          baseUrl: resolveEnvironmentBaseUrl(options, environment),
-          apiKey: credentials.apiKey,
-        });
+        return createUpstreamClient(options, environment, credentials);
       },
     });
 
@@ -358,6 +444,36 @@ export function createAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions 
       }
     }
   });
+}
+
+function createUpstreamClient(
+  options: AgreementsMcpHttpOptions,
+  environment: AgreementsApiEnvironment,
+  credentials: McpCallerCredentials,
+): ApiClient {
+  const baseUrl = resolveEnvironmentBaseUrl(options, environment);
+  if (credentials.kind === 'api-key') {
+    return new ApiClient({ baseUrl, apiKey: credentials.apiKey });
+  }
+  const accessToken = credentials.accessToken;
+  return new ApiClient({
+    baseUrl,
+    tokenProvider: async () => accessToken,
+  });
+}
+
+function sendUnauthorizedChallenge(res: ServerResponse, resourceMetadataUrl: string): void {
+  const scope = MCP_OAUTH_SCOPES_SUPPORTED.join(' ');
+  res.writeHead(401, {
+    'Content-Type': 'application/json',
+    'WWW-Authenticate': `Bearer realm="mcp", resource_metadata="${resourceMetadataUrl}", scope="${scope}"`,
+  });
+  res.end(
+    JSON.stringify({
+      error: 'unauthorized',
+      message: 'Authentication required. Provide an API key or complete OAuth against the authorization server.',
+    }),
+  );
 }
 
 export function startAgreementsMcpHttpServer(options: AgreementsMcpHttpOptions = {}): Promise<Server> {

@@ -2,7 +2,7 @@
 
 [Model Context Protocol](https://modelcontextprotocol.io) server for the Agreements API. Configure Shodai as a remote Streamable HTTP MCP server and the full agreement lifecycle — author, validate, preflight, deploy, submit inputs — becomes callable as MCP tools.
 
-The server is a pure consumer of the public `/v0` API via [`@shodai-network/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key to the Agreements API gateway, which enforces auth, entitlements, and metering.
+The server is a pure consumer of the public `/v0` API via [`@shodai-network/agreements-api-client`](../agreements-api-client). It holds no business logic and stores no credentials: every tool call forwards the caller's API key or OAuth access token to the Agreements API gateway, which enforces auth, entitlements, and metering.
 
 ## Hosted endpoint
 
@@ -26,7 +26,13 @@ testnet
 Use this value as the environment argument on API-calling tools. API keys only work in the environment where they were created.
 ```
 
-Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`. OAuth and JWT bearer tokens are not supported.
+Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`.
+
+When `OAUTH_AUTHORIZATION_SERVERS` is set (hosted `dev` does this), the server also:
+
+- Serves RFC 9728 protected-resource metadata at `/.well-known/oauth-protected-resource` (and `.../mcp`)
+- Challenges unauthenticated `POST /mcp` with `WWW-Authenticate` (`resource_metadata=...`)
+- Accepts OAuth access tokens (`Authorization: Bearer <jwt>`) **in addition to** API keys — not a breaking change for existing key-based clients
 
 Get an API key from the [Developer Portal](https://developers.shodai.network). First-flight setup, tool access, and typed-data preparation: [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp).
 
