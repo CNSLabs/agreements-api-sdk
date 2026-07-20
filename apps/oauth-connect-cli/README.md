@@ -12,19 +12,26 @@ from:
 - **API keys** / hosted MCP bearer keys
 - **Agent identity** OAuth (`client_credentials` + private JWK) used by autonomous agents
 
+## Client ID routes (both supported)
+
+The CLI always uses **authorization_code + PKCE**. `OAUTH_CLIENT_ID` may be
+either:
+
+| Route | Example | Notes |
+| --- | --- | --- |
+| **Registered app** | `cns_oa_…` | Create under Profile → **OAuth apps** with redirect `http://127.0.0.1/callback` |
+| **CIMD** | `https://host/oauth/client.json` | AS fetches the Client ID Metadata Document; document must allow the loopback redirect |
+
+Same login, session file, `agreements`, and `deploy` commands for both.
+
 ## Prerequisites
 
-1. A Shodai environment with delegated OAuth enabled (local stack or
-   [production](https://developers.shodai.network/portal)).
-2. A **public OAuth app** you own — create one in the developer portal under
-   **Profile → OAuth apps** (`/profile?tab=oauth-apps`).
-3. Register this redirect URI on the app (any port is accepted at authorize time):
-
-   ```text
-   http://127.0.0.1/callback
-   ```
-
-4. Copy the app’s `client_id` (`cns_oa_...`).
+1. A Shodai environment with delegated OAuth enabled (local stack or hosted).
+2. A public client id — **either**:
+   - a portal **OAuth apps** `cns_oa_…` with redirect `http://127.0.0.1/callback`, **or**
+   - an HTTPS CIMD URL whose document includes that loopback redirect.
+3. For `deploy`: a wallet linked to the authorizing user (Profile → **Wallets**
+   → **Link wallet**).
 
 ## Install / run from this monorepo
 
@@ -41,7 +48,7 @@ pnpm --filter oauth-connect-cli build
 node apps/oauth-connect-cli/dist/cli.js help
 ```
 
-## Quick start (local stack)
+## Quick start — registered app
 
 With `./start-dev.sh` (or equivalent) running and OAuth flags enabled:
 
@@ -63,12 +70,37 @@ exchanges the code (PKCE), and writes the session to
 `deploy` reuses that session, signs a deploy permit with the linked wallet, and
 calls `deploy-with-permit` (default: bundled MOU template on Linea Sepolia).
 
-## Pointing at production
+## Quick start — CIMD
 
-Defaults are localhost. For Shodai production:
+Use when the client is advertised as an HTTPS metadata URL (MCP hosts, ngrok
+tests). From the `cns-service` repo you can serve a sample document:
 
 ```bash
-export OAUTH_CLIENT_ID=cns_oa_...
+# cns-service repo
+node scripts/oauth/serve-cimd-client.mjs
+# other terminal: ngrok http 9090
+# curl -sS https://<ngrok-host>/oauth/client.json | jq .
+```
+
+Then in this monorepo:
+
+```bash
+export OAUTH_CLIENT_ID=https://<ngrok-host>/oauth/client.json
+# optional hosted overrides — see Environment below
+pnpm oauth login
+pnpm oauth agreements
+LINKED_WALLET_PRIVATE_KEY=0x... pnpm oauth deploy
+```
+
+Internal E2E notes for both routes: `cns-service` → `scripts/oauth/README.md`
+(section “Human delegated demo”).
+
+## Pointing at production / hosted
+
+Defaults are localhost. For Shodai production or hosted `dev`:
+
+```bash
+export OAUTH_CLIENT_ID=cns_oa_...   # or a CIMD https://… URL
 export OAUTH_ISSUER_URL=https://app.shodai.network/auth-api
 export EXTERNAL_API_BASE_URL=https://api.shodai.network
 # optional if metadata discovery is unavailable:
@@ -106,7 +138,7 @@ pnpm oauth agreements
 
 | Variable | Purpose |
 | --- | --- |
-| `OAUTH_CLIENT_ID` | Public client id (required for `login`) |
+| `OAUTH_CLIENT_ID` | Public client id: `cns_oa_…` **or** CIMD `https://…` URL (required for `login`) |
 | `OAUTH_ISSUER_URL` | Auth-api issuer (default `http://localhost:4003/auth-api`) |
 | `OAUTH_AUTHORIZATION_PAGE_URL` | Consent URL override (otherwise RFC 8414 metadata) |
 | `EXTERNAL_API_BASE_URL` | Agreements API origin (production: `https://api.shodai.network`) |
@@ -153,8 +185,10 @@ The reusable helpers live in `@shodai-network/agreements-api-client/oauth`
 
 ## Managing access
 
-- **As the app developer:** Profile → **OAuth apps** (edit redirect URIs, disable the app).
+- **As the app developer (registered apps):** Profile → **OAuth apps**.
 - **As the authorizing user:** Profile → **Connected apps** (disconnect a grant).
+- **CIMD:** rotate or take down the hosted metadata document; existing refresh
+  grants still appear under Connected apps until disconnected or revoked.
 
 ## Notes
 
