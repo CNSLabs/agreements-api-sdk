@@ -256,7 +256,10 @@ function startStubGateway() {
       }
 
       const hasValidApiKey = req.headers['x-api-key'] === TEST_API_KEY;
-      if (!hasValidApiKey) {
+      const hasValidOauthBearer =
+        typeof req.headers.authorization === 'string' &&
+        req.headers.authorization === `Bearer ${TEST_JWT}`;
+      if (!hasValidApiKey && !hasValidOauthBearer) {
         respond(401, {
           error: { code: 'unauthorized', message: 'Invalid API key', requestId: 'req_test' },
         });
@@ -397,7 +400,13 @@ function gatewayBaseUrl(req) {
   return `http://${req.headers.host}`;
 }
 
-async function startServers({ mcpPath = '/mcp', dualGateways = false, publicMcpUrl } = {}) {
+async function startServers({
+  mcpPath = '/mcp',
+  dualGateways = false,
+  publicMcpUrl,
+  authorizationServers,
+  oauthResource,
+} = {}) {
   const testnetGateway = await startStubGateway();
   const productionGateway = dualGateways ? await startStubGateway() : testnetGateway;
   const mcpServer = await startAgreementsMcpHttpServer({
@@ -409,6 +418,8 @@ async function startServers({ mcpPath = '/mcp', dualGateways = false, publicMcpU
     },
     mcpPath,
     publicMcpUrl,
+    authorizationServers,
+    oauthResource,
   });
   const mcpUrl = new URL(`http://127.0.0.1:${mcpServer.address().port}${mcpPath}`);
   return {
@@ -997,7 +1008,7 @@ test('healthz responds without auth and non-POST MCP requests are rejected', asy
   }
 });
 
-test('does not serve OAuth protected-resource metadata', async () => {
+test('does not serve OAuth protected-resource metadata when OAuth is disabled', async () => {
   const env = await startServers();
   try {
     for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp']) {
@@ -1009,7 +1020,7 @@ test('does not serve OAuth protected-resource metadata', async () => {
   }
 });
 
-test('does not challenge unauthenticated MCP requests with OAuth metadata', async () => {
+test('does not challenge unauthenticated MCP requests when OAuth is disabled', async () => {
   const env = await startServers();
   try {
     const response = await fetch(env.mcpUrl, {
@@ -1024,7 +1035,7 @@ test('does not challenge unauthenticated MCP requests with OAuth metadata', asyn
   }
 });
 
-test('does not accept or forward JWT-shaped bearer values', async () => {
+test('does not accept or forward JWT-shaped bearer values when OAuth is disabled', async () => {
   const env = await startServers();
   try {
     const client = await connectClient(env.mcpUrl, {
@@ -1040,6 +1051,86 @@ test('does not accept or forward JWT-shaped bearer values', async () => {
     const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
     assert.equal(gatewayRequest, undefined);
 
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('serves OAuth protected-resource metadata when authorization servers are configured', async () => {
+  const env = await startServers({
+    publicMcpUrl: CANONICAL_MCP_URL,
+    authorizationServers: ['https://dev.cnslabs.cloud/auth-api'],
+  });
+  try {
+    for (const path of ['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp']) {
+      const response = await fetch(new URL(path, env.mcpUrl));
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.resource, CANONICAL_MCP_URL);
+      assert.deepEqual(body.authorization_servers, ['https://dev.cnslabs.cloud/auth-api']);
+      assert.deepEqual(body.bearer_methods_supported, ['header']);
+      assert.ok(body.scopes_supported.includes('agreements.read'));
+    }
+  } finally {
+    await env.close();
+  }
+});
+
+test('challenges unauthenticated MCP requests with WWW-Authenticate when OAuth is enabled', async () => {
+  const env = await startServers({
+    publicMcpUrl: CANONICAL_MCP_URL,
+    authorizationServers: ['https://dev.cnslabs.cloud/auth-api'],
+  });
+  try {
+    const response = await fetch(env.mcpUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: {}, id: 1 }),
+    });
+    assert.equal(response.status, 401);
+    const challenge = response.headers.get('www-authenticate') ?? '';
+    assert.match(challenge, /Bearer/);
+    assert.match(challenge, /resource_metadata="https:\/\/shodai\.network\/\.well-known\/oauth-protected-resource"/);
+    assert.match(challenge, /scope="/);
+  } finally {
+    await env.close();
+  }
+});
+
+test('forwards JWT-shaped bearer tokens upstream when OAuth is enabled', async () => {
+  const env = await startServers({
+    authorizationServers: ['https://dev.cnslabs.cloud/auth-api'],
+  });
+  try {
+    const client = await connectClient(env.mcpUrl, {
+      headers: { Authorization: `Bearer ${TEST_JWT}` },
+    });
+
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
+    assert.equal(result.isError ?? false, false);
+
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.ok(gatewayRequest);
+    assert.equal(gatewayRequest.authorization, `Bearer ${TEST_JWT}`);
+    assert.equal(gatewayRequest.apiKey, undefined);
+
+    await client.close();
+  } finally {
+    await env.close();
+  }
+});
+
+test('still accepts API keys when OAuth is enabled', async () => {
+  const env = await startServers({
+    authorizationServers: ['https://dev.cnslabs.cloud/auth-api'],
+  });
+  try {
+    const client = await connectClient(env.mcpUrl, { apiKey: TEST_API_KEY });
+    const result = await client.callTool({ name: 'list_agreements', arguments: { environment: 'testnet' } });
+    assert.equal(result.isError ?? false, false);
+    const gatewayRequest = env.gateway.requests.find((request) => request.url.startsWith('/v0/agreements'));
+    assert.equal(gatewayRequest?.apiKey, TEST_API_KEY);
     await client.close();
   } finally {
     await env.close();

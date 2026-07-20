@@ -325,9 +325,22 @@ export type WebhookTestResponse = {
 
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
+/**
+ * Supplies an OAuth access token for `Authorization: Bearer` auth. Called
+ * before every request; implementations should cache and refresh internally
+ * (see `OauthClientCredentials` in the `/oauth` subpath export for a
+ * Node-only implementation of the client-credentials grant).
+ */
+export type BearerTokenProvider = () => string | Promise<string>;
+
 type ApiClientSharedConfig = {
   /** API key for the API principal; sent as the canonical `X-API-Key` header. */
   apiKey?: string;
+  /**
+   * OAuth bearer-token source; sent as `Authorization: Bearer <token>`.
+   * Mutually exclusive with `apiKey`.
+   */
+  tokenProvider?: BearerTokenProvider;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
   headers?: Record<string, string> | (() => Record<string, string> | undefined);
   /** Override `fetch` (defaults to global `fetch`). */
@@ -346,7 +359,7 @@ export type ApiClientConfig =
     })
   | (ApiClientSharedConfig & {
       /**
-       * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
+       * Explicit gateway origin override (no trailing slash), e.g. `https://api.shodai.network`.
        * Prefer `environment` for standard Shodai hosts.
        */
       baseUrl: string;

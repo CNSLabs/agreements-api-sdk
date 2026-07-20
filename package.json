@@ -9,9 +9,11 @@
     "build:client": "pnpm --filter @shodai-network/agreements-api-client build",
     "build:playground": "pnpm --filter agreements-api-playground build",
     "build:reference-app": "pnpm --filter shodai-reference-app build",
+    "build:oauth-cli": "pnpm --filter oauth-connect-cli build",
     "dev": "pnpm --filter shodai-reference-app dev:start",
     "dev:stop": "pnpm --filter shodai-reference-app dev:stop",
     "dev:playground": "pnpm --filter agreements-api-playground dev",
+    "oauth": "pnpm --filter oauth-connect-cli run shodai-oauth --",
     "lint": "pnpm -r lint"
   }
 }
