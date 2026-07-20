@@ -68,6 +68,9 @@ importers:
       '@shodai-network/agreements-api-client':
         specifier: workspace:*
         version: link:../../packages/agreements-api-client
+      viem:
+        specifier: ^2.43.0
+        version: 2.43.2(bufferutil@4.1.0)(typescript@5.6.3)(utf-8-validate@6.0.6)(zod@4.4.3)
     devDependencies:
       '@types/node':
         specifier: ^20.10.6
@@ -7730,8 +7733,8 @@ snapshots:
       '@noble/hashes': 2.2.0
       eventemitter3: 5.0.1
       fp-ts: 2.16.11
-      isows: 1.0.7(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@6.0.6))
-      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      isows: 1.0.7(ws@8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -8623,7 +8626,7 @@ snapshots:
       eventemitter3: 5.0.1
       pako: 2.2.0
       uuid: 11.1.1
-      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - encoding
@@ -10360,7 +10363,7 @@ snapshots:
 
   '@scure/bip32@1.7.0':
     dependencies:
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
 
@@ -11113,7 +11116,7 @@ snapshots:
   '@solana/web3.js@1.98.1(bufferutil@4.1.0)(typescript@5.6.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@solana/buffer-layout': 4.0.1
       '@solana/codecs-numbers': 2.3.0(typescript@5.6.3)
@@ -11339,7 +11342,7 @@ snapshots:
 
   '@turnkey/api-key-stamper@0.4.7':
     dependencies:
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@turnkey/encoding': 0.5.0
       sha256-uint8array: 0.10.7
 
@@ -12883,7 +12886,7 @@ snapshots:
       fastestsmallesttextencoderdecoder: 1.0.22
       got: 11.8.6
       ulid: 2.4.0
-      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     optionalDependencies:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -14349,6 +14352,10 @@ snapshots:
     dependencies:
       ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)
 
+  isows@1.0.7(ws@8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)):
+    dependencies:
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+
   iterare@1.2.1: {}
 
   jackspeak@3.4.3:
@@ -15162,7 +15169,7 @@ snapshots:
   ox@0.6.7(typescript@5.6.3)(zod@4.4.3):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
@@ -15176,7 +15183,7 @@ snapshots:
   ox@0.6.9(typescript@5.6.3)(zod@4.4.3):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
@@ -15809,7 +15816,7 @@ snapshots:
       buffer: 6.0.3
       eventemitter3: 5.0.1
       uuid: 14.0.1
-      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      ws: 8.21.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     optionalDependencies:
       bufferutil: 4.1.0
       utf-8-validate: 6.0.6

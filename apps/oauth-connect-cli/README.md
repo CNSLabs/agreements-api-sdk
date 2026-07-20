@@ -51,11 +51,17 @@ export OAUTH_CLIENT_ID=cns_oa_...   # from Profile → OAuth apps
 pnpm oauth login
 pnpm oauth status
 pnpm oauth agreements
+
+# On-chain deploy (signer must already be linked: Profile → Wallets → Link wallet)
+LINKED_WALLET_PRIVATE_KEY=0x... pnpm oauth deploy
 ```
 
 `login` opens a browser to the consent page, waits on a loopback callback,
 exchanges the code (PKCE), and writes the session to
 `~/.config/shodai/oauth-session.json` (mode `0600`).
+
+`deploy` reuses that session, signs a deploy permit with the linked wallet, and
+calls `deploy-with-permit` (default: bundled MOU template on Linea Sepolia).
 
 ## Pointing at production
 
@@ -79,9 +85,22 @@ pnpm oauth agreements
 | `login [--no-browser]` | Browser consent + PKCE; save session |
 | `status` | Show client, issuer, expiry, session path |
 | `agreements [--limit N]` | `GET /v0/agreements` as the connected user |
+| `deploy [options]` | Sign + `deploy-with-permit` as the connected user |
 | `token` | Print a fresh access token (refreshes if needed) |
 | `logout` | Revoke the refresh-token family + delete local session |
 | `help` | Usage |
+
+### `deploy` options
+
+| Flag / env | Purpose |
+| --- | --- |
+| `--wallet-key` / `LINKED_WALLET_PRIVATE_KEY` | EOA that signs the deploy permit (must be linked to the user) |
+| `--agreement` / `AGREEMENT_JSON_PATH` | Agreement JSON (default: `fixtures/mou.json`) |
+| `--chain-id` / `CHAIN_ID` | Default `59141` (Linea Sepolia) |
+| `--rpc-url` / `AGREEMENTS_RPC_URL` | Chain RPC (default: public Linea Sepolia RPC) |
+| `--counterparty` / `COUNTERPARTY_WALLET` | Party B address |
+| `--name` / `DISPLAY_NAME` | Agreement display name |
+| `--party-a-key` / `--party-b-key` | Participant variable keys (MOU defaults) |
 
 ## Environment
 
@@ -93,6 +112,9 @@ pnpm oauth agreements
 | `EXTERNAL_API_BASE_URL` | Agreements API origin (production: `https://api.shodai.network`) |
 | `OAUTH_SCOPES` | Optional space-separated scopes requested at authorize |
 | `SHODAI_OAUTH_SESSION_PATH` | Override session file path |
+| `LINKED_WALLET_PRIVATE_KEY` | Signing key for `deploy` (alias `WALLET_PRIVATE_KEY`) |
+| `AGREEMENTS_RPC_URL` | RPC for `deploy` |
+| `AGREEMENT_JSON_PATH` | Agreement template path for `deploy` |
 
 ## Using the session from your own code
 
@@ -116,6 +138,15 @@ const client = new ApiClient({
 
 await client.listAgreements({ limit: 5 });
 ```
+
+For a one-shot on-chain deploy from this session:
+
+```bash
+LINKED_WALLET_PRIVATE_KEY=0x... pnpm oauth deploy
+```
+
+Programmatic compose examples (list + deploy in your own code) live in
+[`packages/agreements-api-client/README.md`](../../packages/agreements-api-client/README.md#compose-examples).
 
 The reusable helpers live in `@shodai-network/agreements-api-client/oauth`
 (`OauthDelegatedSession`, `createDelegatedTokenProvider`).

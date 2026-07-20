@@ -16,7 +16,8 @@
     "shodai-oauth": "pnpm run build && node dist/cli.js"
   },
   "dependencies": {
-    "@shodai-network/agreements-api-client": "workspace:*"
+    "@shodai-network/agreements-api-client": "workspace:*",
+    "viem": "^2.43.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

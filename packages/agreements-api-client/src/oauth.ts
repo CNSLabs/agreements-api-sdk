@@ -552,6 +552,90 @@ function sha256Base64Url(value: string): string {
   return createHash('sha256').update(value, 'ascii').digest('base64url');
 }
 
+/** Loopback success/error page styled to match the developer portal consent UI. */
+function loopbackCallbackHtml(kind: 'success' | 'error', detail?: string): string {
+  const title = kind === 'success' ? "You're connected" : 'Authorization failed';
+  const body =
+    kind === 'success'
+      ? 'You can close this tab and return to the terminal.'
+      : detail || 'Something went wrong. Return to the terminal for details.';
+  const escaped = body
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title} · Shodai</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: #000000;
+      color: #dae5c5;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    main {
+      width: min(440px, 100%);
+      padding: 28px;
+      border: 1px solid #252c1d;
+      background: #11140d;
+    }
+    .brand {
+      margin: 0 0 20px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: #dae5c5;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.4rem, 3vw, 1.85rem);
+      font-weight: 400;
+      line-height: 1.2;
+      color: #dae5c5;
+    }
+    p {
+      margin: 0;
+      color: #c2ccb0;
+      font-size: 15px;
+    }
+    .status {
+      display: inline-block;
+      margin-bottom: 14px;
+      padding: 2px 8px;
+      border: 1px solid #575a51;
+      color: #c2ccb0;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .status-error { border-color: #8a3a3a; color: #e8a0a0; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">Shodai</p>
+    <span class="status${kind === 'error' ? ' status-error' : ''}">${
+      kind === 'success' ? 'Success' : 'Error'
+    }</span>
+    <h1>${title}</h1>
+    <p>${escaped}</p>
+  </main>
+</body>
+</html>`;
+}
+
 async function listenForLoopbackCode(options: {
   redirectPath: string;
   state: string;
@@ -564,35 +648,56 @@ async function listenForLoopbackCode(options: {
       try {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
         if (url.pathname !== options.redirectPath) {
-          res.writeHead(404).end();
+          res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }).end(
+            loopbackCallbackHtml('error', 'Not found.'),
+          );
           return;
         }
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        res.end(
-          '<!doctype html><html><body><h3>You can close this tab and return to the terminal.</h3></body></html>',
-        );
-        server.close();
+
+        // Connection: close + closeAllConnections so Node does not hang waiting
+        // for the browser's keep-alive socket after login succeeds.
+        const finish = (kind: 'success' | 'error', detail?: string) => {
+          res.writeHead(kind === 'success' ? 200 : 400, {
+            'content-type': 'text/html; charset=utf-8',
+            connection: 'close',
+          });
+          res.end(loopbackCallbackHtml(kind, detail));
+          const shutdown = () => {
+            server.close();
+            if (typeof server.closeAllConnections === 'function') {
+              server.closeAllConnections();
+            }
+          };
+          if (res.writableFinished) {
+            shutdown();
+          } else {
+            res.on('finish', shutdown);
+          }
+        };
+
         if (url.searchParams.get('state') !== options.state) {
+          finish('error', 'OAuth state mismatch. Return to the terminal and try again.');
           reject(new Error('OAuth state mismatch in the callback.'));
           return;
         }
         if (url.searchParams.get('error')) {
+          const err = url.searchParams.get('error') || 'access_denied';
+          const desc = url.searchParams.get('error_description');
+          finish('error', desc ? `${err}: ${desc}` : err);
           reject(
             new Error(
-              `Authorization error: ${url.searchParams.get('error')}${
-                url.searchParams.get('error_description')
-                  ? ` (${url.searchParams.get('error_description')})`
-                  : ''
-              }`,
+              `Authorization error: ${err}${desc ? ` (${desc})` : ''}`,
             ),
           );
           return;
         }
         const code = url.searchParams.get('code');
         if (!code) {
+          finish('error', 'Authorization callback did not include a code.');
           reject(new Error('Authorization callback did not include a code.'));
           return;
         }
+        finish('success');
         resolve({ redirectUri, code });
       } catch (error) {
         reject(error);

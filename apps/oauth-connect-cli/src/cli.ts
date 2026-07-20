@@ -6,6 +6,7 @@ import {
   type OauthDelegatedTokenSet,
 } from '@shodai-network/agreements-api-client/oauth';
 import { resolveConfig, type CliConfig } from './config.js';
+import { deployWithLinkedWallet, resolveDeployOptions } from './deploy.js';
 import {
   clearSession,
   defaultSessionPath,
@@ -20,6 +21,7 @@ Usage:
   shodai-oauth login [--no-browser]
   shodai-oauth status
   shodai-oauth agreements [--limit N]
+  shodai-oauth deploy [options]
   shodai-oauth token
   shodai-oauth logout
   shodai-oauth help
@@ -28,6 +30,7 @@ Prerequisites:
   1. Create a public OAuth app in the developer portal (Profile → OAuth apps)
      with redirect URI: http://127.0.0.1/callback
   2. Export OAUTH_CLIENT_ID=cns_oa_...
+  3. For deploy: link a signing wallet (Profile → Wallets → Link wallet)
 
 Environment:
   OAUTH_CLIENT_ID                 required for login (or stored after login)
@@ -36,6 +39,18 @@ Environment:
   EXTERNAL_API_BASE_URL           Agreements API base (default http://localhost:4005/api)
   OAUTH_SCOPES                    optional space-separated scopes at authorize time
   SHODAI_OAUTH_SESSION_PATH       session file (default ~/.config/shodai/oauth-session.json)
+  LINKED_WALLET_PRIVATE_KEY       signing key for deploy (alias: WALLET_PRIVATE_KEY)
+  AGREEMENTS_RPC_URL              RPC for deploy (default: public Linea Sepolia)
+  AGREEMENT_JSON_PATH             agreement template JSON (default: bundled MOU)
+
+deploy options:
+  --wallet-key 0x...              override LINKED_WALLET_PRIVATE_KEY
+  --agreement <path>              agreement JSON (default: fixtures/mou.json)
+  --chain-id <n>                  default 59141 (Linea Sepolia)
+  --rpc-url <url>                 chain RPC
+  --counterparty 0x...            party B wallet
+  --name <string>                 agreement display name
+  --party-a-key / --party-b-key   participant variable keys (MOU defaults)
 `;
 
 async function main(): Promise<void> {
@@ -53,6 +68,9 @@ async function main(): Promise<void> {
       break;
     case 'agreements':
       await cmdAgreements(parseLimit(args));
+      break;
+    case 'deploy':
+      await cmdDeploy(args.slice(1));
       break;
     case 'token':
       await cmdToken();
@@ -115,6 +133,9 @@ async function cmdLogin(options: { openBrowser: boolean }): Promise<void> {
   console.log(`  expires: ${new Date(tokens.expiresAt).toISOString()}`);
   console.log(`\nSession saved to ${sessionPath}`);
   console.log('Try: shodai-oauth agreements');
+  console.log(
+    'Deploy (after linking a wallet): LINKED_WALLET_PRIVATE_KEY=0x... shodai-oauth deploy',
+  );
 }
 
 function cmdStatus(): void {
@@ -137,6 +158,21 @@ async function cmdAgreements(limit: number): Promise<void> {
   for (const agreement of page.data) {
     console.log(`  - ${agreement.id}  ${agreement.status ?? ''}  ${agreement.displayName ?? ''}`);
   }
+}
+
+async function cmdDeploy(args: string[]): Promise<void> {
+  const options = resolveDeployOptions(args);
+  const { client } = await sessionClient();
+  console.log('Deploying with delegated OAuth session + linked wallet ...');
+  const deployed = await deployWithLinkedWallet(client, options);
+  const read = await client.getAgreement(deployed.id);
+  console.log('\nDeployed.');
+  console.log(`  agreementId:  ${deployed.id}`);
+  console.log(`  address:      ${deployed.address ?? '(none)'}`);
+  console.log(`  chainId:      ${deployed.chainId ?? options.chainId}`);
+  console.log(`  status:       ${read.status ?? '(unknown)'}`);
+  console.log(`  signer:       ${deployed.signerAddress}`);
+  console.log(`  partyB:       ${options.counterparty}`);
 }
 
 async function cmdToken(): Promise<void> {
