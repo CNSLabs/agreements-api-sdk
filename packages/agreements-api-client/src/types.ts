@@ -290,11 +290,11 @@ export type WebhookFilters = {
 export type WebhookSubscription = {
   id: string;
   principalId: string;
-  createdByApiKeyId?: string;
+  createdByApiKeyId: string | null;
   url: string;
   status: WebhookSubscriptionStatus;
   eventTypes: WebhookSubscriptionEventType[];
-  filters?: WebhookFilters;
+  filters: WebhookFilters | null;
   createdAt: string;
   updatedAt: string;
 };
