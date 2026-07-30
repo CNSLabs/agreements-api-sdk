@@ -15,7 +15,8 @@ export type DirectParticipantRecord = {
   email?: string;
   firstName?: string;
   lastName?: string;
-  walletBinding?: 'verified_via_auth' | 'partner_asserted';
+  /** See {@link ParticipantRecord.walletBinding}. Display-only provenance. */
+  walletBinding?: 'verified_via_auth' | 'verified_via_siwe' | 'partner_asserted';
 };
 
 export type AgreementRecord = {
@@ -63,8 +64,14 @@ export type ParticipantRecord = {
   firstName?: string;
   lastName?: string;
   walletAddress?: string;
-  walletBinding?: 'verified_via_auth' | 'partner_asserted';
-  status?: 'pending' | 'invited' | 'accepted';
+  /**
+   * Provenance of the wallet binding, for display only — access is decided by
+   * verified wallet ownership on the account, not by this value.
+   * - verified_via_auth: resolved from the participant's identity
+   * - verified_via_siwe: control proven with a SIWE (EIP-4361) signature
+   * - partner_asserted: asserted directly by an API caller
+   */
+  walletBinding?: 'verified_via_auth' | 'verified_via_siwe' | 'partner_asserted';
 };
 
 export type HealthResponse = {
