@@ -20,6 +20,9 @@ export type DirectParticipantRecord = {
 
 export type AgreementRecord = {
   id: string;
+  operationId?: string;
+  operationLifecycle?: PermitOperationLifecycle;
+  transactionHash?: string;
   address?: string;
   chainId: number;
   status: 'Draft' | 'Deployed';
@@ -111,7 +114,9 @@ export type SortDirection = 'asc' | 'desc';
 export type AgreementListSortField = 'createdAt' | 'updatedAt' | 'displayName';
 export type AgreementInputListSortField = 'createdAt' | 'updatedAt';
 export type SortFilter<TField extends string> = {
-  [Field in TField]: { [Key in Field]: SortDirection } & Partial<Record<Exclude<TField, Field>, never>>;
+  [Field in TField]: { [Key in Field]: SortDirection } & Partial<
+    Record<Exclude<TField, Field>, never>
+  >;
 }[TField];
 
 export type AgreementListParams = {
@@ -243,6 +248,7 @@ export type AgreementDocumentResponse = {
 
 export type AgreementInputRecord = {
   submissionId?: string;
+  operationLifecycle?: PermitOperationLifecycle;
   agreementId: string;
   agreementAddress: string;
   chainId: number;
@@ -257,6 +263,12 @@ export type AgreementInputRecord = {
   updatedAt: string;
   status: 'PENDING' | 'MINED' | 'FAILED';
 };
+
+export type PermitOperationLifecycle =
+  | 'intent_recorded'
+  | 'transaction_ready'
+  | 'confirmed'
+  | 'completed';
 
 export type ProcessInputRequest = {
   inputId: string;
