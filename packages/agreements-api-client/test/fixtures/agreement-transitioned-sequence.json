@@ -1,0 +1,39 @@
+{
+  "transitionEvent": {
+    "sourceEventId": "evt_transition_sequence_contract",
+    "agreementId": "agreement-1",
+    "principalId": "principal-1",
+    "templateId": "template-1",
+    "sequence": 4,
+    "from": "AWAITING_PAYMENT",
+    "to": "WORK_IN_PROGRESS",
+    "input": "submitInitialPaymentProof",
+    "variables": {
+      "hidden": "not-in-webhook-payload"
+    },
+    "timestamp": "2026-05-26T16:05:00.000Z",
+    "agreementName": "Retainer",
+    "participants": [
+      {
+        "variableKey": "client",
+        "email": "client@example.com"
+      }
+    ],
+    "observers": ["observer@example.com"]
+  },
+  "webhookPayload": {
+    "id": "effect_2cd631052d5812f00e7949d5b448015814e7e718345a70198e723b4f5ee18133",
+    "type": "agreement.transitioned",
+    "apiVersion": "2026-06-01",
+    "createdAt": "2026-05-26T16:05:00.000Z",
+    "data": {
+      "agreementId": "agreement-1",
+      "agreementName": "Retainer",
+      "templateId": "template-1",
+      "fromState": "AWAITING_PAYMENT",
+      "toState": "WORK_IN_PROGRESS",
+      "inputId": "submitInitialPaymentProof",
+      "sequence": 4
+    }
+  }
+}
