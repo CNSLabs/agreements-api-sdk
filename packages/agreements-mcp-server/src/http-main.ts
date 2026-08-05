@@ -10,6 +10,11 @@
  * - `AGREEMENTS_API_TESTNET_BASE_URL`: upstream testnet gateway origin override.
  * - `AGREEMENTS_API_PRODUCTION_BASE_URL`: upstream production gateway origin override.
  * - `AGREEMENTS_API_BASE_URL`: local fixed-origin override used for both environments.
+ * - `OAUTH_AUTHORIZATION_SERVERS`: comma-separated issuer URLs; when set, enables
+ *   RFC 9728 protected-resource metadata, WWW-Authenticate challenges, and
+ *   OAuth access-token forwarding alongside API keys.
+ * - `OAUTH_RESOURCE`: optional RFC 9728 `resource` (defaults to PUBLIC_MCP_URL /
+ *   request-derived MCP URL).
  */
 import { startAgreementsMcpHttpServer } from './http.js';
 
@@ -23,11 +28,26 @@ async function main(): Promise<void> {
     testnet: process.env.AGREEMENTS_API_TESTNET_BASE_URL?.trim() || undefined,
     production: process.env.AGREEMENTS_API_PRODUCTION_BASE_URL?.trim() || undefined,
   };
+  const authorizationServers = (process.env.OAUTH_AUTHORIZATION_SERVERS ?? '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  const oauthResource = process.env.OAUTH_RESOURCE?.trim() || undefined;
 
-  await startAgreementsMcpHttpServer({ port, host, mcpPath, publicMcpUrl, baseUrl, baseUrls });
+  await startAgreementsMcpHttpServer({
+    port,
+    host,
+    mcpPath,
+    publicMcpUrl,
+    baseUrl,
+    baseUrls,
+    authorizationServers,
+    oauthResource,
+  });
 
+  const authModes = authorizationServers.length > 0 ? 'api-key+oauth' : 'api-key';
   console.log(
-    `agreements-mcp-server listening on http://${host}:${port}${mcpPath} (upstream: selectable environments, auth: api-key)`,
+    `agreements-mcp-server listening on http://${host}:${port}${mcpPath} (upstream: selectable environments, auth: ${authModes})`,
   );
 }
 

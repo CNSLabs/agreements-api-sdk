@@ -14,7 +14,7 @@ This repository supports builders using the TypeScript SDK, agents or tools usin
 
 **Hosted MCP:** `https://shodai.network/mcp` is the Shodai Agreements execution MCP endpoint. It uses Streamable HTTP, bearer API-key auth, an `environment` tool argument, environment-scoped keys, and no hosted private-key custody.
 
-**Packages and apps:** [`@shodai-network/agreements-api-client`](./packages/agreements-api-client) · [`@shodai-network/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app)
+**Packages and apps:** [`@shodai-network/agreements-api-client`](./packages/agreements-api-client) · [`@shodai-network/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app) · [`oauth-connect-cli`](./apps/oauth-connect-cli) (`shodai-oauth`)
 
 ## Why Builders Use Shodai Agreements
 
@@ -69,6 +69,7 @@ An ordinary browser `GET` to `/mcp` may return `405` because the endpoint expect
 | `@shodai-network/agreements-mcp-server` | [`packages/agreements-mcp-server`](./packages/agreements-mcp-server) | Local MCP server package aligned with the hosted Agreements execution MCP surface. |
 | `agreements-api-playground` | [`apps/agreements-api-playground`](./apps/agreements-api-playground) | Reference Vite app for browser API experimentation and SDK workflow examples. |
 | `shodai-reference-app` | [`apps/shodai-reference-app`](./apps/shodai-reference-app) | Full-stack React/Nest/Mongo reference implementation for developer platform auth, Agreements API usage, agreement lifecycle UX, signing, persistence, and webhook reconciliation. |
+| `oauth-connect-cli` (`shodai-oauth`) | [`apps/oauth-connect-cli`](./apps/oauth-connect-cli) | CLI that connects a public OAuth app to a user via authorization_code + PKCE, stores a refreshable session, and calls the Agreements API as that user. |
 
 ## Install the TypeScript SDK
 

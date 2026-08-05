@@ -15,7 +15,8 @@ export type DirectParticipantRecord = {
   email?: string;
   firstName?: string;
   lastName?: string;
-  walletBinding?: 'verified_via_auth' | 'partner_asserted';
+  /** See {@link ParticipantRecord.walletBinding}. Display-only provenance. */
+  walletBinding?: 'verified_via_auth' | 'verified_via_siwe' | 'partner_asserted';
 };
 
 export type AgreementRecord = {
@@ -63,8 +64,14 @@ export type ParticipantRecord = {
   firstName?: string;
   lastName?: string;
   walletAddress?: string;
-  walletBinding?: 'verified_via_auth' | 'partner_asserted';
-  status?: 'pending' | 'invited' | 'accepted';
+  /**
+   * Provenance of the wallet binding, for display only — access is decided by
+   * verified wallet ownership on the account, not by this value.
+   * - verified_via_auth: resolved from the participant's identity
+   * - verified_via_siwe: control proven with a SIWE (EIP-4361) signature
+   * - partner_asserted: asserted directly by an API caller
+   */
+  walletBinding?: 'verified_via_auth' | 'verified_via_siwe' | 'partner_asserted';
 };
 
 export type HealthResponse = {
@@ -325,9 +332,22 @@ export type WebhookTestResponse = {
 
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
+/**
+ * Supplies an OAuth access token for `Authorization: Bearer` auth. Called
+ * before every request; implementations should cache and refresh internally
+ * (see `OauthClientCredentials` in the `/oauth` subpath export for a
+ * Node-only implementation of the client-credentials grant).
+ */
+export type BearerTokenProvider = () => string | Promise<string>;
+
 type ApiClientSharedConfig = {
   /** API key for the API principal; sent as the canonical `X-API-Key` header. */
   apiKey?: string;
+  /**
+   * OAuth bearer-token source; sent as `Authorization: Bearer <token>`.
+   * Mutually exclusive with `apiKey`.
+   */
+  tokenProvider?: BearerTokenProvider;
   /** Optional header factory (e.g. telemetry). Merged after defaults. */
   headers?: Record<string, string> | (() => Record<string, string> | undefined);
   /** Override `fetch` (defaults to global `fetch`). */
@@ -346,7 +366,7 @@ export type ApiClientConfig =
     })
   | (ApiClientSharedConfig & {
       /**
-       * Explicit gateway origin override (no trailing slash), e.g. `https://api.example.com`.
+       * Explicit gateway origin override (no trailing slash), e.g. `https://api.shodai.network`.
        * Prefer `environment` for standard Shodai hosts.
        */
       baseUrl: string;
