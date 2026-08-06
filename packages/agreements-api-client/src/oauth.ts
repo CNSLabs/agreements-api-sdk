@@ -253,6 +253,8 @@ export type OauthDelegatedConfig = {
   refreshLeewaySeconds?: number;
   /** Persist rotated tokens (login + refresh). */
   onTokensUpdated?: (tokens: OauthDelegatedTokenSet) => void | Promise<void>;
+  /** Clear persisted tokens when the session is revoked. */
+  onTokensCleared?: () => void | Promise<void>;
 };
 
 export type OauthDelegatedTokenSet = {
@@ -286,6 +288,7 @@ export class OauthDelegatedSession {
   private readonly fetchImpl: typeof fetch;
   private readonly refreshLeewayMs: number;
   private readonly onTokensUpdated?: OauthDelegatedConfig['onTokensUpdated'];
+  private readonly onTokensCleared?: OauthDelegatedConfig['onTokensCleared'];
 
   private tokens?: OauthDelegatedTokenSet;
   private inflight?: Promise<string>;
@@ -307,6 +310,7 @@ export class OauthDelegatedSession {
     this.fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
     this.refreshLeewayMs = (config.refreshLeewaySeconds ?? DEFAULT_REFRESH_LEEWAY_SECONDS) * 1000;
     this.onTokensUpdated = config.onTokensUpdated;
+    this.onTokensCleared = config.onTokensCleared;
   }
 
   /** Restore a previously persisted token set (e.g. from disk). */
@@ -404,18 +408,57 @@ export class OauthDelegatedSession {
   async revoke(): Promise<void> {
     const refreshToken = this.tokens?.refreshToken;
     this.tokens = undefined;
-    if (!refreshToken) {
-      return;
+
+    let localClearError: unknown;
+    try {
+      await this.onTokensCleared?.();
+    } catch (error) {
+      localClearError = error;
     }
-    const revokeUrl = await this.resolveRevokeUrl();
-    if (!revokeUrl) {
-      return;
+
+    let remoteRevocationError: unknown;
+    if (refreshToken) {
+      try {
+        const revokeUrl = await this.resolveRevokeUrl();
+        if (!revokeUrl) {
+          throw new Error(
+            'Remote revocation was not confirmed because no revocation endpoint was found; supply `revokeUrl` explicitly.',
+          );
+        }
+        const res = await this.fetchImpl(revokeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+          body: new URLSearchParams({ token: refreshToken, client_id: this.clientId }).toString(),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => undefined)) as
+            | { error?: string; error_description?: string }
+            | undefined;
+          const description = body?.error_description ?? body?.error ?? `HTTP ${res.status}`;
+          throw new OauthTokenRequestError(
+            `Refresh-token revocation failed: ${description}`,
+            res.status,
+            body?.error,
+            body,
+          );
+        }
+      } catch (error) {
+        remoteRevocationError = error;
+      }
     }
-    await this.fetchImpl(revokeUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-      body: new URLSearchParams({ token: refreshToken, client_id: this.clientId }).toString(),
-    });
+
+    if (localClearError && remoteRevocationError) {
+      throw new AggregateError(
+        [localClearError, remoteRevocationError],
+        'Local token clearing failed and remote refresh-token revocation was not confirmed.',
+      );
+    }
+    if (localClearError) {
+      throw localClearError;
+    }
+    if (remoteRevocationError) {
+      throw remoteRevocationError;
+    }
   }
 
   private async refreshAccessToken(): Promise<string> {

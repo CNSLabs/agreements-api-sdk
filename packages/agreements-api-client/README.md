@@ -106,19 +106,30 @@ const session = new OauthDelegatedSession({
   issuer: process.env.OAUTH_ISSUER_URL, // discovers authorize/token/revoke via .well-known
   scope: 'agreements.read agreements.write',
   onTokensUpdated: async (tokens) => {
-    // persist tokens.refreshToken securely
+    await tokenStore.save(tokens); // includes rotated refresh tokens
   },
+  onTokensCleared: () => tokenStore.clear(),
 });
 
-await session.loginWithLoopback(); // opens browser; register redirect http://127.0.0.1/callback
+const savedTokens = await tokenStore.load();
+if (savedTokens) {
+  session.restoreTokens(savedTokens);
+} else {
+  await session.loginWithLoopback(); // register redirect http://127.0.0.1/callback
+}
 
 const client = new ApiClient({
   baseUrl: process.env.EXTERNAL_API_BASE_URL,
   tokenProvider: session.tokenProvider(),
 });
+
+// Disconnect the user and remove the persisted session.
+await session.revoke();
 ```
 
 Register the OAuth app in the developer portal (**Profile → OAuth apps**) with redirect URI `http://127.0.0.1/callback`. For a ready-made CLI that stores the session under `~/.config/shodai/`, see [`apps/oauth-connect-cli`](../../apps/oauth-connect-cli).
+
+`revoke()` always clears in-memory tokens and attempts `onTokensCleared`, even when server-side revocation cannot be confirmed. Handle a rejected `revoke()` as a remote revocation or local storage failure.
 
 ### Compose examples
 
@@ -197,6 +208,9 @@ const session = new OauthDelegatedSession({
   onTokensUpdated: async (tokens) => {
     // persist tokens securely, then restoreTokens(tokens) on next launch
   },
+  onTokensCleared: async () => {
+    // remove the persisted token set
+  },
 });
 
 await session.loginWithLoopback(); // skip if you already restored a valid refresh token
@@ -208,6 +222,8 @@ const client = new ApiClient({
 
 const page = await client.listAgreements({ limit: 5 });
 console.log(`listed ${page.data.length} agreement(s) as the signed-in user`);
+
+// Call await session.revoke() when the user disconnects.
 
 const deployed = await deployAgreementWithPermit({
   client,
