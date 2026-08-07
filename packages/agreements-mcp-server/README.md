@@ -6,7 +6,7 @@ The server is a pure consumer of the public `/v0` API via [`@shodai-network/agre
 
 ## Hosted endpoint
 
-Stateless Streamable HTTP: `POST` only, JSON responses, no sessions. Use this hosted setup contract:
+Stateless Streamable HTTP: `POST` only, JSON responses, no server-side sessions. Use this hosted setup contract:
 
 ```text
 Configure Shodai as a remote Streamable HTTP MCP server.
@@ -15,26 +15,25 @@ URL:
 https://shodai.network/mcp
 
 Auth:
-Authorization: Bearer $SHODAI_API_KEY
-
-Key shape:
-cns_pk_...
+Start the connection and complete Shodai browser sign-in and consent.
 
 Tool environment:
 testnet
 
-Use this value as the environment argument on API-calling tools. API keys only work in the environment where they were created.
+Use this value as the environment argument on API-calling tools.
 ```
 
-Hosted API-calling tools require an `environment` argument: `testnet` or `production`. API keys only work in the environment where they were created, so a testnet key must be used with `environment: "testnet"` and a production key must be used with `environment: "production"`.
+The canonical hosted endpoint advertises Shodai's testnet authorization server. An OAuth-capable MCP client follows RFC 9728 protected-resource discovery, opens browser authorization, and reconnects with the resulting access token. Use `environment: "testnet"` for that OAuth connection.
 
-When `OAUTH_AUTHORIZATION_SERVERS` is set (hosted `dev` does this), the server also:
+When `OAUTH_AUTHORIZATION_SERVERS` is set, the server:
 
 - Serves RFC 9728 protected-resource metadata at `/.well-known/oauth-protected-resource` (and `.../mcp`)
 - Challenges unauthenticated `POST /mcp` with `WWW-Authenticate` (`resource_metadata=...`)
-- Accepts OAuth access tokens (`Authorization: Bearer <jwt>`) **in addition to** API keys — not a breaking change for existing key-based clients
+- Accepts OAuth access tokens (`Authorization: Bearer <jwt>`) in addition to API keys
 
-Get an API key from the [Developer Portal](https://developers.shodai.network). First-flight setup, tool access, and typed-data preparation: [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp).
+API keys remain supported as a fallback and as the production credential path. Send `Authorization: Bearer cns_pk_...` and match the key to the tool `environment`: testnet keys use `testnet`, and production keys use `production`.
+
+First-flight setup, tool access, and typed-data preparation: [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp).
 
 ## Run locally (stdio)
 

@@ -12,16 +12,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://shodai.network/mcp",
-      "headers": [
-        {
-          "name": "Authorization",
-          "description": "Bearer API key, e.g. Bearer cns_pk_...",
-          "isRequired": true,
-          "isSecret": true,
-          "placeholder": "Bearer cns_pk_..."
-        }
-      ]
+      "url": "https://shodai.network/mcp"
     }
   ]
 }

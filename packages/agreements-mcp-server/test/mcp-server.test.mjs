@@ -161,14 +161,6 @@ test('registry server.json describes the hosted remote MCP server only', () => {
   const [remote] = registryServerJson.remotes;
   assert.equal(remote.type, 'streamable-http');
   assert.equal(remote.url, CANONICAL_MCP_URL);
-
-  assert.equal(remote.headers.length, 1);
-  const [authorizationHeader] = remote.headers;
-  assert.equal(authorizationHeader.name, 'Authorization');
-  assert.equal(authorizationHeader.isRequired, true);
-  assert.equal(authorizationHeader.isSecret, true);
-  assert.match(authorizationHeader.description, /Bearer cns_pk_/);
-  assert.match(authorizationHeader.placeholder, /Bearer cns_pk_/);
 });
 
 test('server card discovery metadata stays aligned with the registry metadata', () => {
@@ -188,17 +180,6 @@ test('server card discovery metadata stays aligned with the registry metadata', 
   assert.equal(serverCardRemote.url, registryRemote.url);
   assert.equal(serverCardRemote.url, PUBLIC_MCP_URL);
   assert.deepEqual(serverCardRemote.supportedProtocolVersions, SUPPORTED_PROTOCOL_VERSIONS);
-
-  assert.equal(serverCardRemote.headers.length, 1);
-  const [serverCardAuthorizationHeader] = serverCardRemote.headers;
-  const [registryAuthorizationHeader] = registryRemote.headers;
-  assert.equal(serverCardAuthorizationHeader.name, registryAuthorizationHeader.name);
-  assert.equal(serverCardAuthorizationHeader.isRequired, registryAuthorizationHeader.isRequired);
-  assert.equal(serverCardAuthorizationHeader.isSecret, registryAuthorizationHeader.isSecret);
-  assert.equal(serverCardAuthorizationHeader.value, 'Bearer {token}');
-  assert.match(serverCardAuthorizationHeader.variables.token.description, /cns_pk_/);
-  assert.equal(serverCardAuthorizationHeader.variables.token.isRequired, true);
-  assert.equal(serverCardAuthorizationHeader.variables.token.isSecret, true);
 });
 
 test('catalog discovery metadata points to the hosted server card', () => {
