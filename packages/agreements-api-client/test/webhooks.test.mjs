@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import {
   computeWebhookSignature,
@@ -14,6 +15,12 @@ import {
 const secret = 'whsec_test';
 const nowSeconds = 1_800_000_000;
 const timestamp = String(nowSeconds);
+const transitionSequenceFixture = JSON.parse(
+  readFileSync(
+    new URL('./fixtures/agreement-transitioned-sequence.json', import.meta.url),
+    'utf8',
+  ),
+);
 
 const testPayload = {
   id: 'evt_test',
@@ -23,20 +30,7 @@ const testPayload = {
   data: {},
 };
 
-const transitionPayload = {
-  id: 'evt_transition',
-  type: 'agreement.transitioned',
-  apiVersion: '2026-06-01',
-  createdAt: '2026-06-01T00:00:00.000Z',
-  data: {
-    agreementId: 'agreement-1',
-    agreementName: 'Retainer',
-    templateId: 'template-1',
-    fromState: 'AWAITING_PAYMENT',
-    toState: 'WORK_IN_PROGRESS',
-    inputId: 'submitInitialPaymentProof',
-  },
-};
+const transitionPayload = transitionSequenceFixture.webhookPayload;
 
 const notificationPayload = {
   id: 'evt_notification',
@@ -112,20 +106,21 @@ describe('webhook receiver helpers', () => {
 
   it('verifies a backend-shaped agreement.transitioned delivery', () => {
     const rawBody = body(transitionPayload);
-    const event = constructWebhookEvent(rawBody, headersFor(rawBody, 'evt_transition'), secret, {
+    const event = constructWebhookEvent(rawBody, headersFor(rawBody, transitionPayload.id), secret, {
       now: nowSeconds,
     });
 
     assert.equal(event.type, 'agreement.transitioned');
-    assert.equal(event.id, 'evt_transition');
+    assert.equal(event.id, transitionPayload.id);
     assert.equal(event.apiVersion, '2026-06-01');
-    assert.equal(event.createdAt, '2026-06-01T00:00:00.000Z');
+    assert.equal(event.createdAt, transitionPayload.createdAt);
     assert.equal(event.data.agreementId, 'agreement-1');
     assert.equal(event.data.agreementName, 'Retainer');
     assert.equal(event.data.templateId, 'template-1');
     assert.equal(event.data.fromState, 'AWAITING_PAYMENT');
     assert.equal(event.data.toState, 'WORK_IN_PROGRESS');
     assert.equal(event.data.inputId, 'submitInitialPaymentProof');
+    assert.equal(event.data.sequence, 4);
   });
 
   it('verifies a deploy transition with an empty fromState boundary', () => {
@@ -137,6 +132,7 @@ describe('webhook receiver helpers', () => {
         fromState: '',
         toState: 'AWAITING_PAYMENT',
         inputId: '__deploy',
+        sequence: 0,
       },
     };
     const rawBody = body(deployPayload);
@@ -148,6 +144,49 @@ describe('webhook receiver helpers', () => {
     assert.equal(event.data.fromState, '');
     assert.equal(event.data.toState, 'AWAITING_PAYMENT');
     assert.equal(event.data.inputId, '__deploy');
+    assert.equal(event.data.sequence, 0);
+  });
+
+  it('accepts legacy transitions without sequence', () => {
+    const legacyPayload = structuredClone(transitionPayload);
+    legacyPayload.id = 'evt_legacy_transition';
+    delete legacyPayload.data.sequence;
+    const rawBody = body(legacyPayload);
+    const event = constructWebhookEvent(
+      rawBody,
+      headersFor(rawBody, legacyPayload.id),
+      secret,
+      { now: nowSeconds },
+    );
+
+    assert.equal(event.type, 'agreement.transitioned');
+    assert.equal(event.data.sequence, undefined);
+  });
+
+  it('rejects invalid transition sequences', () => {
+    for (const sequence of [
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+      '4',
+      'not-a-number',
+      true,
+    ]) {
+      const invalidPayload = structuredClone(transitionPayload);
+      invalidPayload.id = `evt_invalid_sequence_${String(sequence)}`;
+      invalidPayload.data.sequence = sequence;
+      const rawBody = body(invalidPayload);
+      assertWebhookError(
+        () =>
+          constructWebhookEvent(
+            rawBody,
+            headersFor(rawBody, invalidPayload.id),
+            secret,
+            { now: nowSeconds },
+          ),
+        'invalid_payload',
+      );
+    }
   });
 
   it('preserves optional CTA labels on notification-triggered deliveries', () => {

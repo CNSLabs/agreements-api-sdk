@@ -63,6 +63,13 @@ export type AgreementTransitionedWebhookData = {
   fromState: string;
   toState: string;
   inputId: string;
+  /**
+   * Per-agreement monotonic canonical ordinal: 1-based over accepted inputs,
+   * with 0 reserved for the `__deploy` transition. Deliveries are
+   * at-least-once and may arrive out of order, so consumers must order an
+   * agreement's transitions by this field. Absent only on legacy events.
+   */
+  sequence?: number;
 };
 
 export type AgreementTransitionedWebhookEvent = WebhookEventEnvelope<
@@ -284,6 +291,7 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
         fromState: requirePayloadString(data, 'fromState', { allowEmpty: true }),
         toState: requirePayloadString(data, 'toState'),
         inputId: requirePayloadString(data, 'inputId'),
+        sequence: optionalPayloadSequence(data, 'sequence'),
       },
     };
   }
@@ -338,6 +346,25 @@ function parseWebhookEvent(value: unknown): ShodaiWebhookEvent {
     'invalid_payload',
     `Unsupported webhook event type: ${type}.`,
   );
+}
+
+function optionalPayloadSequence(
+  value: Record<string, unknown>,
+  field: string,
+): number | undefined {
+  const candidate = value[field];
+  if (candidate === undefined) return undefined;
+  if (
+    typeof candidate !== 'number' ||
+    !Number.isSafeInteger(candidate) ||
+    candidate < 0
+  ) {
+    throw new WebhookVerificationError(
+      'invalid_payload',
+      `Webhook payload ${field} must be a non-negative safe integer.`,
+    );
+  }
+  return candidate;
 }
 
 function requirePayloadString(
