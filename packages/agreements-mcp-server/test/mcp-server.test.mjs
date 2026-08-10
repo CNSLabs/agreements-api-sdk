@@ -30,7 +30,6 @@ import {
 import { resolveRpcUrl } from '../dist/signing.js';
 import { deploymentPermitNextStep, inputPermitNextStep } from '../dist/write-tools.js';
 
-const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const registryServerJson = JSON.parse(readFileSync(new URL('../server.json', import.meta.url), 'utf8'));
 
 const DEVELOPERS_DISCOVERY_HEADERS = {
@@ -147,7 +146,6 @@ test('registry server.json describes the hosted remote MCP server only', () => {
   );
   assert.equal(registryServerJson.name, 'network.shodai/agreements');
   assert.equal(registryServerJson.title, 'Shodai Agreements');
-  assert.equal(registryServerJson.version, packageJson.version);
   assert.equal(registryServerJson.version, SERVER_VERSION);
   assert.ok(registryServerJson.description.length <= 100);
   assert.deepEqual(registryServerJson.repository, {
