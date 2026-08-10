@@ -333,10 +333,9 @@ export type WebhookTestResponse = {
 export type AgreementsApiEnvironment = 'testnet' | 'production';
 
 /**
- * Supplies an OAuth access token for `Authorization: Bearer` auth. Called
- * before every request; implementations should cache and refresh internally
- * (see `OauthClientCredentials` in the `/oauth` subpath export for a
- * Node-only implementation of the client-credentials grant).
+ * Supplies an access token for `Authorization: Bearer` auth. Called before
+ * every request; callers may provide managed tokens directly or use
+ * `OauthDelegatedSession` from the `/oauth` subpath export.
  */
 export type BearerTokenProvider = () => string | Promise<string>;
 

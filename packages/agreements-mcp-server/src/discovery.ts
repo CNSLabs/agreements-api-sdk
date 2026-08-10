@@ -83,24 +83,6 @@ export function createAgreementsMcpServerCard(publicMcpUrl: string = PUBLIC_MCP_
         type: 'streamable-http',
         url: publicMcpUrl,
         supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
-        headers: [
-          {
-            name: 'Authorization',
-            description:
-              'Bearer credentials for the Shodai MCP endpoint: an API key (`cns_pk_…`) or an OAuth access token from the authorization server advertised in protected-resource metadata.',
-            isRequired: true,
-            isSecret: true,
-            value: 'Bearer {token}',
-            variables: {
-              token: {
-                description:
-                  'Shodai API key (`cns_pk_…`) or OAuth access token from the Agreements authorization server',
-                isRequired: true,
-                isSecret: true,
-              },
-            },
-          },
-        ],
       },
     ],
   } as const;

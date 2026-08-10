@@ -6,11 +6,10 @@ refreshable session on disk, and calls the Agreements API as the signed-in
 user via `@shodai-network/agreements-api-client`.
 
 This is the reference “app that receives `/callback`” for builders who want
-user-delegated access without standing up their own web server. It is distinct
-from:
-
-- **API keys** / hosted MCP bearer keys
-- **Agent identity** OAuth (`client_credentials` + private JWK) used by autonomous agents
+user-delegated access without standing up their own web server. The CLI and
+hosted MCP can both use delegated OAuth, but they are different OAuth clients
+and connection experiences: this CLI owns a loopback callback and local session,
+while an OAuth-capable MCP client follows the hosted resource's discovery flow.
 
 ## Client ID routes (both supported)
 
