@@ -68,30 +68,9 @@ When `baseUrl` is provided, it wins over the environment host mapping.
 
 - `apiKey` is sent as `X-API-Key`
 - use the API key issued for your API principal by your deployment operator
-- `tokenProvider` sends `Authorization: Bearer <token>` instead of an API key (see [OAuth client credentials](#oauth-client-credentials-agents) below); `apiKey` and `tokenProvider` are mutually exclusive
+- `tokenProvider` sends `Authorization: Bearer <token>` from a delegated session or caller-managed token source; `apiKey` and `tokenProvider` are mutually exclusive
 - `headers` lets you attach correlation IDs, telemetry headers, or other request metadata
 - `fetch` can be overridden if your runtime does not provide a compatible global `fetch`
-
-### OAuth client credentials (agents)
-
-Agent identities provisioned with an OAuth client (`cns_oa_...`) can authenticate with short-lived bearer tokens instead of an API key. The Node-only `/oauth` subpath export signs `private_key_jwt` client assertions with your private ES256 JWK, mints tokens via the `client_credentials` grant, caches them, and refreshes them shortly before expiry:
-
-```ts
-import { ApiClient } from '@shodai-network/agreements-api-client';
-import { createClientCredentialsTokenProvider } from '@shodai-network/agreements-api-client/oauth';
-
-const client = new ApiClient({
-  baseUrl: process.env.EXTERNAL_API_BASE_URL,
-  tokenProvider: createClientCredentialsTokenProvider({
-    clientId: process.env.OAUTH_CLIENT_ID,
-    privateJwk: process.env.OAUTH_CLIENT_PRIVATE_JWK, // JSON string or object
-    issuer: process.env.OAUTH_ISSUER_URL, // token endpoint discovered via .well-known
-    scope: 'agreements.read agreements.write', // optional; defaults to the client's allowed scopes
-  }),
-});
-```
-
-Pass `tokenUrl` instead of `issuer` to skip metadata discovery. The private JWK must never ship to a browser; browser apps should pass a custom `tokenProvider` that fetches tokens from a backend holding the key. The `/oauth` module uses `node:crypto`, so importing it requires Node 18+.
 
 ### OAuth delegated access (on behalf of a user)
 
@@ -129,60 +108,13 @@ await session.revoke();
 
 Register the OAuth app in the developer portal (**Profile → OAuth apps**) with redirect URI `http://127.0.0.1/callback`. For a ready-made CLI that stores the session under `~/.config/shodai/`, see [`apps/oauth-connect-cli`](../../apps/oauth-connect-cli).
 
+The `/oauth` module uses Node APIs for delegated loopback login, so importing it requires Node 18+.
+
 `revoke()` always clears in-memory tokens and attempts `onTokensCleared`, even when server-side revocation cannot be confirmed. Handle a rejected `revoke()` as a remote revocation or local storage failure.
 
 ### Compose examples
 
-End-to-end snippets that wire OAuth auth to list + `deploy-with-permit`. Both need `viem` and a funded signer on the target chain (e.g. Linea Sepolia `59141`). Replace `agreement` / `participants` with your template payload.
-
-#### Agent: client credentials → list → deploy
-
-Assumes you already have `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_PRIVATE_JWK` (operator provision or SIWE self-registration). The deploy signer must be a wallet attached to that agent (the wallet used at registration, or an operator-attached address).
-
-```ts
-import { createWalletClient, createPublicClient, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { lineaSepolia } from 'viem/chains';
-import { ApiClient, computeDefaultDeadlineSeconds, deployAgreementWithPermit } from '@shodai-network/agreements-api-client';
-import { createClientCredentialsTokenProvider } from '@shodai-network/agreements-api-client/oauth';
-
-const account = privateKeyToAccount(process.env.WALLET_PRIVATE_KEY as `0x${string}`);
-const chain = lineaSepolia;
-const publicClient = createPublicClient({ chain, transport: http() });
-const walletClient = createWalletClient({ account, chain, transport: http() });
-
-const client = new ApiClient({
-  baseUrl: process.env.EXTERNAL_API_BASE_URL, // e.g. https://dev.cnslabs.cloud/api
-  tokenProvider: createClientCredentialsTokenProvider({
-    clientId: process.env.OAUTH_CLIENT_ID!,
-    privateJwk: process.env.OAUTH_CLIENT_PRIVATE_JWK!,
-    issuer: process.env.OAUTH_ISSUER_URL, // e.g. https://dev.cnslabs.cloud/auth-api
-    scope: 'agreements.read agreements.write',
-  }),
-});
-
-const page = await client.listAgreements({ limit: 5 });
-console.log(`listed ${page.data.length} agreement(s)`);
-
-const deployed = await deployAgreementWithPermit({
-  client,
-  walletClient,
-  publicClient,
-  chainId: chain.id,
-  agreement,
-  displayName: 'Agent OAuth deploy',
-  initValues: {
-    partyAEthAddress: account.address,
-    partyBEthAddress: process.env.COUNTERPARTY_WALLET!,
-  },
-  participants: [
-    { variableKey: 'partyAEthAddress', walletAddress: account.address },
-    { variableKey: 'partyBEthAddress', walletAddress: process.env.COUNTERPARTY_WALLET! },
-  ],
-  deadline: computeDefaultDeadlineSeconds(),
-});
-console.log(deployed.id, deployed.address);
-```
+This end-to-end snippet wires OAuth auth to list + `deploy-with-permit`. It needs `viem` and a funded signer on the target chain (e.g. Linea Sepolia `59141`). Replace `agreement` / `participants` with your template payload.
 
 #### Human: delegated session → deploy
 
@@ -245,7 +177,7 @@ const deployed = await deployAgreementWithPermit({
 console.log(deployed.id, deployed.address);
 ```
 
-For a batteries-included CLI: [`shodai-oauth`](../../apps/oauth-connect-cli) (`login`, then `LINKED_WALLET_PRIVATE_KEY=0x... shodai-oauth deploy`). Internal stack demos that also provision/link live under the `cns-service` repo (`scripts/oauth/run-agent-e2e.mjs`, `run-delegated-e2e.mjs`).
+For a batteries-included CLI: [`shodai-oauth`](../../apps/oauth-connect-cli) (`login`, then `LINKED_WALLET_PRIVATE_KEY=0x... shodai-oauth deploy`). The delegated internal stack demo lives in the `cns-service` repo (`scripts/oauth/run-delegated-e2e.mjs`).
 
 ## Response Envelopes and Query Results
 
