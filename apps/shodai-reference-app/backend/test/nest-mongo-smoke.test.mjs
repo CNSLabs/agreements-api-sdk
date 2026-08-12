@@ -760,6 +760,81 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
   }
 });
 
+test('Deploying records a pending deployment when the platform could not broadcast', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_pending_deploy_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  try {
+    const db = mongoClient.db(dbName);
+    const service = createMockExternalAgreementsService(db);
+    // Deploying through a permit is durable: when the platform cannot broadcast
+    // it stores a resumable operation and answers with a pending record — Draft,
+    // an operationLifecycle, a transaction hash, and no address. The agreement
+    // is not deployed, and recording it as such is what leaves the app showing a
+    // live agreement the platform has never persisted.
+    service.notificationCatalog = { getExternalWebhookTemplateByAgreementTemplateId: async () => null };
+    service.config.externalApiBaseUrl = 'https://external-api.example.test';
+    service.config.getSupportedAgreementChains = () => [{ chainId: 59141, network: 'linea-sepolia', factoryAddress: `0x${'2'.repeat(40)}` }];
+    service.config.isSupportedAgreementChain = (chainId) => chainId === 59141;
+    service.config.normalizeAgreementChainId = (chainId) => {
+      const parsed = Number(chainId ?? 59141);
+      if (parsed !== 59141) throw new Error('unsupported');
+      return parsed;
+    };
+    service.externalApiCall = async (operation) => {
+      if (operation === 'validate-deployment') return { variables: {} };
+      return {
+        id: 'external-pending-1',
+        status: 'Draft',
+        operationId: 'operation-pending-1',
+        operationLifecycle: 'transaction_ready',
+        transactionHash: `0x${'9'.repeat(64)}`,
+        chainId: 59141,
+      };
+    };
+
+    await db.collection('agreements').insertOne({
+      id: 'pending-deploy-local-1',
+      ownerUserId: 'user-1',
+      owner: '0x1111111111111111111111111111111111111111',
+      status: 'Draft',
+      chainId: 59141,
+      json: { metadata: { templateId: 'did:template:mou-v1' }, execution: { initialize: { initialState: 'START' }, states: { START: {} } } },
+      variables: {},
+      participants: [],
+      observers: [],
+    });
+
+    const result = await service.deployWithPermit(
+      'pending-deploy-local-1',
+      { signer: '0x1111111111111111111111111111111111111111', deadline: 1, signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` } },
+      { platformUserId: 'user-1', id: 'user-1', wallets: [{ address: '0x1111111111111111111111111111111111111111' }] },
+    );
+
+    assert.equal(result.status, 'Draft');
+    assert.equal(result.deployment?.state, 'pending');
+    assert.equal(result.deployment?.operationLifecycle, 'transaction_ready');
+    // The agreement id must never stand in for a contract address.
+    assert.equal(result.address, undefined);
+    assert.notEqual(result.address, 'pending-deploy-local-1');
+
+    const persisted = await db.collection('agreements').findOne({ id: 'pending-deploy-local-1' }, { projection: { _id: 0 } });
+    assert.equal(persisted.status, 'Draft');
+    assert.equal(persisted.address, undefined);
+    assert.equal(persisted.externalAgreementId, 'external-pending-1');
+  } finally {
+    await mongoClient.db(dbName).dropDatabase().catch(() => {});
+    await mongoClient.close();
+  }
+});
+
 test('Webhook reconciliation does not write local mirrors after lease loss', async (t) => {
   const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
   const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });

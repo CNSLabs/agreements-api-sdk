@@ -147,15 +147,54 @@ export class ExternalAgreementsService {
         async () => (await this.externalApiClient()).deployWithPermit(directPayload as any),
         { agreementId: agreement.id },
       );
-    const externalIdentifier = externalRecord.address || externalRecord.id;
-    if (!externalIdentifier) {
-      throw new InternalServerErrorException('External API deploy response did not include an agreement id or address');
+    if (!externalRecord.id) {
+      throw new InternalServerErrorException('External API deploy response did not include an agreement id');
     }
 
     const now = new Date().toISOString();
+
+    // Deploying through a permit is durable, not synchronous: if the platform
+    // could not broadcast, it records a resumable operation and answers with a
+    // pending record — status Draft, an operationLifecycle, a transaction hash,
+    // and no address. Treating that as deployed is how an agreement ends up
+    // looking live locally while the platform has never heard of it, and why
+    // its state and input reads then 404. An address is the only proof of
+    // deployment; the agreement id is never a substitute for one.
+    // The address is the proof: a pending response never carries one, because
+    // the contract does not exist yet. Status corroborates but cannot be relied
+    // on alone — treat an explicit Draft as pending, and absent status with a
+    // real address as deployed.
+    const deployed = !!externalRecord.address && externalRecord.status !== 'Draft';
+    if (!deployed) {
+      Object.assign(agreement, {
+        externalAgreementId: externalRecord.id,
+        status: 'Draft',
+        chainId: externalRecord.chainId || directPayload.chainId,
+        docUri: externalRecord.docUri || directPayload.docUri,
+        variables: externalRecord.variables || externalValidation?.variables || initValues,
+        participants: externalRecord.participants || agreement.participants,
+        observers: externalRecord.observers || agreement.observers || [],
+        deployment: {
+          state: 'pending',
+          operationId: externalRecord.operationId ?? null,
+          operationLifecycle: externalRecord.operationLifecycle ?? null,
+          transactionHash: externalRecord.transactionHash ?? null,
+          submittedAt: now,
+        },
+        updatedAt: now,
+      });
+      await this.agreements.upsertOne({ id: agreement.id }, agreement);
+      this.logger.warn(
+        `Deployment for agreement ${agreement.id} is pending on the platform ` +
+        `(operation ${externalRecord.operationId ?? 'unknown'}, lifecycle ${externalRecord.operationLifecycle ?? 'unknown'}); ` +
+        'the agreement is not deployed yet.',
+      );
+      return agreement;
+    }
+
     Object.assign(agreement, {
       externalAgreementId: externalRecord.id || agreement.externalAgreementId,
-      address: externalIdentifier,
+      address: externalRecord.address,
       status: 'Deployed',
       chainId: externalRecord.chainId || directPayload.chainId,
       docUri: externalRecord.docUri || directPayload.docUri,
@@ -164,6 +203,7 @@ export class ExternalAgreementsService {
       variables: externalRecord.variables || externalValidation?.variables || initValues,
       participants: externalRecord.participants || agreement.participants,
       observers: externalRecord.observers || agreement.observers || [],
+      deployment: { state: 'deployed', confirmedAt: now },
       updatedAt: now,
     });
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);
@@ -392,12 +432,20 @@ export class ExternalAgreementsService {
   }
 
   private async upsertInputMirror(inputRecord: any, agreement: any) {
+    // Only a real address may key an input mirror. Falling back to an agreement
+    // id produces a record that looks addressed but matches nothing on chain,
+    // and inputs are only submittable against a deployed agreement, so a
+    // missing address here means the caller got ahead of the deployment rather
+    // than that a default is needed.
     const agreementAddress = normalizeAddress(inputRecord.agreementAddress) ||
       normalizeAddress(agreement.address) ||
       inputRecord.agreementAddress ||
-      agreement.address ||
-      agreement.externalAgreementId ||
-      agreement.id;
+      agreement.address;
+    if (!agreementAddress) {
+      throw new InternalServerErrorException(
+        `Cannot mirror an input for agreement ${agreement.id}: it has no on-chain address`,
+      );
+    }
     const mirrored = {
       ...inputRecord,
       agreementAddress,
