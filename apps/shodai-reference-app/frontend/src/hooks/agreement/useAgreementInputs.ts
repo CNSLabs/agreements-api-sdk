@@ -4,6 +4,7 @@ import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from "wa
 import { AgreementEngine, buildInputPayload, inputToBytes32, type AgreementJson } from "@shodai-network/agreements-protocol-evm";
 import { useAgreementsApi, type AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import { useInputFinalityProgress, type TrackedInput } from "@/hooks/agreement/useInputFinalityProgress";
+import { useAgreementEventStream } from "@/hooks/agreement/useAgreementEventStream";
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {
   buildCurrentStateBlankValues,
@@ -87,13 +88,22 @@ export function useAgreementInputs({
       }),
     [submittedInputs],
   );
-  const refreshWhilePending = React.useCallback(async () => {
-    await Promise.allSettled([refreshState(), refreshInputs()]);
-  }, [refreshState, refreshInputs]);
   const finality = useInputFinalityProgress({
     requiredConfirmations,
     isSettled: isSubmittedInputSettled,
-    refresh: refreshWhilePending,
+  });
+
+  // The platform tells us when an agreement moves, so the page listens rather
+  // than polling for a change it has already been notified about. A reconnect
+  // re-reads once, because anything delivered while the socket was down was
+  // missed.
+  const rereadAgreement = React.useCallback(async () => {
+    await Promise.allSettled([refreshState(), refreshInputs()]);
+  }, [refreshState, refreshInputs]);
+  useAgreementEventStream({
+    agreementId: record?.id,
+    onEvent: () => void rereadAgreement(),
+    onReconnect: () => void rereadAgreement(),
   });
   const captureDiagnostic = useWalletDiagnostics();
 

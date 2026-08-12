@@ -16,9 +16,10 @@ import { usePublicClient } from "wagmi";
  *   poll cycle and commit. Indeterminate and usually brief; reporting it as
  *   "confirmed" would promise a state change that has not landed yet.
  *
- * Reaching the boundary is not the same as the projection having happened,
- * which is why the caller keeps refreshing until the input is settled rather
- * than trusting the count alone.
+ * Reaching the boundary is not the same as the projection having happened, so
+ * settlement is decided by the input record turning FINALIZED — announced by
+ * the `agreement.transitioned` webhook — rather than by arithmetic on block
+ * numbers. The head is read here only to drive the counter.
  */
 export type InputFinalityPhase = "idle" | "confirming" | "finalizing" | "settled";
 
@@ -46,10 +47,8 @@ export function useInputFinalityProgress(options: {
   requiredConfirmations?: number;
   /** True once the tracked input is observed as settled by the API. */
   isSettled: (input: TrackedInput) => boolean;
-  /** Re-read state and inputs; called while waiting for the projection. */
-  refresh: () => Promise<void>;
 }): InputFinalityProgress {
-  const { requiredConfirmations, isSettled, refresh } = options;
+  const { requiredConfirmations, isSettled } = options;
   const publicClient = usePublicClient();
 
   const [tracked, setTracked] = React.useState<TrackedInput | null>(null);
@@ -107,11 +106,8 @@ export function useInputFinalityProgress(options: {
           setPhase("finalizing");
         }
       } catch {
-        // A failed head read is not worth surfacing; the next tick retries and
-        // the API refresh below is what actually resolves the wait.
-      }
-      if (!cancelled) {
-        await refresh().catch(() => undefined);
+        // A failed head read is not worth surfacing; the next tick retries, and
+        // settlement is announced by the webhook stream regardless.
       }
     };
 
@@ -121,7 +117,7 @@ export function useInputFinalityProgress(options: {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [tracked, phase, publicClient, required, refresh]);
+  }, [tracked, phase, publicClient, required]);
 
   return {
     phase,

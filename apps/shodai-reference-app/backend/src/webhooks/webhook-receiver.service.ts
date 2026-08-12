@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { StandaloneConfigService } from '../config/standalone-config.service';
 import { WebhookEventRepository } from '../database/repositories/webhook-event.repository';
+import { AgreementEventStreamService } from './agreement-event-stream.service';
 import type {
   ShodaiWebhookEvent,
   WebhookHeaders,
@@ -19,6 +20,7 @@ export class WebhookReceiverService {
   constructor(
     private readonly config: StandaloneConfigService,
     private readonly webhookEvents: WebhookEventRepository,
+    private readonly stream: AgreementEventStreamService,
   ) {}
 
   async receive(rawBody: WebhookRawBody, headers: WebhookHeaders): Promise<void> {
@@ -47,6 +49,21 @@ export class WebhookReceiverService {
 
     if (!inserted) {
       await this.webhookEvents.recordDuplicateDelivery(event.id);
+      // Deliveries are at-least-once, so a repeat carries no new information
+      // for an open page. Dropping it here is the same dedupe an integrator
+      // has to do on the delivery id.
+      return;
+    }
+
+    const agreementId = (event as { data?: { agreementId?: unknown } }).data?.agreementId;
+    if (typeof agreementId === 'string' && agreementId) {
+      const sequence = (event as { data?: { sequence?: unknown } }).data?.sequence;
+      this.stream.publish({
+        type: event.type,
+        agreementId,
+        ...(typeof sequence === 'number' ? { sequence } : {}),
+        receivedAt: now,
+      });
     }
   }
 
