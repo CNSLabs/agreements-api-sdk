@@ -429,7 +429,7 @@ Input history filters:
 
 - `userId`: platform user ID associated with the submission
 - `inputId`: input ID defined in the agreement JSON
-- `status`: input submission status: `PENDING`, `MINED`, or `FAILED`
+- `status`: input submission status: `PENDING`, `FINALIZED`, or `FAILED`
 - `createdAt` and `updatedAt`: date filters with `gt`, `gte`, `lt`, and `lte`
 - `sort`: one sort field: `createdAt` or `updatedAt`
 - `limit`: page size

@@ -362,7 +362,7 @@ test('Agreements API client emits the outbound external API contract used by the
         return jsonResponse(201, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: init.body ? JSON.parse(String(init.body)).chainId : undefined, state: 'Active' }));
       }
       if (String(url).endsWith('/input')) {
-        return jsonResponse(201, successEnvelope({ agreementAddress: 'agr_1', inputId: 'submit', status: 'MINED' }));
+        return jsonResponse(201, successEnvelope({ agreementAddress: 'agr_1', inputId: 'submit', status: 'PENDING' }));
       }
       if (String(url).endsWith('/agr_1')) {
         return jsonResponse(200, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: 59141, state: 'Active' }));
@@ -700,7 +700,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
       agreementAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       inputId: 'accept',
       txHash: `0x${'1'.repeat(64)}`,
-      status: 'MINED',
+      status: 'FINALIZED',
       values: { index },
       createdAt: now,
       updatedAt: new Date(Date.now() + index).toISOString(),
@@ -721,7 +721,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
       agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       inputId: 'legacyAccept',
       txHash: legacyTxHash,
-      status: 'MINED',
+      status: 'FINALIZED',
       values: { before: true },
       createdAt: now,
       updatedAt: now,
@@ -733,7 +733,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
         agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         inputId: 'legacyAccept',
         txHash: normalizedLegacyTxHash,
-        status: 'MINED',
+        status: 'FINALIZED',
         values: { after: true },
         createdAt: now,
         updatedAt: now,
@@ -1320,7 +1320,7 @@ test('Nest backend persists template access through Mongo-backed admin module', 
     });
     const inputBody = await readJsonResponse(inputResponse);
     assert.equal(inputResponse.status, 201, JSON.stringify(inputBody));
-    assert.equal(inputBody.status, 'MINED');
+    assert.equal(inputBody.status, 'PENDING');
 
     const stateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/state`, {
       headers: { authorization: `Bearer ${token}` },
@@ -1555,7 +1555,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
         txHash: `0x${String(inputSubmissionCount).repeat(64)}`,
         payload: '0x',
         values: body?.values || {},
-        status: 'MINED',
+        status: 'PENDING',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -1734,7 +1734,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
     });
     const submitBody = await readJsonResponse(submitResponse);
     assert.equal(submitResponse.status, 201, JSON.stringify(submitBody));
-    assert.equal(submitBody.status, 'MINED');
+    assert.equal(submitBody.status, 'PENDING');
 
     const inputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/inputs?userId=platform-user-bridge`, {
       headers: { authorization: `Bearer ${token}` },
@@ -1777,7 +1777,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
     });
     const stateFailureSubmitBody = await readJsonResponse(stateFailureSubmitResponse);
     assert.equal(stateFailureSubmitResponse.status, 201, `${JSON.stringify(stateFailureSubmitBody)}\n${logs}`);
-    assert.equal(stateFailureSubmitBody.status, 'MINED');
+    assert.equal(stateFailureSubmitBody.status, 'PENDING');
     assert.equal(
       await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoiceAfterStateFailure' }),
       1,
@@ -1887,7 +1887,7 @@ test('Reference app scopes deployed agreement lookup and input mirrors by chain'
       txHash: sharedTxHash,
       payload: '0x',
       values: { chain: 'linea' },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-04T10:00:00.000Z',
       updatedAt: '2026-06-04T10:00:00.000Z',
     }],
@@ -1899,7 +1899,7 @@ test('Reference app scopes deployed agreement lookup and input mirrors by chain'
       txHash: sharedTxHash,
       payload: '0x',
       values: { chain: 'base' },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-04T10:01:00.000Z',
       updatedAt: '2026-06-04T10:01:00.000Z',
     }],
@@ -2135,7 +2135,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
         txHash: `0x${'6'.repeat(64)}`,
         payload: '0x',
         values: { partyBSignature: 'Webhook reconciled party B signature' },
-        status: 'MINED',
+        status: 'FINALIZED',
         createdAt: '2026-06-02T18:01:00.000Z',
         updatedAt: '2026-06-02T18:01:00.000Z',
       },
@@ -2148,7 +2148,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
         txHash: `0x${'8'.repeat(64)}`,
         payload: '0x',
         values: { finalSignature: 'Webhook reconciled final signature' },
-        status: 'MINED',
+        status: 'FINALIZED',
         createdAt: '2026-06-02T18:02:00.000Z',
         updatedAt: '2026-06-02T18:02:00.000Z',
       },
@@ -2162,7 +2162,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'9'.repeat(64)}`,
       payload: '0x',
       values: { raceAccepted: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:03:00.000Z',
       updatedAt: '2026-06-02T18:03:00.000Z',
     }],
@@ -2175,7 +2175,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'a'.repeat(64)}`,
       payload: '0x',
       values: { failRecovered: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:04:00.000Z',
       updatedAt: '2026-06-02T18:04:00.000Z',
     }],
@@ -2188,7 +2188,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'b'.repeat(64)}`,
       payload: '0x',
       values: { deadRecovered: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:05:00.000Z',
       updatedAt: '2026-06-02T18:05:00.000Z',
     }],

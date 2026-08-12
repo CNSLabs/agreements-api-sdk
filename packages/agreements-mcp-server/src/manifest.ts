@@ -92,7 +92,7 @@ export const AGREEMENTS_MCP_TOOLS: readonly AgreementsMcpToolDefinition[] = [
     name: 'get_input_history',
     title: 'Get input history',
     description:
-      'Returns recorded input submissions for an agreement, with pagination and filtering. Use this to inspect which events have been submitted and whether each is PENDING, MINED, or FAILED.',
+      'Returns recorded input submissions for an agreement, with pagination and filtering. Use this to inspect which events have been submitted and whether each is PENDING, FINALIZED, or FAILED.',
     method: 'GET',
     path: '/v0/agreements/{id}/inputs',
     operationId: 'listAgreementInputs',

@@ -561,7 +561,7 @@ export class ExternalAgreementsService {
       blockNumber: undefined,
       payload: '0x',
       values: body.values || {},
-      status: 'MINED',
+      status: 'PENDING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

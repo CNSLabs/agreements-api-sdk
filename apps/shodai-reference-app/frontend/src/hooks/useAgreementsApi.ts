@@ -65,7 +65,7 @@ export type AgreementInputRecordApi = {
   blockNumber?: number;
   payload: string;
   values: Record<string, unknown>;
-  status: "PENDING" | "MINED" | "FAILED" | string;
+  status: "PENDING" | "FINALIZED" | "FAILED" | string;
   createdAt?: string;
   updatedAt?: string;
 };

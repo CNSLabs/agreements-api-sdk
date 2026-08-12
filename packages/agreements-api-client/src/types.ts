@@ -134,7 +134,7 @@ export type AgreementListParams = {
 export type AgreementInputListParams = {
   userId?: string;
   inputId?: string;
-  status?: 'PENDING' | 'MINED' | 'FAILED';
+  status?: 'PENDING' | 'FINALIZED' | 'FAILED';
   createdAt?: DateFilter;
   updatedAt?: DateFilter;
   sort?: SortFilter<AgreementInputListSortField>;
@@ -262,7 +262,7 @@ export type AgreementInputRecord = {
   error?: string;
   createdAt: string;
   updatedAt: string;
-  status: 'PENDING' | 'MINED' | 'FAILED';
+  status: 'PENDING' | 'FINALIZED' | 'FAILED';
 };
 
 export type ProcessInputRequest = {
