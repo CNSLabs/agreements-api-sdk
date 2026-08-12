@@ -18,6 +18,17 @@ export function useAgreementActivity({
   const [activityLoading, setActivityLoading] = React.useState(false);
   const [activityError, setActivityError] = React.useState<string | null>(null);
 
+  // Activity belongs to one agreement. Without this, navigating to another one
+  // shows the previous agreement's inputs until the refetch lands, and keeps a
+  // failure that has nothing to do with what is now on screen — the error is
+  // only ever cleared by a successful refetch of the same agreement.
+  const agreementKey = record?.id || id || "";
+  React.useEffect(() => {
+    setActivityInputs([]);
+    setActivityError(null);
+    setActivityLoading(false);
+  }, [agreementKey]);
+
   // Create activity list with initialization event as last item
   const activityWithInit = React.useMemo(() => {
     if (!record) return activityInputs;
@@ -56,6 +67,15 @@ export function useAgreementActivity({
   const refreshInputs = React.useCallback(async () => {
     const inputsId = record?.id || id || "";
     if (!inputsId) return;
+    // An agreement that is not deployed has no on-chain history, and the
+    // platform has no record to answer for — asking anyway returns a 404 that
+    // surfaces as a failure banner on what is simply an empty history.
+    if (record && record.status !== "Deployed") {
+      setActivityInputs([]);
+      setActivityError(null);
+      setActivityLoading(false);
+      return;
+    }
     setActivityError(null);
     setActivityLoading(true);
     try {
@@ -87,7 +107,7 @@ export function useAgreementActivity({
     } finally {
       setActivityLoading(false);
     }
-  }, [record?.id, id, record?.json, getInputs, formatPaymentAmount]);
+  }, [record?.id, record?.status, id, record?.json, getInputs, formatPaymentAmount]);
 
   return {
     activityInputs,
