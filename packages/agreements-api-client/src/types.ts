@@ -233,6 +233,12 @@ export type NotificationAttachmentStrategy = {
 export type AgreementStateResponse = {
   status: 'Draft' | 'Deployed';
   state: string | null;
+  /**
+   * Confirmations an input needs before it is treated as settled and the state
+   * advances. Combine with an input's `blockNumber` and the chain head to show
+   * progress while that input is `PENDING`.
+   */
+  requiredConfirmations?: number;
 };
 
 export type AgreementDocumentResponse = {

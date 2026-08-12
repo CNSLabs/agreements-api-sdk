@@ -87,6 +87,9 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
   // Core agreement data state
   const [record, setRecord] = React.useState<AgreementRecordApi | null>(null);
   const [currentState, setCurrentState] = React.useState<string | null>(null);
+  // How many confirmations an input needs before the projection settles it and
+  // the state advances. Server-supplied so the UI never hardcodes it.
+  const [requiredConfirmations, setRequiredConfirmations] = React.useState<number | undefined>(undefined);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [participants, setParticipants] = React.useState<ParticipantApi[]>([]);
   const [deployApprovalWarning, setDeployApprovalWarning] = React.useState<string | null>(null);
@@ -166,6 +169,9 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     if (!stateId) return;
     const json = await getState(stateId);
     if (json?.state) setCurrentState(json.state);
+    if (typeof json?.requiredConfirmations === "number") {
+      setRequiredConfirmations(json.requiredConfirmations);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]); // Only depend on id, not record?.address, to prevent recreation loops
 
@@ -285,6 +291,7 @@ export function useAgreementData({ form }: UseAgreementDataParams) {
     record,
     agreementJson,
     currentState,
+    requiredConfirmations,
     participants,
     agreementAddress,
     loadError,

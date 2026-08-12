@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Controller, Control, FieldErrors } from "react-hook-form";
+import { InputFinalityStatus } from "@/components/agreement/InputFinalityStatus";
+import type { InputFinalityProgress } from "@/hooks/agreement/useInputFinalityProgress";
 import { createPublicClient, formatUnits, http, isAddress, keccak256, stringToHex } from "viem";
 import { Button } from "@/subframe/components/Button";
 import { Loader } from "@/subframe/components/Loader";
@@ -246,6 +248,7 @@ export interface AgreementActionsTabProps {
   handleActionConfirmSubmit: () => void;
   handleActionDialogChange: (open: boolean) => void;
   isWorking: boolean;
+  finality: InputFinalityProgress;
   isActionConfirmOpen: boolean;
   showActionSuccessModal: boolean;
   lastSubmittedAction: {
@@ -299,6 +302,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
     handleActionConfirmSubmit,
     handleActionDialogChange,
     isWorking,
+    finality,
     isActionConfirmOpen,
     showActionSuccessModal,
     lastSubmittedAction,
@@ -835,6 +839,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                 </div>
               )}
               <div className="flex h-px w-full flex-none flex-col items-center gap-2 bg-neutral-border" />
+              <InputFinalityStatus progress={finality} />
               <Button
                 className="h-10 w-full flex-none"
                 variant="brand-primary"

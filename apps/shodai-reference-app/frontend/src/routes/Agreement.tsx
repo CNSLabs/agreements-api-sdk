@@ -124,6 +124,7 @@ const Agreement: React.FC = () => {
     record,
     agreementJson,
     currentState,
+    requiredConfirmations,
     participants,
     agreementAddress,
     loadError,
@@ -195,6 +196,7 @@ const Agreement: React.FC = () => {
   const {
     activeInputId,
     isWorking,
+    finality,
     isActionConfirmOpen,
     showActionSuccessModal,
     lastSubmittedAction,
@@ -227,6 +229,8 @@ const Agreement: React.FC = () => {
     refreshAgreement,
     refreshState,
     refreshInputs,
+    requiredConfirmations,
+    submittedInputs: activityInputs,
   });
 
   React.useEffect(() => {
@@ -615,6 +619,7 @@ const Agreement: React.FC = () => {
                 record={record}
                 agreementJson={agreementJson}
                 currentState={currentState}
+                finality={finality}
                 stateLabel={stateLabel}
                 previousStateId={previousStateId}
                 previousStateLabel={previousStateLabel}

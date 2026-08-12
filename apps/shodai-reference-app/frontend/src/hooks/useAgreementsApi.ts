@@ -133,7 +133,7 @@ export function useAgreementsApi() {
     async (id: string) => {
       return apiCall(async () => {
         const axiosInstance = await createInstance();
-        const res = await axiosInstance.get<{ status?: string; state?: string }>(`/agreements/${id}/state`);
+        const res = await axiosInstance.get<{ status?: string; state?: string; requiredConfirmations?: number }>(`/agreements/${id}/state`);
         return res.data;
       });
     },
