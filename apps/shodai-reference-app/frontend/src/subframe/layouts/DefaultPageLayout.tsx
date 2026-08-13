@@ -15,6 +15,8 @@ import { useAccount as useWagmiAccount, usePublicClient, useSwitchChain } from "
 import { FeatherLogOut } from "@subframe/core";
 import { FeatherSettings2 } from "@subframe/core";
 import { FeatherUser } from "@subframe/core";
+import { FeatherWallet } from "@subframe/core";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { DropdownMenu } from "../components/DropdownMenu";
 import { TopbarWithTabs } from "../components/TopbarWithTabs";
 import { UserAccountMenu } from "../components/UserAccountMenu";
@@ -39,6 +41,7 @@ const DefaultPageLayoutRoot = React.forwardRef<
   ref
 ) {
   const { address, disconnect } = useLogin();
+  const { setShowDynamicUserProfile } = useDynamicContext();
   const navigate = useNavigate();
   const location = useLocation();
   const publicClient = usePublicClient();
@@ -126,6 +129,12 @@ const DefaultPageLayoutRoot = React.forwardRef<
                   <>
                     <DropdownMenu.DropdownItem icon={<FeatherUser />}>
                       Profile
+                    </DropdownMenu.DropdownItem>
+                    <DropdownMenu.DropdownItem
+                      icon={<FeatherWallet />}
+                      onSelect={() => setShowDynamicUserProfile(true)}
+                    >
+                      Manage wallets
                     </DropdownMenu.DropdownItem>
                     <DropdownMenu.DropdownItem icon={<FeatherSettings2 />}>
                       Settings

@@ -2,6 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Controller, Control, FieldErrors } from "react-hook-form";
 import { InputFinalityStatus } from "@/components/agreement/InputFinalityStatus";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import type { InputFinalityProgress } from "@/hooks/agreement/useInputFinalityProgress";
 import { createPublicClient, formatUnits, http, isAddress, keccak256, stringToHex } from "viem";
 import { Button } from "@/subframe/components/Button";
@@ -269,6 +270,7 @@ export interface AgreementActionsTabProps {
 
 export function AgreementActionsTab(props: AgreementActionsTabProps) {
   const captureDiagnostic = useWalletDiagnostics();
+  const { setShowDynamicUserProfile } = useDynamicContext();
   const {
     record,
     agreementJson,
@@ -717,6 +719,15 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                               .join(" or ")}. You have ${shortAddress(address)} connected — switch to an eligible wallet to act on this step.`
                           : `Your connected wallet ${shortAddress(address)} is not assigned to any of this step's actions, and their assigned wallets are not identifiable yet. Check the Participants section for who acts next.`}
                     </span>
+                    {address ? (
+                      <Button
+                        size="small"
+                        variant="neutral-secondary"
+                        onClick={() => setShowDynamicUserProfile(true)}
+                      >
+                        Manage wallets
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
