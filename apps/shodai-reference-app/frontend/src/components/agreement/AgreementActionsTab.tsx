@@ -411,6 +411,29 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
       allInputIds.map((inputId) => [inputId, inputs[inputId] ?? null]),
     );
   }, [agreementJson, nonPerformableInputIds, performableInputIds]);
+  // The wallets that could sign this step's actions, for the ineligibility
+  // notice. Eligibility is purely which wallet is connected — the signed-in
+  // account is irrelevant here — so the notice must name addresses, not send
+  // the user off to check their login.
+  const currentStepIssuerAddresses = React.useMemo(() => {
+    const seen = new Set<string>();
+    const addresses: string[] = [];
+    for (const inputDef of Object.values(availableCurrentStepInputs)) {
+      const resolved = resolveIssuerAddresses(
+        (inputDef as any)?.issuer,
+        record?.variables as Record<string, unknown> | undefined,
+        form.getValues() as Record<string, unknown>,
+      );
+      for (const issuerAddr of resolved) {
+        const normalized = issuerAddr.toLowerCase();
+        if (!seen.has(normalized)) {
+          seen.add(normalized);
+          addresses.push(issuerAddr);
+        }
+      }
+    }
+    return addresses;
+  }, [availableCurrentStepInputs, form, record?.variables]);
   const retainerBalanceLookup = React.useMemo(
     () =>
       getRetainerBalanceLookup({
@@ -679,12 +702,20 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                   <FeatherAlertTriangle className="text-body font-body text-warning-600" />
                   <div className="flex grow shrink-0 basis-0 flex-col items-start gap-1">
                     <span className="text-body-bold font-body-bold text-default-font">
-                      {address ? "No actions available for this account" : "Connect a wallet to view eligible actions"}
+                      {!address
+                        ? "Connect a wallet to view eligible actions"
+                        : currentStepIssuerAddresses.length > 0
+                          ? "A different wallet is needed for this step"
+                          : "No actions available for your connected wallet"}
                     </span>
                     <span className="text-caption font-caption text-subtext-color">
-                      {address
-                        ? "You are not assigned any of the roles with available actions for this step. Check that you are logged in with the correct account if you believe this is an error."
-                        : "Connect a wallet to see which actions you can take for this step. You can still reveal the other available actions with the eye icon."}
+                      {!address
+                        ? "Connect a wallet to see which actions you can take for this step. You can still reveal the other available actions with the eye icon."
+                        : currentStepIssuerAddresses.length > 0
+                          ? `This step's actions can be signed by ${currentStepIssuerAddresses
+                              .map((issuerAddr) => shortAddress(issuerAddr))
+                              .join(" or ")}. You have ${shortAddress(address)} connected — switch to an eligible wallet to act on this step.`
+                          : `Your connected wallet ${shortAddress(address)} is not assigned to any of this step's actions, and their assigned wallets are not identifiable yet. Check the Participants section for who acts next.`}
                     </span>
                   </div>
                 </div>

@@ -4,7 +4,7 @@ import { StandaloneConfigService } from '../config/standalone-config.service';
 import { AgreementRepository } from '../database/repositories/agreement.repository';
 import { AgreementInputRepository } from '../database/repositories/agreement-input.repository';
 import { ExternalApiEventRepository } from '../database/repositories/external-api-event.repository';
-import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields } from '../agreements/agreement-utils';
+import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields, resolveInputIssuerAddresses } from '../agreements/agreement-utils';
 import { NotificationCatalogService } from '../notifications/notification-catalog.service';
 import type { AgreementTransitionedWebhookEvent } from '@shodai-network/agreements-api-client/webhooks';
 import type { ApiClient, AgreementInputRecord } from '@shodai-network/agreements-api-client';
@@ -214,7 +214,7 @@ export class ExternalAgreementsService {
   async submitInput(id: string, body: any, user: any, options: { chainId?: unknown } = {}) {
     const agreement = await this.getReadableAgreement(id, user, options);
     if (agreement.status !== 'Deployed') throw new ConflictException('Cannot submit inputs to a Draft agreement. Deploy it first.');
-    this.assertPermitSignerAuthorized(body.signer, user);
+    this.assertSignerMayIssueInput(agreement, body);
 
     const externalAgreementId = agreement.externalAgreementId || agreement.id;
     const previousState = agreement.state;
@@ -507,6 +507,39 @@ export class ExternalAgreementsService {
       || (email && (agreement.participants || []).some((entry: any) => normalizeEmail(entry.email || '') === email));
     if (!canRead) throw new ForbiddenException('You do not have access to this agreement');
     return agreement;
+  }
+
+  /**
+   * Inputs are signed by whichever wallet the agreement names as the input's
+   * issuer, not necessarily by a wallet on the submitting user's account —
+   * users bring their own EOAs, and the EIP-712 permit is what proves key
+   * control. So this checks the signer against the agreement's issuer rule
+   * rather than against the user's wallets (which is why it differs from the
+   * deploy-time assertPermitSignerAuthorized below).
+   *
+   * The issuer may resolve from a variable this very input assigns (a
+   * counterparty joining), so submitted values are merged over the stored
+   * variables. When no issuer resolves at all the check defers to the chain,
+   * where the permit signature is verified regardless.
+   */
+  private assertSignerMayIssueInput(agreement: any, body: any) {
+    const signer = normalizeAddress(body.signer);
+    if (!signer) throw new BadRequestException('Signer must be a valid wallet address');
+
+    const inputDef = agreement.json?.execution?.inputs?.[body.inputId];
+    if (!inputDef) return;
+
+    const issuerAddresses = resolveInputIssuerAddresses(inputDef.issuer, {
+      ...(agreement.variables || {}),
+      ...(body.values || {}),
+    });
+    if (issuerAddresses.length === 0) return;
+
+    if (!issuerAddresses.includes(signer)) {
+      throw new ForbiddenException(
+        `Input "${body.inputId}" must be signed by ${issuerAddresses.join(' or ')}; the permit was signed by ${signer}. Connect the expected wallet and sign again.`,
+      );
+    }
   }
 
   private assertPermitSignerAuthorized(signer: string, user: any) {

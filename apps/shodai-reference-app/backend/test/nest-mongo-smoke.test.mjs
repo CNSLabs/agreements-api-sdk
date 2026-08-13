@@ -1694,7 +1694,10 @@ test('Reference app external bridge uses the real API client surface and mirrors
       },
       execution: {
         initialState: 'AWAITING_INPUT',
-        inputs: { submitInvoice: {} },
+        inputs: {
+          submitInvoice: {},
+          issuerGatedInput: { issuer: '${variables.clientWalletAddress}' },
+        },
         states: { AWAITING_INPUT: {}, COMPLETE: {} },
       },
     };
@@ -1857,6 +1860,53 @@ test('Reference app external bridge uses the real API client surface and mirrors
       await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoiceAfterStateFailure' }),
       1,
     );
+
+    // When the agreement names an issuer for an input, the permit must be
+    // signed by that wallet — not merely by a wallet on the submitting user's
+    // account. The rejection happens before any external call, so nothing is
+    // added to the externalCalls ledger asserted below.
+    const issuerMismatchResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'issuerGatedInput',
+        values: {},
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'5'.repeat(64)}`, s: `0x${'6'.repeat(64)}` },
+      }),
+    });
+    const issuerMismatchBody = await readJsonResponse(issuerMismatchResponse);
+    assert.equal(issuerMismatchResponse.status, 403, JSON.stringify(issuerMismatchBody));
+    assert.match(issuerMismatchBody.message, new RegExp(participant));
+    assert.match(issuerMismatchBody.message, new RegExp(owner));
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'issuerGatedInput' }), 0);
+
+    // Submitted values are merged over stored variables when resolving the
+    // issuer, so an input that reassigns its own issuer variable is judged
+    // against the incoming value, not the stale stored one.
+    const reassignedIssuer = '0x3333333333333333333333333333333333333333';
+    const issuerReassignedResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'issuerGatedInput',
+        values: { clientWalletAddress: reassignedIssuer },
+        signer: participant,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'5'.repeat(64)}`, s: `0x${'6'.repeat(64)}` },
+      }),
+    });
+    const issuerReassignedBody = await readJsonResponse(issuerReassignedResponse);
+    assert.equal(issuerReassignedResponse.status, 403, JSON.stringify(issuerReassignedBody));
+    assert.match(issuerReassignedBody.message, new RegExp(reassignedIssuer));
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'issuerGatedInput' }), 0);
 
     const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',

@@ -50,6 +50,48 @@ export function nextState(agreement: any, currentState: string | undefined, inpu
   return undefined;
 }
 
+function normalizeIssuerEntries(issuer: unknown): string[] {
+  if (typeof issuer === 'string') return issuer.trim() ? [issuer] : [];
+  if (!Array.isArray(issuer)) return [];
+  return issuer.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+}
+
+/**
+ * Resolve an input definition's `issuer` entries to wallet addresses. Entries
+ * are either literal addresses or `${variables.key}` references, resolved
+ * against the given variable sources in order (first source with a valid
+ * address wins per entry). Mirrors the frontend's resolveIssuerAddresses in
+ * frontend/src/utils/agreementsUi.ts — keep the two in sync.
+ *
+ * Returns normalized lowercase addresses; entries that resolve to nothing are
+ * dropped, so an empty result means the issuer is unknown, not that no one may
+ * sign.
+ */
+export function resolveInputIssuerAddresses(
+  issuer: unknown,
+  ...variableSources: Array<Record<string, unknown> | undefined>
+): string[] {
+  const addresses = new Set<string>();
+  for (const entry of normalizeIssuerEntries(issuer)) {
+    const literal = normalizeAddress(entry);
+    if (literal) {
+      addresses.add(literal);
+      continue;
+    }
+    const varKey = entry.match(/\$\{variables\.(\w+)/)?.[1];
+    if (!varKey) continue;
+    for (const source of variableSources) {
+      const value = source?.[varKey];
+      const resolved = typeof value === 'string' ? normalizeAddress(value) : '';
+      if (resolved) {
+        addresses.add(resolved);
+        break;
+      }
+    }
+  }
+  return [...addresses];
+}
+
 export function normalizeEmailList(values: unknown): string[] {
   return [...new Set((Array.isArray(values) ? values : []).map((value) => normalizeEmail(String(value || ''))).filter(Boolean))];
 }
