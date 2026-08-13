@@ -12,8 +12,41 @@ import type { InputFinalityProgress } from "@/hooks/agreement/useInputFinalityPr
  * indeterminate phase for the short gap between the boundary and the
  * projection landing.
  */
-export function InputFinalityStatus({ progress }: { progress: InputFinalityProgress }) {
-  if (progress.phase === "idle") return null;
+export function InputFinalityStatus({
+  progress,
+  pendingWithoutProgress = false,
+}: {
+  progress: InputFinalityProgress;
+  /**
+   * True when a PENDING input exists but this session is not tracking it —
+   * the page was reloaded after submitting, so there is no confirmation count
+   * to show. Renders an indeterminate waiting notice instead of nothing.
+   */
+  pendingWithoutProgress?: boolean;
+}) {
+  if (progress.phase === "idle" && !pendingWithoutProgress) return null;
+
+  if (progress.phase === "idle") {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          padding: "12px 14px",
+          borderRadius: 8,
+          border: "1px solid var(--neutral-border, #e5e7eb)",
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 500 }}>Awaiting on-chain confirmations</span>
+        <span style={{ fontSize: 12, opacity: 0.75 }}>
+          A submitted input is waiting to become final. The agreement state updates once it is.
+        </span>
+      </div>
+    );
+  }
 
   const { phase, confirmations, requiredConfirmations } = progress;
   const determinate = phase === "confirming" && requiredConfirmations > 0;

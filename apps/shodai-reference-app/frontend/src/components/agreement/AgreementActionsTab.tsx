@@ -41,7 +41,7 @@ import { isReadOnlyLongTextVariable } from "./readOnlyLongTextLogic";
 import { resolveSummaryVariableDefinition } from "./summaryVariableDefinition";
 import type { ParticipantApi, AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import type { AgreementInputRecordApi } from "@/hooks/useAgreementsApi";
-import { extractIssuerVariableKeys, resolveIssuerAddresses } from "@/utils/agreementsUi";
+import { extractIssuerVariableKeys, resolveIssuerAddresses, toMillis } from "@/utils/agreementsUi";
 import { getChainConfig, getDefaultChainConfig } from "@/utils/chainConfig";
 import { formatOnchainReferenceValue } from "@/utils/onchainReferences";
 import {
@@ -413,6 +413,26 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
       allInputIds.map((inputId) => [inputId, inputs[inputId] ?? null]),
     );
   }, [agreementJson, nonPerformableInputIds, performableInputIds]);
+  // A submission that has not finalized yet means the state may change at any
+  // moment: signing the same input again would duplicate it, and signing a
+  // fresh permit starts a separate durable operation. The finality hook covers
+  // submissions made in this session; a recent PENDING mirror row covers the
+  // page being reloaded mid-wait. Rows older than the tracker's own give-up
+  // window are treated as stuck rather than in flight, so a failed submission
+  // cannot lock the form forever.
+  const PENDING_INPUT_FRESHNESS_MS = 15 * 60_000;
+  const hasRecentPendingInput = React.useMemo(
+    () =>
+      activityInputs.some(
+        (input) =>
+          input.status === "PENDING" &&
+          Date.now() - toMillis(input.createdAt) < PENDING_INPUT_FRESHNESS_MS,
+      ),
+    [activityInputs, PENDING_INPUT_FRESHNESS_MS],
+  );
+  const isAwaitingFinality =
+    finality.phase === "confirming" || finality.phase === "finalizing" || hasRecentPendingInput;
+
   // The wallets that could sign this step's actions, for the ineligibility
   // notice. Eligibility is purely which wallet is connected — the signed-in
   // account is irrelevant here — so the notice must name addresses, not send
@@ -868,7 +888,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                             onChange={(value) => field.onChange(value)}
                             onBlur={field.onBlur}
                             error={(errors as any)?.[fieldKey]}
-                            disabled={!canSignActiveInput}
+                            disabled={!canSignActiveInput || isAwaitingFinality}
                             showError={true}
                             convertDateTime={toDatetimeLocal}
                             useTextArea={false}
@@ -881,16 +901,16 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                 </div>
               )}
               <div className="flex h-px w-full flex-none flex-col items-center gap-2 bg-neutral-border" />
-              <InputFinalityStatus progress={finality} />
+              <InputFinalityStatus progress={finality} pendingWithoutProgress={hasRecentPendingInput} />
               <Button
                 className="h-10 w-full flex-none"
                 variant="brand-primary"
                 size="large"
                 icon={isWorking ? <Loader size="small" /> : <FeatherBlocks />}
                 onClick={handleClickSubmitAction}
-                disabled={!activeInputId || !hasWalletClient || !hasPublicClient || isWorking || !canSignActiveInput}
+                disabled={!activeInputId || !hasWalletClient || !hasPublicClient || isWorking || !canSignActiveInput || isAwaitingFinality}
               >
-                SIGN &amp; SUBMIT
+                {isAwaitingFinality ? "AWAITING CONFIRMATIONS" : "SIGN & SUBMIT"}
               </Button>
               {import.meta.env.DEV ? (
                 <Button
@@ -920,7 +940,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
         footer={
           <>
             <Button variant="neutral-secondary" size="large" onClick={() => handleActionDialogChange(false)} disabled={isWorking}>Cancel</Button>
-            <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={() => void handleActionConfirmSubmit()} disabled={isWorking || !canSignActiveInput}>Sign &amp; Submit</Button>
+            <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={() => void handleActionConfirmSubmit()} disabled={isWorking || !canSignActiveInput || isAwaitingFinality}>Sign &amp; Submit</Button>
           </>
         }
       >
