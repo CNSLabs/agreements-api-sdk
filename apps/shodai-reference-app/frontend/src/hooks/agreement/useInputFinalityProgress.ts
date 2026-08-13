@@ -93,17 +93,41 @@ export function useInputFinalityProgress(options: {
         return;
       }
       try {
-        if (publicClient && typeof tracked.blockNumber === "number") {
+        // A PENDING submission response carries no block number — the API
+        // answers before caring about confirmations — so learn it from the
+        // transaction receipt. The API waited for inclusion before
+        // responding, so the receipt is normally available on the first ask.
+        let blockNumber = tracked.blockNumber;
+        if (typeof blockNumber !== "number" && publicClient && tracked.txHash) {
+          try {
+            const receipt = await publicClient.getTransactionReceipt({
+              hash: tracked.txHash as `0x${string}`,
+            });
+            blockNumber = Number(receipt.blockNumber);
+            if (!cancelled) {
+              setTracked((current) =>
+                current && current.txHash === tracked.txHash
+                  ? { ...current, blockNumber }
+                  : current,
+              );
+            }
+          } catch {
+            // Not indexed yet; keep counting as unknown and retry next tick.
+          }
+        }
+        if (cancelled) return;
+        if (publicClient && typeof blockNumber === "number") {
           const head = Number(await publicClient.getBlockNumber());
-          const seen = Math.max(0, head - tracked.blockNumber + 1);
+          const seen = Math.max(0, head - blockNumber + 1);
           if (!cancelled) {
             setConfirmations(seen);
             setPhase(required > 0 && seen < required ? "confirming" : "finalizing");
           }
         } else if (!cancelled) {
-          // No block number yet, or no chain access: the wait is real but its
-          // length is unknowable from here.
-          setPhase("finalizing");
+          // Still no block number, or no chain access: confirmations are
+          // accumulating but uncountable from here. "Finalizing" would claim
+          // they are complete, which is not known to be true.
+          setPhase("confirming");
         }
       } catch {
         // A failed head read is not worth surfacing; the next tick retries, and
