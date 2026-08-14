@@ -659,7 +659,7 @@ const Agreement: React.FC = () => {
                 setActionError={setActionError}
                 setActionErrorReport={setActionErrorReport}
                 openPreviousInputAccordion={shouldOpenPreviousInput}
-                onReturnToOverview={() => { setShowActionSuccessModal(false); setLastSubmittedAction(null); navigateToTab("overview"); }}
+                onSuccessDialogClose={() => { setShowActionSuccessModal(false); setLastSubmittedAction(null); }}
               />
             ) : (
               <div className="flex max-w-[1280px] grow shrink-0 basis-0 flex-col items-center gap-4 self-stretch bg-default-background">

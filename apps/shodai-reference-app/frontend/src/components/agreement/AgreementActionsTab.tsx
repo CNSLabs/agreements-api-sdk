@@ -54,7 +54,6 @@ import {
   FeatherFormInput,
   FeatherMousePointerClick,
   FeatherStepBack,
-  FeatherArrowLeft,
   FeatherFileCheck,
   FeatherX,
 } from "@subframe/core";
@@ -265,7 +264,7 @@ export interface AgreementActionsTabProps {
   setActionError: (error: string | null) => void;
   setActionErrorReport: (report: string | null) => void;
   openPreviousInputAccordion: boolean;
-  onReturnToOverview: () => void;
+  onSuccessDialogClose: () => void;
 }
 
 export function AgreementActionsTab(props: AgreementActionsTabProps) {
@@ -315,7 +314,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
     setActionError,
     setActionErrorReport,
     openPreviousInputAccordion,
-    onReturnToOverview,
+    onSuccessDialogClose,
   } = props;
 
   const handlePreviewActionError = React.useCallback(() => {
@@ -989,13 +988,17 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
         )}
       </ConfirmFlowDialog>
 
+      {/* Closing keeps the user on the current-state page: the state change is
+          not applied until the finality window passes, and the progress tracker
+          they should watch is right here. Navigating away implied the
+          submission was already reflected, which it is not. */}
       <SuccessDialog
         open={showActionSuccessModal}
         onOpenChange={(open) => { if (!open) { setShowActionSuccessModal(false); setLastSubmittedAction(null); } }}
         title="Action Submitted"
         message={<>Your {lastSubmittedAction?.inputDisplayName || "action"} input has been successfully signed and submitted.</>}
         footer={
-          <Button variant="brand-primary" size="large" icon={<FeatherArrowLeft />} onClick={onReturnToOverview}>Return to Agreement</Button>
+          <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={onSuccessDialogClose}>Track Confirmation Progress</Button>
         }
       >
         {lastSubmittedAction && Object.keys(lastSubmittedAction.payload).length > 0 && (
