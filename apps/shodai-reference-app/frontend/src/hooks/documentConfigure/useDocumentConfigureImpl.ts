@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useUserWallets } from "@dynamic-labs/sdk-react-core";
 import type { UseFormReturn } from "react-hook-form";
 import type { AgreementRecordApi, ParticipantApi } from "@/hooks/useAgreementsApi";
 import type { DocumentConfigureViewModel, DocumentVariable, DeployValidationError } from "./types";
@@ -101,11 +102,24 @@ export function useDocumentConfigure({
     [participantsState.participantErrors]
   );
 
+  // Draft ownership is account-level, not active-wallet-level: the backend
+  // accepts any wallet on the signed-in account (getWritableDraft), and with
+  // wallet switching the active wallet routinely differs from the one that
+  // created the draft. Comparing against the active wallet alone locked the
+  // owner out of their own draft after they switched.
+  const userWallets = useUserWallets();
+  const isDraftOwnedByUser = React.useMemo(() => {
+    const owner = draft?.owner?.toLowerCase();
+    if (!owner) return true;
+    if (address && owner === address.toLowerCase()) return true;
+    return userWallets.some((wallet) => wallet.address?.toLowerCase() === owner);
+  }, [address, draft?.owner, userWallets]);
+
   const canClickDeploy = React.useMemo(() => {
     if (!hasWallet) return false;
     if (isWorking) return false;
     if (draft?.status !== "Draft") return false;
-    if (draft?.owner && address && draft.owner.toLowerCase() !== address.toLowerCase()) return false;
+    if (!isDraftOwnedByUser) return false;
     if (
       nonParticipantKeys.length > 0 &&
       Object.values(initValuesState.initFieldErrors).some((x) => !!x)
@@ -114,9 +128,8 @@ export function useDocumentConfigure({
     if (hasParticipantErrors) return false;
     return true;
   }, [
-    address,
     draft?.status,
-    draft?.owner,
+    isDraftOwnedByUser,
     hasParticipantErrors,
     initValuesState.initFieldErrors,
     nonParticipantKeys.length,
@@ -140,13 +153,13 @@ export function useDocumentConfigure({
     if (isWorking) return null;
     if (draft?.status !== "Draft") return null;
 
-    // Permission: not owner
-    if (draft?.owner && address && draft.owner.toLowerCase() !== address.toLowerCase()) {
+    // Permission: the draft's owner wallet is not on this account at all.
+    if (!isDraftOwnedByUser) {
       return {
         type: "permission",
         errorCount: 1,
         title: "You are not the owner",
-        description: "Only the owner of this draft can deploy the agreement.",
+        description: `This draft is owned by ${draft?.owner ?? "another wallet"}, which is not one of your linked wallets. Only the owner can deploy it.`,
         showReviewButton: false,
       };
     }
@@ -188,7 +201,7 @@ export function useDocumentConfigure({
     isWorking,
     draft?.status,
     draft?.owner,
-    address,
+    isDraftOwnedByUser,
     hasWallet,
     agreementNameState.agreementName,
     initValuesState.initFieldErrors,
