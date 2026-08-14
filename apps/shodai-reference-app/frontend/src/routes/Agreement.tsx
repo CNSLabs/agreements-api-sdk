@@ -22,6 +22,8 @@ import { useNotificationsApi } from "@/hooks/useNotificationsApi";
 import { useAgreementActivity } from "@/hooks/agreement/useAgreementActivity";
 import { useAgreementData, formatPaymentAmount as formatPaymentAmountForActivity } from "@/hooks/agreement/useAgreementData";
 import { useAgreementInputs } from "@/hooks/agreement/useAgreementInputs";
+import { useDeploymentFinalityProgress } from "@/hooks/agreement/useDeploymentFinalityProgress";
+import { DeploymentFinalityBanner } from "@/components/agreement/DeploymentFinalityBanner";
 import { getChainLabel } from "@/utils/chainConfig";
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {
@@ -231,6 +233,14 @@ const Agreement: React.FC = () => {
     refreshInputs,
     requiredConfirmations,
     submittedInputs: activityInputs,
+  });
+
+  // Deployment finality is display-only: the deploy answered after inclusion,
+  // and the worker recognizes the agreement once the finality boundary
+  // passes. The banner shows that window on every tab and then disappears.
+  const deploymentFinality = useDeploymentFinalityProgress({
+    record,
+    requiredConfirmations,
   });
 
   React.useEffect(() => {
@@ -581,6 +591,11 @@ const Agreement: React.FC = () => {
         }
       />
       <div ref={contentScrollRef} className="flex w-full grow shrink-0 basis-0 flex-col items-center gap-6 px-6 py-8 mobile:px-4 mobile:py-4 overflow-y-auto bg-neutral-50">
+        {deploymentFinality.tracking ? (
+          <div className="w-full max-w-[1280px]">
+            <DeploymentFinalityBanner progress={deploymentFinality} />
+          </div>
+        ) : null}
         {activeTab === "overview" ? (
           <AgreementOverviewTab
             record={record}

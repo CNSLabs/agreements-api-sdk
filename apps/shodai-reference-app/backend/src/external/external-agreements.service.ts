@@ -203,7 +203,13 @@ export class ExternalAgreementsService {
       variables: externalRecord.variables || externalValidation?.variables || initValues,
       participants: externalRecord.participants || agreement.participants,
       observers: externalRecord.observers || agreement.observers || [],
-      deployment: { state: 'deployed', confirmedAt: now },
+      deployment: {
+        state: 'deployed',
+        // The deploy transaction is included but not yet final; the frontend
+        // counts confirmations from this hash to show deployment finality.
+        transactionHash: externalRecord.transactionHash ?? null,
+        confirmedAt: now,
+      },
       updatedAt: now,
     });
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);

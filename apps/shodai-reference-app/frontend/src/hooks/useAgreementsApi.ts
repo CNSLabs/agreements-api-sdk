@@ -31,6 +31,20 @@ export type AgreementRecordApi = {
   lastInputAt?: string;
   participants?: ParticipantApi[];
   observers?: string[];
+  /**
+   * Local deployment marker. After a successful deploy it carries the deploy
+   * transaction hash and timestamp, which the UI uses to show finality
+   * progress; while a durable platform operation is still pending it carries
+   * the operation details instead.
+   */
+  deployment?: {
+    state: "pending" | "deployed";
+    transactionHash?: string | null;
+    confirmedAt?: string;
+    operationId?: string | null;
+    operationLifecycle?: string | null;
+    submittedAt?: string;
+  };
 };
 
 export type ParticipantApi = {
