@@ -531,10 +531,14 @@ export class ExternalAgreementsService {
    * rather than against the user's wallets (which is why it differs from the
    * deploy-time assertPermitSignerAuthorized below).
    *
-   * The issuer may resolve from a variable this very input assigns (a
-   * counterparty joining), so submitted values are merged over the stored
-   * variables. When no issuer resolves at all the check defers to the chain,
-   * where the permit signature is verified regardless.
+   * Stored variables take precedence over submitted values when resolving the
+   * issuer — the chain checks the issuer against the agreement's pre-input
+   * state, so a submission that reassigns its own issuer variable is still
+   * judged by who holds the role now, and merging values first would 403 a
+   * signer the chain accepts. Submitted values only fill variables with no
+   * stored value (a counterparty joining), mirroring the frontend resolver.
+   * When no issuer resolves at all the check defers to the chain, where the
+   * permit signature is verified regardless.
    */
   private assertSignerMayIssueInput(agreement: any, body: any) {
     const signer = normalizeAddress(body.signer);
@@ -543,10 +547,11 @@ export class ExternalAgreementsService {
     const inputDef = agreement.json?.execution?.inputs?.[body.inputId];
     if (!inputDef) return;
 
-    const issuerAddresses = resolveInputIssuerAddresses(inputDef.issuer, {
-      ...(agreement.variables || {}),
-      ...(body.values || {}),
-    });
+    const issuerAddresses = resolveInputIssuerAddresses(
+      inputDef.issuer,
+      agreement.variables,
+      body.values,
+    );
     if (issuerAddresses.length === 0) return;
 
     if (!issuerAddresses.includes(signer)) {
