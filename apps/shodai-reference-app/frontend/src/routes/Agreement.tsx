@@ -293,6 +293,11 @@ const Agreement: React.FC = () => {
   // Deploy success modal handling
   React.useEffect(() => {
     if (hasProcessedDeployModal.current && record) {
+      // Consume the flag: it marks "arrived here from a deploy", and the modal
+      // belongs to that arrival only. Left set, every later record refresh —
+      // and submitting an input now refreshes the record — re-opened this
+      // modal underneath whatever the user was actually doing.
+      hasProcessedDeployModal.current = false;
       // Show modal after a brief delay to ensure smooth transition
       requestAnimationFrame(() => {
         setShowDeploySuccessModal(true);
