@@ -238,6 +238,12 @@ export class ExternalAgreementsService {
     await this.upsertInputMirror(inputRecord, agreement);
 
     if (!isMockExternal) {
+      // The state has legitimately not changed yet at this point: the input
+      // stays PENDING for the finality window, and the webhook reconciliation
+      // is what advances the mirror. This read only picks up a state the
+      // platform already recognizes — e.g. a resumed operation whose input
+      // finalized long ago. A null state (first input, nothing projected yet)
+      // and a failed read are both normal here, not alarming.
       try {
         externalStateAfterInput = await this.externalApiCall(
           'read-state-after-input',
@@ -245,12 +251,9 @@ export class ExternalAgreementsService {
           async () => (await this.externalApiClient()).getAgreementState(externalAgreementId),
           { agreementId: agreement.id, externalAgreementId },
         );
-        if (!externalStateAfterInput?.state) {
-          throw new InternalServerErrorException('External API state response did not include a state after input submission');
-        }
       } catch (error) {
-        this.logger.warn(
-          `Input ${inputRecord.inputId || body.inputId} for agreement ${agreement.id} was submitted, but post-submit state refresh failed: ${
+        this.logger.log(
+          `Post-submit state read for agreement ${agreement.id} failed; the webhook reconciliation will refresh state: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -260,9 +263,14 @@ export class ExternalAgreementsService {
     agreement.variables = { ...(agreement.variables || {}), ...(body.values || {}) };
     agreement.lastInputId = inputRecord.inputId;
     agreement.lastInputAt = inputRecord.createdAt;
+    // Never advance the mirror's state locally: guessing the post-input state
+    // before finality is the overclaiming the PENDING/FINALIZED model exists
+    // to prevent. Outside mock mode the state moves only when the platform
+    // says it has (this read, or the webhook reconciliation that follows
+    // finalization). Mock mode keeps the instant transition by design.
     agreement.state = isMockExternal
       ? nextState(agreement.json, previousState, inputRecord.inputId) || previousState || initialState(agreement.json)
-      : externalStateAfterInput?.state || nextState(agreement.json, previousState, inputRecord.inputId) || previousState || agreement.state || initialState(agreement.json);
+      : externalStateAfterInput?.state || agreement.state || initialState(agreement.json);
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);
     agreement.updatedAt = new Date().toISOString();
     await this.agreements.upsertOne({ id: agreement.id }, agreement);
