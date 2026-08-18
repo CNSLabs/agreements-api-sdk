@@ -24,6 +24,15 @@ export type AgreementRecord = {
   address?: string;
   chainId: number;
   status: 'Draft' | 'Deployed';
+  operationId?: string;
+  operationLifecycle?:
+    | 'intent_recorded'
+    | 'transaction_ready'
+    | 'confirmed'
+    | 'completed'
+    | 'failed';
+  transactionHash?: string;
+  pendingOperation?: AgreementPendingOperation;
   lastInputId?: string;
   lastInputAt?: string;
   json?: Record<string, unknown>;
@@ -46,6 +55,7 @@ export type AgreementSummary = {
   address?: string;
   chainId: number;
   status: 'Draft' | 'Deployed';
+  pendingOperation?: AgreementPendingOperation;
   lastInputId?: string;
   lastInputAt?: string;
   state?: string;
@@ -228,6 +238,32 @@ export type NotificationRule = {
 export type NotificationAttachmentStrategy = {
   type: 'customerInvoicePdf';
   variant: string;
+};
+
+/**
+ * Unresolved (or terminally failed) deployment operation carried on an
+ * agreement record. Deliberately the same field shape as the on-chain
+ * operation data on AgreementInputRecord (submissionId, operationLifecycle,
+ * txHash, blockNumber, error), so both map onto a future generic operations
+ * resource without translation. Present while a permit deployment is in
+ * flight or after terminal failure; cleared when the record is promoted to
+ * Deployed. Poll the agreement to follow a pending deployment instead of
+ * re-submitting the permit.
+ */
+export type AgreementPendingOperation = {
+  kind: 'deployment';
+  submissionId: string;
+  operationLifecycle:
+    | 'intent_recorded'
+    | 'transaction_ready'
+    | 'confirmed'
+    | 'completed'
+    | 'failed';
+  txHash?: string;
+  blockNumber?: number;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AgreementStateResponse = {
