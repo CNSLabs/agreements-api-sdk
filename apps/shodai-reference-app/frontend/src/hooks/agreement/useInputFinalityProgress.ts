@@ -21,7 +21,12 @@ import { usePublicClient } from "wagmi";
  * the `agreement.transitioned` webhook — rather than by arithmetic on block
  * numbers. The head is read here only to drive the counter.
  */
-export type InputFinalityPhase = "idle" | "confirming" | "finalizing" | "settled";
+export type InputFinalityPhase =
+  | "idle"
+  | "confirming"
+  | "finalizing"
+  | "settled"
+  | "stalled";
 
 export interface TrackedInput {
   inputId: string;
@@ -40,7 +45,11 @@ export interface InputFinalityProgress {
 
 const HEAD_POLL_INTERVAL_MS = 4_000;
 // A submission that has not settled long after its confirmations arrived is a
-// problem to surface, not a spinner to leave running forever.
+// problem to surface, not a spinner to leave running forever: past this
+// window the tracker stops polling and reports `stalled` — an explicit
+// abnormal result — instead of quietly returning to idle as if nothing had
+// been submitted. Late settlement still resolves it: the webhook-driven
+// isSettled check keeps watching the tracked input.
 const MAX_TRACKING_MS = 15 * 60_000;
 
 export function useInputFinalityProgress(options: {
@@ -82,14 +91,16 @@ export function useInputFinalityProgress(options: {
   }, [tracked, isSettled]);
 
   React.useEffect(() => {
-    if (!tracked || phase === "idle" || phase === "settled") return undefined;
+    if (!tracked || phase === "idle" || phase === "settled" || phase === "stalled")
+      return undefined;
 
     let cancelled = false;
     const tick = async () => {
       if (cancelled) return;
       if (Date.now() - startedAtRef.current > MAX_TRACKING_MS) {
-        setTracked(null);
-        setPhase("idle");
+        // Keep the tracked input: the stalled notice references it, and a
+        // late webhook can still settle it through the isSettled effect.
+        setPhase("stalled");
         return;
       }
       try {
@@ -118,7 +129,12 @@ export function useInputFinalityProgress(options: {
         if (cancelled) return;
         if (publicClient && typeof blockNumber === "number") {
           const head = Number(await publicClient.getBlockNumber());
-          const seen = Math.max(0, head - blockNumber + 1);
+          // Counted as blocks ON TOP of the inclusion block, not the
+          // conventional inclusion-counts-as-one: the worker finalizes when
+          // head - B >= requiredConfirmations, so this definition makes
+          // "N of N" coincide exactly with worker eligibility instead of
+          // reading done one block early.
+          const seen = Math.max(0, head - blockNumber);
           if (!cancelled) {
             setConfirmations(seen);
             setPhase(required > 0 && seen < required ? "confirming" : "finalizing");

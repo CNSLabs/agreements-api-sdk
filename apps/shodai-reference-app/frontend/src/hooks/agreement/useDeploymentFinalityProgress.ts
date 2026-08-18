@@ -75,7 +75,9 @@ export function useDeploymentFinalityProgress(options: {
           blockNumberRef.current = Number(receipt.blockNumber);
         }
         const head = Number(await publicClient.getBlockNumber());
-        const seen = Math.max(0, head - blockNumberRef.current + 1);
+        // Blocks on top of inclusion, matching the worker's head - B >= depth
+        // eligibility rule (see useInputFinalityProgress for the rationale).
+        const seen = Math.max(0, head - blockNumberRef.current);
         if (cancelled) return;
         setConfirmations(seen);
         if (seen >= required) setDone(true);

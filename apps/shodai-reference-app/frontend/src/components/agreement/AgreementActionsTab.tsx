@@ -420,14 +420,25 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
   // window are treated as stuck rather than in flight, so a failed submission
   // cannot lock the form forever.
   const PENDING_INPUT_FRESHNESS_MS = 15 * 60_000;
+  // The freshness window must expire on its own: keyed only on
+  // activityInputs, a dead webhook (no refetch, no new rows) would have kept
+  // the gate closed past the window until an unrelated re-render. The clock
+  // ticks only while a PENDING row exists, so quiet pages pay nothing.
+  const hasPendingRows = activityInputs.some((input) => input.status === "PENDING");
+  const [gateClock, setGateClock] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!hasPendingRows) return undefined;
+    const timer = window.setInterval(() => setGateClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [hasPendingRows]);
   const hasRecentPendingInput = React.useMemo(
     () =>
       activityInputs.some(
         (input) =>
           input.status === "PENDING" &&
-          Date.now() - toMillis(input.createdAt) < PENDING_INPUT_FRESHNESS_MS,
+          gateClock - toMillis(input.createdAt) < PENDING_INPUT_FRESHNESS_MS,
       ),
-    [activityInputs, PENDING_INPUT_FRESHNESS_MS],
+    [activityInputs, gateClock, PENDING_INPUT_FRESHNESS_MS],
   );
   const isAwaitingFinality =
     finality.phase === "confirming" || finality.phase === "finalizing" || hasRecentPendingInput;

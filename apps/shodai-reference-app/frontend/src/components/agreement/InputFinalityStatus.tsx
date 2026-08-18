@@ -57,16 +57,20 @@ export function InputFinalityStatus({
   const heading =
     phase === "settled"
       ? "Applied to the agreement"
-      : determinate
-        ? `Confirming on chain — ${Math.min(confirmations, requiredConfirmations)} of ${requiredConfirmations}`
-        : "Finalizing";
+      : phase === "stalled"
+        ? "This is taking longer than expected"
+        : determinate
+          ? `Confirming on chain — ${Math.min(confirmations, requiredConfirmations)} of ${requiredConfirmations}`
+          : "Finalizing";
 
   const detail =
     phase === "settled"
       ? "The state now reflects this input."
-      : determinate
-        ? "Your submission is in a block. The agreement state updates once it is final."
-        : "Confirmations complete. Applying the state change.";
+      : phase === "stalled"
+        ? "The submission has not settled within the normal window. It may still complete — check the Activity tab for its status. If it never appears there, the transaction likely did not survive on-chain and signing a fresh submission is safe."
+        : determinate
+          ? "Your submission is in a block. The agreement state updates once it is final."
+          : "Confirmations complete. Applying the state change.";
 
   return (
     <div
@@ -95,7 +99,10 @@ export function InputFinalityStatus({
             width: `${percent}%`,
             height: "100%",
             borderRadius: 999,
-            background: "var(--brand-600, #4f46e5)",
+            background:
+              phase === "stalled"
+                ? "var(--warning-500, #f59e0b)"
+                : "var(--brand-600, #4f46e5)",
             transition: "width 400ms ease",
             opacity: phase === "finalizing" ? 0.6 : 1,
           }}
