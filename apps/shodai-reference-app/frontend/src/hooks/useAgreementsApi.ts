@@ -31,19 +31,22 @@ export type AgreementRecordApi = {
   lastInputAt?: string;
   participants?: ParticipantApi[];
   observers?: string[];
+  /** Deploy transaction hash, mirrored from the platform record. */
+  transactionHash?: string | null;
   /**
-   * Local deployment marker. After a successful deploy it carries the deploy
-   * transaction hash and timestamp, which the UI uses to show finality
-   * progress; while a durable platform operation is still pending it carries
-   * the operation details instead.
+   * The platform's deployment-operation summary, mirrored verbatim. Present
+   * while a permit deployment is unresolved or terminally failed; cleared on
+   * promotion to Deployed. Same field shape as input operation data.
    */
-  deployment?: {
-    state: "pending" | "deployed";
-    transactionHash?: string | null;
-    confirmedAt?: string;
-    operationId?: string | null;
+  pendingOperation?: {
+    kind: "deployment";
+    submissionId?: string | null;
     operationLifecycle?: string | null;
-    submittedAt?: string;
+    txHash?: string | null;
+    blockNumber?: number;
+    error?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
   };
 };
 

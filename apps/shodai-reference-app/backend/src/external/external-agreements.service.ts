@@ -174,12 +174,17 @@ export class ExternalAgreementsService {
         variables: externalRecord.variables || externalValidation?.variables || initValues,
         participants: externalRecord.participants || agreement.participants,
         observers: externalRecord.observers || agreement.observers || [],
-        deployment: {
-          state: 'pending',
-          operationId: externalRecord.operationId ?? null,
+        // Mirror the platform's operation summary verbatim: whatever detail
+        // the platform adds to pendingOperation next flows through this app
+        // with zero changes here. The synthesized fallback only covers a
+        // platform old enough not to send it.
+        pendingOperation: externalRecord.pendingOperation ?? {
+          kind: 'deployment',
+          submissionId: externalRecord.operationId ?? null,
           operationLifecycle: externalRecord.operationLifecycle ?? null,
-          transactionHash: externalRecord.transactionHash ?? null,
-          submittedAt: now,
+          txHash: externalRecord.transactionHash ?? null,
+          createdAt: now,
+          updatedAt: now,
         },
         updatedAt: now,
       });
@@ -192,6 +197,8 @@ export class ExternalAgreementsService {
       return agreement;
     }
 
+    // The platform clears pendingOperation on promotion; the mirror follows.
+    delete agreement.pendingOperation;
     Object.assign(agreement, {
       externalAgreementId: externalRecord.id || agreement.externalAgreementId,
       address: externalRecord.address,
@@ -203,13 +210,9 @@ export class ExternalAgreementsService {
       variables: externalRecord.variables || externalValidation?.variables || initValues,
       participants: externalRecord.participants || agreement.participants,
       observers: externalRecord.observers || agreement.observers || [],
-      deployment: {
-        state: 'deployed',
-        // The deploy transaction is included but not yet final; the frontend
-        // counts confirmations from this hash to show deployment finality.
-        transactionHash: externalRecord.transactionHash ?? null,
-        confirmedAt: now,
-      },
+      // The deploy transaction is included but not yet final; the frontend
+      // counts confirmations from this hash to show deployment finality.
+      transactionHash: externalRecord.transactionHash ?? null,
       updatedAt: now,
     });
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);

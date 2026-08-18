@@ -797,6 +797,14 @@ test('Deploying records a pending deployment when the platform could not broadca
         operationLifecycle: 'transaction_ready',
         transactionHash: `0x${'9'.repeat(64)}`,
         chainId: 59141,
+        pendingOperation: {
+          kind: 'deployment',
+          submissionId: 'operation-pending-1',
+          operationLifecycle: 'transaction_ready',
+          txHash: `0x${'9'.repeat(64)}`,
+          createdAt: '2026-08-18T00:00:00.000Z',
+          updatedAt: '2026-08-18T00:00:01.000Z',
+        },
       };
     };
 
@@ -819,8 +827,16 @@ test('Deploying records a pending deployment when the platform could not broadca
     );
 
     assert.equal(result.status, 'Draft');
-    assert.equal(result.deployment?.state, 'pending');
-    assert.equal(result.deployment?.operationLifecycle, 'transaction_ready');
+    // The platform's operation summary is mirrored verbatim, not re-derived:
+    // new platform detail must reach this app's records with no code change.
+    assert.deepEqual(result.pendingOperation, {
+      kind: 'deployment',
+      submissionId: 'operation-pending-1',
+      operationLifecycle: 'transaction_ready',
+      txHash: `0x${'9'.repeat(64)}`,
+      createdAt: '2026-08-18T00:00:00.000Z',
+      updatedAt: '2026-08-18T00:00:01.000Z',
+    });
     // The agreement id must never stand in for a contract address.
     assert.equal(result.address, undefined);
     assert.notEqual(result.address, 'pending-deploy-local-1');

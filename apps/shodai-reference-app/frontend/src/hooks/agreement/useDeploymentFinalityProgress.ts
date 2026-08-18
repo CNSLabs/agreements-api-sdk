@@ -38,14 +38,15 @@ export function useDeploymentFinalityProgress(options: {
     requiredConfirmations && requiredConfirmations > 0 ? requiredConfirmations : 0;
 
   const txHash =
-    record?.status === "Deployed" && record.deployment?.state === "deployed"
-      ? record.deployment.transactionHash || undefined
+    record?.status === "Deployed"
+      ? record.transactionHash || undefined
       : undefined;
-  const confirmedAtMs = record?.deployment?.confirmedAt
-    ? Date.parse(record.deployment.confirmedAt)
-    : NaN;
+  // The mirror's updatedAt is the promotion write, so it dates the
+  // deployment closely enough for the give-up gate; an older record that
+  // slips through costs one receipt read before the counter reports done.
+  const deployedAtMs = record?.updatedAt ? Date.parse(String(record.updatedAt)) : NaN;
   const isRecent =
-    Number.isFinite(confirmedAtMs) && Date.now() - confirmedAtMs < MAX_TRACKING_MS;
+    Number.isFinite(deployedAtMs) && Date.now() - deployedAtMs < MAX_TRACKING_MS;
 
   const [confirmations, setConfirmations] = React.useState(0);
   const [done, setDone] = React.useState(false);
