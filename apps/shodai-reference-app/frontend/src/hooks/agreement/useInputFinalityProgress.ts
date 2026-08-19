@@ -34,8 +34,25 @@ export interface TrackedInput {
   blockNumber?: number;
 }
 
+/**
+ * Why a tracked submission stalled, established by reconciling against the
+ * chain at stall time rather than guessed from absence:
+ * - `onchain-lagging` — the transaction is mined and successful; only the
+ *   platform's projection is behind. Re-submitting would duplicate it.
+ * - `unmined` — no receipt yet. The transaction can still land until its
+ *   permit deadline, so a fresh submission is not yet known to be safe.
+ * - `reverted` — the transaction failed on-chain; this submission is closed.
+ * - `unknown` — the chain could not be consulted; no claims are made.
+ */
+export type StalledReason =
+  | "onchain-lagging"
+  | "unmined"
+  | "reverted"
+  | "unknown";
+
 export interface InputFinalityProgress {
   phase: InputFinalityPhase;
+  stalledReason?: StalledReason;
   confirmations: number;
   requiredConfirmations: number;
   trackedInputId?: string;
@@ -63,6 +80,7 @@ export function useInputFinalityProgress(options: {
   const [tracked, setTracked] = React.useState<TrackedInput | null>(null);
   const [confirmations, setConfirmations] = React.useState(0);
   const [phase, setPhase] = React.useState<InputFinalityPhase>("idle");
+  const [stalledReason, setStalledReason] = React.useState<StalledReason | undefined>(undefined);
   const startedAtRef = React.useRef<number>(0);
 
   const required = requiredConfirmations && requiredConfirmations > 0 ? requiredConfirmations : 0;
@@ -70,6 +88,7 @@ export function useInputFinalityProgress(options: {
   const track = React.useCallback((input: TrackedInput) => {
     startedAtRef.current = Date.now();
     setConfirmations(0);
+    setStalledReason(undefined);
     setPhase("confirming");
     setTracked(input);
   }, []);
@@ -77,6 +96,7 @@ export function useInputFinalityProgress(options: {
   const clear = React.useCallback(() => {
     setTracked(null);
     setConfirmations(0);
+    setStalledReason(undefined);
     setPhase("idle");
   }, []);
 
@@ -98,6 +118,25 @@ export function useInputFinalityProgress(options: {
     const tick = async () => {
       if (cancelled) return;
       if (Date.now() - startedAtRef.current > MAX_TRACKING_MS) {
+        // Reconcile against the chain before reporting the stall, so the
+        // notice states what is established rather than guessed from
+        // absence: a mined-and-successful transaction means only the
+        // platform is lagging (re-submitting would duplicate it); no receipt
+        // means the transaction can still land until its permit deadline;
+        // a reverted receipt closes this submission.
+        let reason: StalledReason = "unknown";
+        if (publicClient && tracked.txHash) {
+          try {
+            const receipt = await publicClient.getTransactionReceipt({
+              hash: tracked.txHash as `0x${string}`,
+            });
+            reason = receipt.status === "reverted" ? "reverted" : "onchain-lagging";
+          } catch {
+            reason = "unmined";
+          }
+        }
+        if (cancelled) return;
+        setStalledReason(reason);
         // Keep the tracked input: the stalled notice references it, and a
         // late webhook can still settle it through the isSettled effect.
         setPhase("stalled");
@@ -161,6 +200,7 @@ export function useInputFinalityProgress(options: {
 
   return {
     phase,
+    stalledReason,
     confirmations,
     requiredConfirmations: required,
     trackedInputId: tracked?.inputId,

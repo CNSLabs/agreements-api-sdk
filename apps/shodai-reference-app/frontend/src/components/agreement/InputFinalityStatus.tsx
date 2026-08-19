@@ -63,11 +63,25 @@ export function InputFinalityStatus({
           ? `Confirming on chain — ${Math.min(confirmations, requiredConfirmations)} of ${requiredConfirmations}`
           : "Finalizing";
 
+  // Stalled guidance states only what the stall-time chain reconciliation
+  // established. Absence from Activity is NOT proof the transaction died —
+  // the projection can lag — and an unmined transaction can still land until
+  // its permit deadline, so no branch claims a fresh submission is "safe"
+  // unless the chain itself closed this one.
+  const stalledDetail =
+    progress.stalledReason === "onchain-lagging"
+      ? "The transaction is confirmed on-chain; the platform has not reflected it yet. No action needed — do not submit again, or the input may be applied twice."
+      : progress.stalledReason === "reverted"
+        ? "The transaction failed on-chain, so this submission is closed. Review the agreement state and sign a new submission to try again."
+        : progress.stalledReason === "unmined"
+          ? "The transaction has not been mined yet. It can still land until its permit deadline (about an hour from submission), so wait before signing a new submission — both could apply."
+          : "The submission has not settled within the normal window and its on-chain status could not be checked. Check the Activity tab, and avoid re-submitting until its outcome is known.";
+
   const detail =
     phase === "settled"
       ? "The state now reflects this input."
       : phase === "stalled"
-        ? "The submission has not settled within the normal window. It may still complete — check the Activity tab for its status. If it never appears there, the transaction likely did not survive on-chain and signing a fresh submission is safe."
+        ? stalledDetail
         : determinate
           ? "Your submission is in a block. The agreement state updates once it is final."
           : "Confirmations complete. Applying the state change.";
