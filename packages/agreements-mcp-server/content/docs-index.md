@@ -4,7 +4,7 @@
 
 ## Docs
 
-- [Authentication](https://docs.shodai.network/authentication.md): Authenticate API requests with an API key and understand access scopes, entitlements, and auth failures.
+- [Authentication](https://docs.shodai.network/authentication.md): Understand how API keys and OAuth access tokens authenticate Agreements API requests, how environments and scopes affect access, and why authentication fails.
 - [Author Agreement JSON](https://docs.shodai.network/workflow/author-agreement-json.md): Learn how to make good authoring decisions when turning a real business workflow into agreement JSON.
 - [Validate Agreement Structure](https://docs.shodai.network/workflow/validate-agreement-structure.md): Check authored agreement JSON, read validation feedback, and distinguish template validation from deployment preflight.
 - [Complex Agreement](https://docs.shodai.network/examples/complex.md): Use a richer complete agreement JSON example to inspect a realistic lifecycle with more states, event types, metadata, and branching behavior.
@@ -13,7 +13,7 @@
 - [Choose an integration surface](https://docs.shodai.network/integration-surfaces.md): Choose between the TypeScript SDK and MCP for your first Shodai agreement integration.
 - [Overview](https://docs.shodai.network/index.md): Understand how Agreements Protocol gives agreements shared meaning, explicit execution paths, and verifiable history.
 - [Quickstart with TypeScript SDK](https://docs.shodai.network/sdks/quickstart-with-typescript-sdk.md): Install the TypeScript client, authenticate with an API key, validate an example agreement, and prove EIP-712 signing readiness without deploying.
-- [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp.md): Configure hosted MCP, call authenticated tools, validate an example agreement, and prepare EIP-712 typed data without giving the server a private key.
+- [Quickstart with MCP](https://docs.shodai.network/sdks/quickstart-with-mcp.md): Connect hosted MCP at https://shodai.network/mcp with browser OAuth, validate an agreement, and prepare testnet deployment typed data.
 - [Get agreement](https://docs.shodai.network/reference/api/agreement-records/get-agreement.md): Returns a single agreement record, including agreement JSON and hosted record context.
 - [List agreements](https://docs.shodai.network/reference/api/agreement-records/list-agreements.md): Lists agreement summaries visible to the current API key. Supports pagination, filtering, and sorting.
 - [Validate agreement structure](https://docs.shodai.network/reference/api/authoring/validate-agreement-structure.md): Checks only the authored agreement JSON and returns participant variable keys, input IDs, state IDs, and warnings. This does not validate deployment values, participant wallet addresses, signer, or permit data.
