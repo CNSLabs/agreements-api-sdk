@@ -10,7 +10,7 @@ COPY apps/shodai-reference-app/package.json ./apps/shodai-reference-app/
 COPY apps/shodai-reference-app/backend/package.json ./apps/shodai-reference-app/backend/
 
 RUN pnpm install --frozen-lockfile \
-  --filter @cns-labs/agreements-api-client... \
+  --filter @shodai-network/agreements-api-client... \
   --filter shodai-reference-backend...
 
 FROM base AS build
@@ -18,7 +18,7 @@ FROM base AS build
 COPY packages/agreements-api-client ./packages/agreements-api-client
 COPY apps/shodai-reference-app ./apps/shodai-reference-app
 
-RUN pnpm --filter @cns-labs/agreements-api-client build
+RUN pnpm --filter @shodai-network/agreements-api-client build
 RUN pnpm --filter shodai-reference-backend build
 
 FROM node:20-alpine AS production
@@ -35,7 +35,7 @@ COPY apps/shodai-reference-app/backend/package.json ./apps/shodai-reference-app/
 COPY --from=build /workspace/packages/agreements-api-client/dist ./packages/agreements-api-client/dist
 
 RUN pnpm install --frozen-lockfile --prod \
-  --filter @cns-labs/agreements-api-client... \
+  --filter @shodai-network/agreements-api-client... \
   --filter shodai-reference-backend...
 
 RUN apk add --no-cache ca-certificates curl && \
