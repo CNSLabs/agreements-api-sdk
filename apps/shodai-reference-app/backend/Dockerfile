@@ -45,6 +45,9 @@ ENV NODE_ENV=production
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/rds-combined-ca-bundle.pem
 
 COPY --from=build /workspace/apps/shodai-reference-app/backend/dist ./apps/shodai-reference-app/backend/dist
+# Runtime-read catalogs (agreement + notification templates): the template
+# services resolve data/ relative to the app root, not the compiled dist.
+COPY --from=build /workspace/apps/shodai-reference-app/data ./apps/shodai-reference-app/data
 
 WORKDIR /workspace/apps/shodai-reference-app
 
