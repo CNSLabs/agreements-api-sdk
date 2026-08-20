@@ -4,7 +4,9 @@
   "license": "Apache-2.0",
   "scripts": {
     "start": "node -r ts-node/register -r tsconfig-paths/register src/main.ts",
+    "start:prod": "node dist/main.js",
     "dev": "node --watch -r ts-node/register -r tsconfig-paths/register src/main.ts",
+    "build": "tsc -p tsconfig.json",
     "test": "NODE_ENV=test node --test test/*.test.mjs",
     "type-check": "tsc --noEmit"
   },

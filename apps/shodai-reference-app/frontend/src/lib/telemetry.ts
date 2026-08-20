@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react";
 const correlationHeaderName = "x-correlation-id";
 const traceparentHeaderName = "traceparent";
 const clientAppHeaderName = "x-client-app";
-const clientAppName = "agreements-ui";
+const clientAppName = "shodai-reference-frontend";
 const traceIdPattern = /^[0-9a-f]{32}$/i;
 const spanIdPattern = /^[0-9a-f]{16}$/i;
 
