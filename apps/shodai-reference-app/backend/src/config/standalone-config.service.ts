@@ -10,6 +10,7 @@ const PRODUCTION_CHAIN_IDS = new Set([59144, 8453]);
 export class StandaloneConfigService implements OnModuleInit {
   readonly nodeEnv = process.env.NODE_ENV || 'development';
   readonly port = Number(process.env.AGREEMENTS_BACKEND_PORT || 4199);
+  readonly apiBasePath = normalizeBasePath(process.env.SHODAI_REFERENCE_API_BASE_PATH);
   readonly mongoUri = process.env.MONGO_URI || '';
   readonly mongoDbName = process.env.MONGO_DB_NAME || process.env.MONGO_DB || '';
   readonly dynamicEnvironmentId =
@@ -155,4 +156,10 @@ function positiveInteger(raw: string | undefined, fallback: number): number {
 
 function booleanFlag(raw: string | undefined): boolean {
   return String(raw || '').trim().toLowerCase() === 'true';
+}
+
+function normalizeBasePath(raw: string | undefined): string {
+  const value = String(raw || '').trim();
+  if (!value || value === '/') return '';
+  return value.replace(/^\/+/, '').replace(/\/+$/, '');
 }
