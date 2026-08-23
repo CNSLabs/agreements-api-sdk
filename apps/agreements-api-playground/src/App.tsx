@@ -1205,7 +1205,7 @@ function buildQuickActions(params: {
       label: 'Inputs By Status',
       method: 'GET' as const,
       path: buildQueryPath(inputsPath, [
-        ['status', 'MINED'],
+        ['status', 'FINALIZED'],
         ['sort[updatedAt]', 'desc'],
         ['limit', 25],
       ]),

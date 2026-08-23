@@ -11,11 +11,18 @@ import {
   FeatherCircleDot,
   FeatherClock,
   FeatherFileInput,
+  FeatherWallet,
   FeatherFileJson,
   FeatherFilePlus,
   FeatherInfo,
 } from "@subframe/core";
 import { computeAvailableActions } from "@/utils/agreementsActions";
+import { useUserWallets } from "@dynamic-labs/sdk-react-core";
+
+function shortWallet(address: string | undefined): string {
+  if (!address) return "another wallet";
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
 import { formatWhen, isTerminalStateByDfsm, resolveStateLabel, toMillis } from "@/utils/agreementsUi";
 import { useAgreementsApi } from "@/hooks/useAgreementsApi";
 import { getChainLabel } from "@/utils/chainConfig";
@@ -95,11 +102,21 @@ const Home: React.FC = () => {
       .sort((a, b) => toMillis(b.updatedAt || b.createdAt) - toMillis(a.updatedAt || a.createdAt));
   }, [agreements]);
 
-  // Deployed agreements with available inputs for the user
+  const userWallets = useUserWallets();
+  const linkedWalletAddresses = React.useMemo(
+    () => userWallets.map((wallet) => wallet.address).filter(Boolean) as string[],
+    [userWallets],
+  );
+
+  // Deployed agreements with available inputs for the user. Actions whose
+  // issuer is another of the user's wallets — or a custom EOA they have not
+  // linked — stay listed with the required wallet named, instead of
+  // disappearing whenever the active wallet changes.
   const awaitingInputs = React.useMemo(() => {
     const items = computeAvailableActions({
       agreements: agreements as any,
       userAddress: address,
+      userWallets: linkedWalletAddresses,
     });
 
     const byAgreement = new Map<
@@ -111,7 +128,13 @@ const Home: React.FC = () => {
         agreementName: string;
         currentStateLabel?: string;
         updatedAt?: string | Date;
-        inputs: { inputId: string; label: string }[];
+        inputs: {
+          inputId: string;
+          label: string;
+          availability: "ready" | "switch-wallet" | "other-wallet";
+          requiredWallets: string[];
+        }[];
+        hasReady: boolean;
         chainId?: number;
       }
     >();
@@ -128,22 +151,39 @@ const Home: React.FC = () => {
           currentStateLabel: x.currentStateLabel || x.currentState,
           updatedAt: x.agreementUpdatedAt,
           chainId: x.chainId,
-          inputs: [{ inputId: x.inputId, label: x.inputLabel }],
+          inputs: [{
+            inputId: x.inputId,
+            label: x.inputLabel,
+            availability: x.availability,
+            requiredWallets: x.requiredWallets,
+          }],
+          hasReady: x.availability === "ready",
         });
       } else {
         if (x.agreementUpdatedAt && toMillis(x.agreementUpdatedAt) > toMillis(existing.updatedAt)) {
           existing.updatedAt = x.agreementUpdatedAt;
         }
         if (!existing.inputs.find((i) => i.inputId === x.inputId)) {
-          existing.inputs.push({ inputId: x.inputId, label: x.inputLabel });
+          existing.inputs.push({
+            inputId: x.inputId,
+            label: x.inputLabel,
+            availability: x.availability,
+            requiredWallets: x.requiredWallets,
+          });
         }
+        if (x.availability === "ready") existing.hasReady = true;
       }
     }
 
     const list = Array.from(byAgreement.values());
-    list.sort((a, b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
+    // Actionable-now agreements first; within each group, most recent first.
+    list.sort(
+      (a, b) =>
+        Number(b.hasReady) - Number(a.hasReady) ||
+        toMillis(b.updatedAt) - toMillis(a.updatedAt),
+    );
     return list;
-  }, [address, agreements]);
+  }, [address, agreements, linkedWalletAddresses]);
 
   // Combined count: drafts + deployed agreements awaiting input
   const awaitingTotalCount = drafts.length + awaitingInputs.length;
@@ -430,7 +470,7 @@ const Home: React.FC = () => {
                   const visibleCount = visibleBadgeCounts.get(agreementKey) ?? inputs.length;
                   const shown = inputs.slice(0, visibleCount);
                   const more = inputs.length - shown.length;
-                  const primaryInput = inputs[0]?.inputId;
+                  const primaryInput = (inputs.find((i) => i.availability === "ready") ?? inputs[0])?.inputId;
 
                   return (
                     <Table.Row
@@ -466,11 +506,32 @@ const Home: React.FC = () => {
                           className="flex items-center gap-2 flex-nowrap"
                           style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}
                         >
-                          {shown.map((x) => (
-                            <Badge key={x.inputId} variant="neutral" icon={<FeatherFileInput />} style={{ flexShrink: 0 }}>
-                              {x.label}
-                            </Badge>
-                          ))}
+                          {shown.map((x) => {
+                            const requiredWallet = x.requiredWallets[0];
+                            const needsOtherWallet = x.availability !== "ready";
+                            return (
+                              <span
+                                key={x.inputId}
+                                style={{ flexShrink: 0 }}
+                                title={
+                                  x.availability === "switch-wallet"
+                                    ? `Signed with your linked wallet ${shortWallet(requiredWallet)} — switch to it to act`
+                                    : x.availability === "other-wallet"
+                                      ? `Needs wallet ${shortWallet(requiredWallet)}`
+                                      : undefined
+                                }
+                              >
+                                <Badge
+                                  variant="neutral"
+                                  icon={needsOtherWallet ? <FeatherWallet /> : <FeatherFileInput />}
+                                >
+                                  {needsOtherWallet
+                                    ? `${x.label} · ${shortWallet(requiredWallet)}`
+                                    : x.label}
+                                </Badge>
+                              </span>
+                            );
+                          })}
                           {more > 0 && (
                             <Badge variant="neutral" style={{ flexShrink: 0 }}>+{more}</Badge>
                           )}
@@ -488,7 +549,7 @@ const Home: React.FC = () => {
                               if (primaryInput) handleReviewAction({ agreementId: row.agreementId, inputId: primaryInput });
                             }}
                           >
-                            Review Now
+                            {row.hasReady ? "Review Now" : "View"}
                           </Button>
                         </div>
                       </Table.Cell>

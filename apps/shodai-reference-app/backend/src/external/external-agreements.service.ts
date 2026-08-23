@@ -4,7 +4,7 @@ import { StandaloneConfigService } from '../config/standalone-config.service';
 import { AgreementRepository } from '../database/repositories/agreement.repository';
 import { AgreementInputRepository } from '../database/repositories/agreement-input.repository';
 import { ExternalApiEventRepository } from '../database/repositories/external-api-event.repository';
-import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields } from '../agreements/agreement-utils';
+import { getTemplateId, initialState, nextState, normalizeAddress, normalizeEmail, refreshDerivedFields, resolveInputIssuerAddresses } from '../agreements/agreement-utils';
 import { NotificationCatalogService } from '../notifications/notification-catalog.service';
 import type { AgreementTransitionedWebhookEvent } from '@shodai-network/agreements-api-client/webhooks';
 import type { ApiClient, AgreementInputRecord } from '@shodai-network/agreements-api-client';
@@ -147,15 +147,61 @@ export class ExternalAgreementsService {
         async () => (await this.externalApiClient()).deployWithPermit(directPayload as any),
         { agreementId: agreement.id },
       );
-    const externalIdentifier = externalRecord.address || externalRecord.id;
-    if (!externalIdentifier) {
-      throw new InternalServerErrorException('External API deploy response did not include an agreement id or address');
+    if (!externalRecord.id) {
+      throw new InternalServerErrorException('External API deploy response did not include an agreement id');
     }
 
     const now = new Date().toISOString();
+
+    // Deploying through a permit is durable, not synchronous: if the platform
+    // could not broadcast, it records a resumable operation and answers with a
+    // pending record — status Draft, an operationLifecycle, a transaction hash,
+    // and no address. Treating that as deployed is how an agreement ends up
+    // looking live locally while the platform has never heard of it, and why
+    // its state and input reads then 404. An address is the only proof of
+    // deployment; the agreement id is never a substitute for one.
+    // The address is the proof: a pending response never carries one, because
+    // the contract does not exist yet. Status corroborates but cannot be relied
+    // on alone — treat an explicit Draft as pending, and absent status with a
+    // real address as deployed.
+    const deployed = !!externalRecord.address && externalRecord.status !== 'Draft';
+    if (!deployed) {
+      Object.assign(agreement, {
+        externalAgreementId: externalRecord.id,
+        status: 'Draft',
+        chainId: externalRecord.chainId || directPayload.chainId,
+        docUri: externalRecord.docUri || directPayload.docUri,
+        variables: externalRecord.variables || externalValidation?.variables || initValues,
+        participants: externalRecord.participants || agreement.participants,
+        observers: externalRecord.observers || agreement.observers || [],
+        // Mirror the platform's operation summary verbatim: whatever detail
+        // the platform adds to pendingOperation next flows through this app
+        // with zero changes here. The synthesized fallback only covers a
+        // platform old enough not to send it.
+        pendingOperation: externalRecord.pendingOperation ?? {
+          kind: 'deployment',
+          submissionId: externalRecord.operationId ?? null,
+          operationLifecycle: externalRecord.operationLifecycle ?? null,
+          txHash: externalRecord.transactionHash ?? null,
+          createdAt: now,
+          updatedAt: now,
+        },
+        updatedAt: now,
+      });
+      await this.agreements.upsertOne({ id: agreement.id }, agreement);
+      this.logger.warn(
+        `Deployment for agreement ${agreement.id} is pending on the platform ` +
+        `(operation ${externalRecord.operationId ?? 'unknown'}, lifecycle ${externalRecord.operationLifecycle ?? 'unknown'}); ` +
+        'the agreement is not deployed yet.',
+      );
+      return agreement;
+    }
+
+    // The platform clears pendingOperation on promotion; the mirror follows.
+    delete agreement.pendingOperation;
     Object.assign(agreement, {
       externalAgreementId: externalRecord.id || agreement.externalAgreementId,
-      address: externalIdentifier,
+      address: externalRecord.address,
       status: 'Deployed',
       chainId: externalRecord.chainId || directPayload.chainId,
       docUri: externalRecord.docUri || directPayload.docUri,
@@ -164,6 +210,9 @@ export class ExternalAgreementsService {
       variables: externalRecord.variables || externalValidation?.variables || initValues,
       participants: externalRecord.participants || agreement.participants,
       observers: externalRecord.observers || agreement.observers || [],
+      // The deploy transaction is included but not yet final; the frontend
+      // counts confirmations from this hash to show deployment finality.
+      transactionHash: externalRecord.transactionHash ?? null,
       updatedAt: now,
     });
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);
@@ -174,7 +223,7 @@ export class ExternalAgreementsService {
   async submitInput(id: string, body: any, user: any, options: { chainId?: unknown } = {}) {
     const agreement = await this.getReadableAgreement(id, user, options);
     if (agreement.status !== 'Deployed') throw new ConflictException('Cannot submit inputs to a Draft agreement. Deploy it first.');
-    this.assertPermitSignerAuthorized(body.signer, user);
+    this.assertSignerMayIssueInput(agreement, body);
 
     const externalAgreementId = agreement.externalAgreementId || agreement.id;
     const previousState = agreement.state;
@@ -192,6 +241,12 @@ export class ExternalAgreementsService {
     await this.upsertInputMirror(inputRecord, agreement);
 
     if (!isMockExternal) {
+      // The state has legitimately not changed yet at this point: the input
+      // stays PENDING for the finality window, and the webhook reconciliation
+      // is what advances the mirror. This read only picks up a state the
+      // platform already recognizes — e.g. a resumed operation whose input
+      // finalized long ago. A null state (first input, nothing projected yet)
+      // and a failed read are both normal here, not alarming.
       try {
         externalStateAfterInput = await this.externalApiCall(
           'read-state-after-input',
@@ -199,12 +254,9 @@ export class ExternalAgreementsService {
           async () => (await this.externalApiClient()).getAgreementState(externalAgreementId),
           { agreementId: agreement.id, externalAgreementId },
         );
-        if (!externalStateAfterInput?.state) {
-          throw new InternalServerErrorException('External API state response did not include a state after input submission');
-        }
       } catch (error) {
-        this.logger.warn(
-          `Input ${inputRecord.inputId || body.inputId} for agreement ${agreement.id} was submitted, but post-submit state refresh failed: ${
+        this.logger.log(
+          `Post-submit state read for agreement ${agreement.id} failed; the webhook reconciliation will refresh state: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -214,9 +266,14 @@ export class ExternalAgreementsService {
     agreement.variables = { ...(agreement.variables || {}), ...(body.values || {}) };
     agreement.lastInputId = inputRecord.inputId;
     agreement.lastInputAt = inputRecord.createdAt;
+    // Never advance the mirror's state locally: guessing the post-input state
+    // before finality is the overclaiming the PENDING/FINALIZED model exists
+    // to prevent. Outside mock mode the state moves only when the platform
+    // says it has (this read, or the webhook reconciliation that follows
+    // finalization). Mock mode keeps the instant transition by design.
     agreement.state = isMockExternal
       ? nextState(agreement.json, previousState, inputRecord.inputId) || previousState || initialState(agreement.json)
-      : externalStateAfterInput?.state || nextState(agreement.json, previousState, inputRecord.inputId) || previousState || agreement.state || initialState(agreement.json);
+      : externalStateAfterInput?.state || agreement.state || initialState(agreement.json);
     refreshDerivedFields(agreement, [normalizeAddress(body.signer)]);
     agreement.updatedAt = new Date().toISOString();
     await this.agreements.upsertOne({ id: agreement.id }, agreement);
@@ -392,12 +449,20 @@ export class ExternalAgreementsService {
   }
 
   private async upsertInputMirror(inputRecord: any, agreement: any) {
+    // Only a real address may key an input mirror. Falling back to an agreement
+    // id produces a record that looks addressed but matches nothing on chain,
+    // and inputs are only submittable against a deployed agreement, so a
+    // missing address here means the caller got ahead of the deployment rather
+    // than that a default is needed.
     const agreementAddress = normalizeAddress(inputRecord.agreementAddress) ||
       normalizeAddress(agreement.address) ||
       inputRecord.agreementAddress ||
-      agreement.address ||
-      agreement.externalAgreementId ||
-      agreement.id;
+      agreement.address;
+    if (!agreementAddress) {
+      throw new InternalServerErrorException(
+        `Cannot mirror an input for agreement ${agreement.id}: it has no on-chain address`,
+      );
+    }
     const mirrored = {
       ...inputRecord,
       agreementAddress,
@@ -459,6 +524,44 @@ export class ExternalAgreementsService {
       || (email && (agreement.participants || []).some((entry: any) => normalizeEmail(entry.email || '') === email));
     if (!canRead) throw new ForbiddenException('You do not have access to this agreement');
     return agreement;
+  }
+
+  /**
+   * Inputs are signed by whichever wallet the agreement names as the input's
+   * issuer, not necessarily by a wallet on the submitting user's account —
+   * users bring their own EOAs, and the EIP-712 permit is what proves key
+   * control. So this checks the signer against the agreement's issuer rule
+   * rather than against the user's wallets (which is why it differs from the
+   * deploy-time assertPermitSignerAuthorized below).
+   *
+   * Stored variables take precedence over submitted values when resolving the
+   * issuer — the chain checks the issuer against the agreement's pre-input
+   * state, so a submission that reassigns its own issuer variable is still
+   * judged by who holds the role now, and merging values first would 403 a
+   * signer the chain accepts. Submitted values only fill variables with no
+   * stored value (a counterparty joining), mirroring the frontend resolver.
+   * When no issuer resolves at all the check defers to the chain, where the
+   * permit signature is verified regardless.
+   */
+  private assertSignerMayIssueInput(agreement: any, body: any) {
+    const signer = normalizeAddress(body.signer);
+    if (!signer) throw new BadRequestException('Signer must be a valid wallet address');
+
+    const inputDef = agreement.json?.execution?.inputs?.[body.inputId];
+    if (!inputDef) return;
+
+    const issuerAddresses = resolveInputIssuerAddresses(
+      inputDef.issuer,
+      agreement.variables,
+      body.values,
+    );
+    if (issuerAddresses.length === 0) return;
+
+    if (!issuerAddresses.includes(signer)) {
+      throw new ForbiddenException(
+        `Input "${body.inputId}" must be signed by ${issuerAddresses.join(' or ')}; the permit was signed by ${signer}. Connect the expected wallet and sign again.`,
+      );
+    }
   }
 
   private assertPermitSignerAuthorized(signer: string, user: any) {
@@ -561,7 +664,7 @@ export class ExternalAgreementsService {
       blockNumber: undefined,
       payload: '0x',
       values: body.values || {},
-      status: 'MINED',
+      status: 'PENDING',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -12,7 +12,7 @@ This repository supports builders using the TypeScript SDK, agents or tools usin
 | Get access | [Dev Portal / API keys](https://developers.shodai.network/portal) |
 | Build | [Choose SDK vs MCP](https://docs.shodai.network/integration-surfaces) · [MCP quickstart](https://docs.shodai.network/sdks/quickstart-with-mcp) · [TypeScript SDK quickstart](https://docs.shodai.network/sdks/quickstart-with-typescript-sdk) · [End-to-end workflow](https://docs.shodai.network/examples/end-to-end-workflow) |
 
-**Hosted MCP:** `https://shodai.network/mcp` is the Shodai Agreements execution MCP endpoint. It uses Streamable HTTP, bearer API-key auth, an `environment` tool argument, environment-scoped keys, and no hosted private-key custody.
+**Hosted MCP:** `https://shodai.network/mcp` is the Shodai Agreements execution MCP endpoint. OAuth-capable clients connect through browser sign-in and consent for testnet access. The endpoint uses Streamable HTTP, requires an `environment` tool argument, supports environment-scoped API keys as a fallback, and has no hosted private-key custody.
 
 **Packages and apps:** [`@shodai-network/agreements-api-client`](./packages/agreements-api-client) · [`@shodai-network/agreements-mcp-server`](./packages/agreements-mcp-server) · [`agreements-api-playground`](./apps/agreements-api-playground) · [`shodai-reference-app`](./apps/shodai-reference-app) · [`oauth-connect-cli`](./apps/oauth-connect-cli) (`shodai-oauth`)
 
@@ -42,17 +42,13 @@ Configure Shodai as a remote Streamable HTTP MCP server:
 URL:
 https://shodai.network/mcp
 
-Auth:
-Authorization: Bearer $SHODAI_API_KEY
-
-Key shape:
-cns_pk_...
-
 Required API-calling tool argument:
-environment: "testnet" | "production"
+environment: "testnet"
 ```
 
-API keys only work in the environment where they were created. Hosted MCP never receives private keys; write tools use externally signed EIP-712 permits or typed-data preparation.
+Start the connection in an OAuth-capable client, then complete Shodai browser sign-in and consent. The hosted endpoint advertises the testnet authorization server, so use `environment: "testnet"` for this OAuth connection.
+
+Clients without OAuth support can send `Authorization: Bearer cns_pk_...`. API keys only work in the environment where they were created; a production key can use `environment: "production"`. Hosted MCP never receives private keys; write tools use externally signed EIP-712 permits or typed-data preparation.
 
 An ordinary browser `GET` to `/mcp` may return `405` because the endpoint expects MCP protocol requests. MCP surfaces on `docs.shodai.network` are for docs and search only; `https://shodai.network/mcp` is the Agreements execution endpoint.
 
@@ -197,7 +193,7 @@ See [`apps/agreements-api-playground/README.md`](./apps/agreements-api-playgroun
 
 ## Boundaries
 
-Hosted MCP does not hold private keys. OAuth/session auth and x402 payments are not current setup paths. Shodai agreements do not claim legal finality or fully autonomous enforcement. Shodai does not move value without authorized signed inputs.
+Hosted MCP does not hold private keys. Hosted MCP browser OAuth and direct API delegated OAuth are supported connection paths; x402 payments are not a current setup path. Shodai agreements do not claim legal finality or fully autonomous enforcement. Shodai does not move value without authorized signed inputs.
 
 ## Open Source Project Notes
 

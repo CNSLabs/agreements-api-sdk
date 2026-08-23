@@ -243,7 +243,7 @@ export function registerReadTools(
         ...environmentInputSchema(options),
         agreementId: agreementIdSchema,
         inputId: z.string().optional().describe('Filter by input ID as defined in the agreement JSON (execution.inputs).'),
-        status: z.enum(['PENDING', 'MINED', 'FAILED']).optional().describe('Filter by submission status.'),
+        status: z.enum(['PENDING', 'FINALIZED', 'FAILED']).optional().describe('Filter by submission status.'),
         limit: z.number().int().min(1).max(100).optional().describe('Page size (max 100).'),
         cursor: z.string().optional().describe('Opaque pagination cursor from a previous response (pageInfo.nextCursor).'),
       },

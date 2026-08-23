@@ -31,6 +31,23 @@ export type AgreementRecordApi = {
   lastInputAt?: string;
   participants?: ParticipantApi[];
   observers?: string[];
+  /** Deploy transaction hash, mirrored from the platform record. */
+  transactionHash?: string | null;
+  /**
+   * The platform's deployment-operation summary, mirrored verbatim. Present
+   * while a permit deployment is unresolved or terminally failed; cleared on
+   * promotion to Deployed. Same field shape as input operation data.
+   */
+  pendingOperation?: {
+    kind: "deployment";
+    submissionId?: string | null;
+    operationLifecycle?: string | null;
+    txHash?: string | null;
+    blockNumber?: number;
+    error?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+  };
 };
 
 export type ParticipantApi = {
@@ -65,7 +82,7 @@ export type AgreementInputRecordApi = {
   blockNumber?: number;
   payload: string;
   values: Record<string, unknown>;
-  status: "PENDING" | "MINED" | "FAILED" | string;
+  status: "PENDING" | "FINALIZED" | "FAILED" | string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -133,7 +150,7 @@ export function useAgreementsApi() {
     async (id: string) => {
       return apiCall(async () => {
         const axiosInstance = await createInstance();
-        const res = await axiosInstance.get<{ status?: string; state?: string }>(`/agreements/${id}/state`);
+        const res = await axiosInstance.get<{ status?: string; state?: string; requiredConfirmations?: number }>(`/agreements/${id}/state`);
         return res.data;
       });
     },

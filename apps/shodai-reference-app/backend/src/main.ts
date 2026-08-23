@@ -7,6 +7,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(StandaloneConfigService);
 
+  if (config.apiBasePath) {
+    app.setGlobalPrefix(config.apiBasePath, { exclude: ['health'] });
+  }
+
   app.enableCors({
     origin: true,
     allowedHeaders: [

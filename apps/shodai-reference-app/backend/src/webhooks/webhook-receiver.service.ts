@@ -47,7 +47,16 @@ export class WebhookReceiverService {
 
     if (!inserted) {
       await this.webhookEvents.recordDuplicateDelivery(event.id);
+      // Deliveries are at-least-once, so a repeat carries no new information
+      // for an open page. Dropping it here is the same dedupe an integrator
+      // has to do on the delivery id.
+      return;
     }
+
+    // Browser notification happens in the processor, not here: the payload
+    // carries the EXTERNAL agreement id while pages subscribe by the local
+    // one, and publishing before the mirror is reconciled would tell the page
+    // to refetch data that has not changed yet.
   }
 
   private async constructEvent(rawBody: WebhookRawBody, headers: WebhookHeaders): Promise<ShodaiWebhookEvent> {

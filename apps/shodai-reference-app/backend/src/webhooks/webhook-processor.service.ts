@@ -5,6 +5,7 @@ import { AgreementRepository } from '../database/repositories/agreement.reposito
 import { WebhookEventRepository } from '../database/repositories/webhook-event.repository';
 import { ExternalAgreementsService } from '../external/external-agreements.service';
 import { NotificationEmailService } from '../notifications/notification-email.service';
+import { AgreementEventStreamService } from './agreement-event-stream.service';
 import type {
   AgreementNotificationTriggeredWebhookEvent,
   AgreementTransitionedWebhookEvent,
@@ -23,6 +24,7 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
     private readonly webhookEvents: WebhookEventRepository,
     private readonly external: ExternalAgreementsService,
     private readonly notificationEmail: NotificationEmailService,
+    private readonly stream: AgreementEventStreamService,
   ) {}
 
   onModuleInit() {
@@ -143,6 +145,21 @@ export class WebhookProcessorService implements OnModuleDestroy, OnModuleInit {
         reconciliation,
       });
       this.logLostLease(document, updated, 'mark processed');
+      if (updated) {
+        // Tell open pages only now: the event names agreements by the
+        // external id while pages subscribe by the local one, and a signal
+        // sent before this point would trigger a refetch of a mirror that
+        // has not been reconciled yet. A lost lease means another worker
+        // owns the event and its publish.
+        this.stream.publish({
+          type: transitionEvent.type,
+          agreementId: agreement.id,
+          ...(typeof transitionEvent.data.sequence === 'number'
+            ? { sequence: transitionEvent.data.sequence }
+            : {}),
+          receivedAt: new Date().toISOString(),
+        });
+      }
     } catch (error) {
       await this.retryOrDeadLetter(document, 'reconciliation_failed', error, {
         agreementId: agreement.id,

@@ -187,21 +187,29 @@ async function cmdLogout(): Promise<void> {
     console.log('No session on disk.');
     return;
   }
+  const sessionPath = defaultSessionPath();
+  let localSessionCleared = false;
   const session = new OauthDelegatedSession({
     clientId: stored.clientId,
     issuer: stored.issuer,
+    onTokensCleared: () => {
+      clearSession(sessionPath);
+      localSessionCleared = true;
+    },
   });
   session.restoreTokens(stored.tokens);
   try {
     await session.revoke();
     console.log('Revoked refresh token family on the authorization server.');
+    console.log(`Cleared ${sessionPath}`);
   } catch (error) {
-    console.error(
-      `Revoke request failed (${error instanceof Error ? error.message : String(error)}); clearing local session anyway.`,
-    );
+    const detail = error instanceof Error ? error.message : String(error);
+    if (localSessionCleared) {
+      console.error(`Remote revocation was not confirmed (${detail}); cleared ${sessionPath}.`);
+    } else {
+      console.error(`Local session could not be cleared (${detail}).`);
+    }
   }
-  clearSession();
-  console.log(`Cleared ${defaultSessionPath()}`);
 }
 
 function requireSession(): StoredOauthSession {

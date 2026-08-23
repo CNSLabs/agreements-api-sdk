@@ -3,6 +3,8 @@ import { createPublicClient, http, keccak256 } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
 import { AgreementEngine, buildInputPayload, inputToBytes32, type AgreementJson } from "@shodai-network/agreements-protocol-evm";
 import { useAgreementsApi, type AgreementRecordApi } from "@/hooks/useAgreementsApi";
+import { useInputFinalityProgress, type TrackedInput } from "@/hooks/agreement/useInputFinalityProgress";
+import { useAgreementEventStream } from "@/hooks/agreement/useAgreementEventStream";
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {
   buildCurrentStateBlankValues,
@@ -50,6 +52,10 @@ export interface UseAgreementInputsParams {
   refreshAgreement: () => Promise<void>;
   refreshState: () => Promise<void>;
   refreshInputs: () => Promise<void>;
+  /** Confirmations required before a submitted input settles, from the API. */
+  requiredConfirmations?: number;
+  /** Current input history, used to tell when a submission has settled. */
+  submittedInputs?: Array<{ inputId?: string; txHash?: string; status?: string }>;
 }
 
 export function useAgreementInputs({
@@ -60,12 +66,45 @@ export function useAgreementInputs({
   refreshAgreement,
   refreshState,
   refreshInputs,
+  requiredConfirmations,
+  submittedInputs,
 }: UseAgreementInputsParams) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const { switchChainAsync } = useSwitchChain();
   const { processInput } = useAgreementsApi();
+
+  // An input stays PENDING for the whole finality window, so the submit flow
+  // keeps reporting progress instead of going quiet the moment the request
+  // returns. Settlement is decided by the API record, not the block count.
+  const isSubmittedInputSettled = React.useCallback(
+    (tracked: TrackedInput) =>
+      (submittedInputs ?? []).some((input) => {
+        const sameTransaction =
+          !!tracked.txHash && !!input.txHash &&
+          input.txHash.toLowerCase() === tracked.txHash.toLowerCase();
+        return sameTransaction && input.status === "FINALIZED";
+      }),
+    [submittedInputs],
+  );
+  const finality = useInputFinalityProgress({
+    requiredConfirmations,
+    isSettled: isSubmittedInputSettled,
+  });
+
+  // The platform tells us when an agreement moves, so the page listens rather
+  // than polling for a change it has already been notified about. A reconnect
+  // re-reads once, because anything delivered while the socket was down was
+  // missed.
+  const rereadAgreement = React.useCallback(async () => {
+    await Promise.allSettled([refreshState(), refreshInputs()]);
+  }, [refreshState, refreshInputs]);
+  useAgreementEventStream({
+    agreementId: record?.id,
+    onEvent: () => void rereadAgreement(),
+    onReconnect: () => void rereadAgreement(),
+  });
   const captureDiagnostic = useWalletDiagnostics();
 
   const [activeInputId, setActiveInputId] = React.useState<string | null>(null);
@@ -401,6 +440,12 @@ export function useAgreementInputs({
         signature,
       });
 
+      finality.track({
+        inputId: activeInputId,
+        txHash: (inputRecord as { txHash?: string })?.txHash,
+        blockNumber: (inputRecord as { blockNumber?: number })?.blockNumber,
+      });
+
       // Refresh state and inputs after successful submission
       submitStage = "refresh-agreement-state";
       const refreshResults = await Promise.allSettled([refreshAgreement(), refreshState(), refreshInputs()]);
@@ -447,6 +492,7 @@ export function useAgreementInputs({
     resolveInputIssuerAddresses,
     switchChainAsync,
     walletClient,
+    finality,
   ]);
 
   const handleClickSubmitAction = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
@@ -498,6 +544,7 @@ export function useAgreementInputs({
     // State
     activeInputId,
     isWorking,
+    finality,
     isActionConfirmOpen,
     showActionSuccessModal,
     lastSubmittedAction,

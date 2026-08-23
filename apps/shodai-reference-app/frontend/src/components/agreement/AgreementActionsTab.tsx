@@ -1,6 +1,9 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Controller, Control, FieldErrors } from "react-hook-form";
+import { InputFinalityStatus } from "@/components/agreement/InputFinalityStatus";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import type { InputFinalityProgress } from "@/hooks/agreement/useInputFinalityProgress";
 import { createPublicClient, formatUnits, http, isAddress, keccak256, stringToHex } from "viem";
 import { Button } from "@/subframe/components/Button";
 import { Loader } from "@/subframe/components/Loader";
@@ -38,7 +41,7 @@ import { isReadOnlyLongTextVariable } from "./readOnlyLongTextLogic";
 import { resolveSummaryVariableDefinition } from "./summaryVariableDefinition";
 import type { ParticipantApi, AgreementRecordApi } from "@/hooks/useAgreementsApi";
 import type { AgreementInputRecordApi } from "@/hooks/useAgreementsApi";
-import { extractIssuerVariableKeys, resolveIssuerAddresses } from "@/utils/agreementsUi";
+import { extractIssuerVariableKeys, resolveIssuerAddresses, toMillis } from "@/utils/agreementsUi";
 import { getChainConfig, getDefaultChainConfig } from "@/utils/chainConfig";
 import { formatOnchainReferenceValue } from "@/utils/onchainReferences";
 import {
@@ -51,7 +54,6 @@ import {
   FeatherFormInput,
   FeatherMousePointerClick,
   FeatherStepBack,
-  FeatherArrowLeft,
   FeatherFileCheck,
   FeatherX,
 } from "@subframe/core";
@@ -246,6 +248,7 @@ export interface AgreementActionsTabProps {
   handleActionConfirmSubmit: () => void;
   handleActionDialogChange: (open: boolean) => void;
   isWorking: boolean;
+  finality: InputFinalityProgress;
   isActionConfirmOpen: boolean;
   showActionSuccessModal: boolean;
   lastSubmittedAction: {
@@ -261,11 +264,12 @@ export interface AgreementActionsTabProps {
   setActionError: (error: string | null) => void;
   setActionErrorReport: (report: string | null) => void;
   openPreviousInputAccordion: boolean;
-  onReturnToOverview: () => void;
+  onSuccessDialogClose: () => void;
 }
 
 export function AgreementActionsTab(props: AgreementActionsTabProps) {
   const captureDiagnostic = useWalletDiagnostics();
+  const { setShowDynamicUserProfile } = useDynamicContext();
   const {
     record,
     agreementJson,
@@ -299,6 +303,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
     handleActionConfirmSubmit,
     handleActionDialogChange,
     isWorking,
+    finality,
     isActionConfirmOpen,
     showActionSuccessModal,
     lastSubmittedAction,
@@ -309,7 +314,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
     setActionError,
     setActionErrorReport,
     openPreviousInputAccordion,
-    onReturnToOverview,
+    onSuccessDialogClose,
   } = props;
 
   const handlePreviewActionError = React.useCallback(() => {
@@ -407,6 +412,60 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
       allInputIds.map((inputId) => [inputId, inputs[inputId] ?? null]),
     );
   }, [agreementJson, nonPerformableInputIds, performableInputIds]);
+  // A submission that has not finalized yet means the state may change at any
+  // moment: signing the same input again would duplicate it, and signing a
+  // fresh permit starts a separate durable operation. The finality hook covers
+  // submissions made in this session; a recent PENDING mirror row covers the
+  // page being reloaded mid-wait. Rows older than the tracker's own give-up
+  // window are treated as stuck rather than in flight, so a failed submission
+  // cannot lock the form forever.
+  const PENDING_INPUT_FRESHNESS_MS = 15 * 60_000;
+  // The freshness window must expire on its own: keyed only on
+  // activityInputs, a dead webhook (no refetch, no new rows) would have kept
+  // the gate closed past the window until an unrelated re-render. The clock
+  // ticks only while a PENDING row exists, so quiet pages pay nothing.
+  const hasPendingRows = activityInputs.some((input) => input.status === "PENDING");
+  const [gateClock, setGateClock] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!hasPendingRows) return undefined;
+    const timer = window.setInterval(() => setGateClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [hasPendingRows]);
+  const hasRecentPendingInput = React.useMemo(
+    () =>
+      activityInputs.some(
+        (input) =>
+          input.status === "PENDING" &&
+          gateClock - toMillis(input.createdAt) < PENDING_INPUT_FRESHNESS_MS,
+      ),
+    [activityInputs, gateClock, PENDING_INPUT_FRESHNESS_MS],
+  );
+  const isAwaitingFinality =
+    finality.phase === "confirming" || finality.phase === "finalizing" || hasRecentPendingInput;
+
+  // The wallets that could sign this step's actions, for the ineligibility
+  // notice. Eligibility is purely which wallet is connected — the signed-in
+  // account is irrelevant here — so the notice must name addresses, not send
+  // the user off to check their login.
+  const currentStepIssuerAddresses = React.useMemo(() => {
+    const seen = new Set<string>();
+    const addresses: string[] = [];
+    for (const inputDef of Object.values(availableCurrentStepInputs)) {
+      const resolved = resolveIssuerAddresses(
+        (inputDef as any)?.issuer,
+        record?.variables as Record<string, unknown> | undefined,
+        form.getValues() as Record<string, unknown>,
+      );
+      for (const issuerAddr of resolved) {
+        const normalized = issuerAddr.toLowerCase();
+        if (!seen.has(normalized)) {
+          seen.add(normalized);
+          addresses.push(issuerAddr);
+        }
+      }
+    }
+    return addresses;
+  }, [availableCurrentStepInputs, form, record?.variables]);
   const retainerBalanceLookup = React.useMemo(
     () =>
       getRetainerBalanceLookup({
@@ -675,13 +734,30 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                   <FeatherAlertTriangle className="text-body font-body text-warning-600" />
                   <div className="flex grow shrink-0 basis-0 flex-col items-start gap-1">
                     <span className="text-body-bold font-body-bold text-default-font">
-                      {address ? "No actions available for this account" : "Connect a wallet to view eligible actions"}
+                      {!address
+                        ? "Connect a wallet to view eligible actions"
+                        : currentStepIssuerAddresses.length > 0
+                          ? "A different wallet is needed for this step"
+                          : "No actions available for your connected wallet"}
                     </span>
                     <span className="text-caption font-caption text-subtext-color">
-                      {address
-                        ? "You are not assigned any of the roles with available actions for this step. Check that you are logged in with the correct account if you believe this is an error."
-                        : "Connect a wallet to see which actions you can take for this step. You can still reveal the other available actions with the eye icon."}
+                      {!address
+                        ? "Connect a wallet to see which actions you can take for this step. You can still reveal the other available actions with the eye icon."
+                        : currentStepIssuerAddresses.length > 0
+                          ? `This step's actions can be signed by ${currentStepIssuerAddresses
+                              .map((issuerAddr) => shortAddress(issuerAddr))
+                              .join(" or ")}. You have ${shortAddress(address)} connected — switch to an eligible wallet to act on this step.`
+                          : `Your connected wallet ${shortAddress(address)} is not assigned to any of this step's actions, and their assigned wallets are not identifiable yet. Check the Participants section for who acts next.`}
                     </span>
+                    {address ? (
+                      <Button
+                        size="small"
+                        variant="neutral-secondary"
+                        onClick={() => setShowDynamicUserProfile(true)}
+                      >
+                        Manage wallets
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -822,7 +898,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                             onChange={(value) => field.onChange(value)}
                             onBlur={field.onBlur}
                             error={(errors as any)?.[fieldKey]}
-                            disabled={!canSignActiveInput}
+                            disabled={!canSignActiveInput || isAwaitingFinality}
                             showError={true}
                             convertDateTime={toDatetimeLocal}
                             useTextArea={false}
@@ -835,15 +911,16 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
                 </div>
               )}
               <div className="flex h-px w-full flex-none flex-col items-center gap-2 bg-neutral-border" />
+              <InputFinalityStatus progress={finality} pendingWithoutProgress={hasRecentPendingInput} />
               <Button
                 className="h-10 w-full flex-none"
                 variant="brand-primary"
                 size="large"
                 icon={isWorking ? <Loader size="small" /> : <FeatherBlocks />}
                 onClick={handleClickSubmitAction}
-                disabled={!activeInputId || !hasWalletClient || !hasPublicClient || isWorking || !canSignActiveInput}
+                disabled={!activeInputId || !hasWalletClient || !hasPublicClient || isWorking || !canSignActiveInput || isAwaitingFinality}
               >
-                SIGN &amp; SUBMIT
+                {isAwaitingFinality ? "AWAITING CONFIRMATIONS" : "SIGN & SUBMIT"}
               </Button>
               {import.meta.env.DEV ? (
                 <Button
@@ -873,7 +950,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
         footer={
           <>
             <Button variant="neutral-secondary" size="large" onClick={() => handleActionDialogChange(false)} disabled={isWorking}>Cancel</Button>
-            <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={() => void handleActionConfirmSubmit()} disabled={isWorking || !canSignActiveInput}>Sign &amp; Submit</Button>
+            <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={() => void handleActionConfirmSubmit()} disabled={isWorking || !canSignActiveInput || isAwaitingFinality}>Sign &amp; Submit</Button>
           </>
         }
       >
@@ -922,13 +999,17 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
         )}
       </ConfirmFlowDialog>
 
+      {/* Closing keeps the user on the current-state page: the state change is
+          not applied until the finality window passes, and the progress tracker
+          they should watch is right here. Navigating away implied the
+          submission was already reflected, which it is not. */}
       <SuccessDialog
         open={showActionSuccessModal}
         onOpenChange={(open) => { if (!open) { setShowActionSuccessModal(false); setLastSubmittedAction(null); } }}
         title="Action Submitted"
         message={<>Your {lastSubmittedAction?.inputDisplayName || "action"} input has been successfully signed and submitted.</>}
         footer={
-          <Button variant="brand-primary" size="large" icon={<FeatherArrowLeft />} onClick={onReturnToOverview}>Return to Agreement</Button>
+          <Button variant="brand-primary" size="large" icon={<FeatherBlocks />} onClick={onSuccessDialogClose}>Track Confirmation Progress</Button>
         }
       >
         {lastSubmittedAction && Object.keys(lastSubmittedAction.payload).length > 0 && (

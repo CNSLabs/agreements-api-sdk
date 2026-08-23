@@ -22,6 +22,8 @@ import { useNotificationsApi } from "@/hooks/useNotificationsApi";
 import { useAgreementActivity } from "@/hooks/agreement/useAgreementActivity";
 import { useAgreementData, formatPaymentAmount as formatPaymentAmountForActivity } from "@/hooks/agreement/useAgreementData";
 import { useAgreementInputs } from "@/hooks/agreement/useAgreementInputs";
+import { useDeploymentFinalityProgress } from "@/hooks/agreement/useDeploymentFinalityProgress";
+import { DeploymentFinalityBanner } from "@/components/agreement/DeploymentFinalityBanner";
 import { getChainLabel } from "@/utils/chainConfig";
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {
@@ -124,6 +126,7 @@ const Agreement: React.FC = () => {
     record,
     agreementJson,
     currentState,
+    requiredConfirmations,
     participants,
     agreementAddress,
     loadError,
@@ -195,6 +198,7 @@ const Agreement: React.FC = () => {
   const {
     activeInputId,
     isWorking,
+    finality,
     isActionConfirmOpen,
     showActionSuccessModal,
     lastSubmittedAction,
@@ -227,6 +231,16 @@ const Agreement: React.FC = () => {
     refreshAgreement,
     refreshState,
     refreshInputs,
+    requiredConfirmations,
+    submittedInputs: activityInputs,
+  });
+
+  // Deployment finality is display-only: the deploy answered after inclusion,
+  // and the worker recognizes the agreement once the finality boundary
+  // passes. The banner shows that window on every tab and then disappears.
+  const deploymentFinality = useDeploymentFinalityProgress({
+    record,
+    requiredConfirmations,
   });
 
   React.useEffect(() => {
@@ -279,6 +293,11 @@ const Agreement: React.FC = () => {
   // Deploy success modal handling
   React.useEffect(() => {
     if (hasProcessedDeployModal.current && record) {
+      // Consume the flag: it marks "arrived here from a deploy", and the modal
+      // belongs to that arrival only. Left set, every later record refresh —
+      // and submitting an input now refreshes the record — re-opened this
+      // modal underneath whatever the user was actually doing.
+      hasProcessedDeployModal.current = false;
       // Show modal after a brief delay to ensure smooth transition
       requestAnimationFrame(() => {
         setShowDeploySuccessModal(true);
@@ -577,6 +596,11 @@ const Agreement: React.FC = () => {
         }
       />
       <div ref={contentScrollRef} className="flex w-full grow shrink-0 basis-0 flex-col items-center gap-6 px-6 py-8 mobile:px-4 mobile:py-4 overflow-y-auto bg-neutral-50">
+        {deploymentFinality.tracking ? (
+          <div className="w-full max-w-[1280px]">
+            <DeploymentFinalityBanner progress={deploymentFinality} />
+          </div>
+        ) : null}
         {activeTab === "overview" ? (
           <AgreementOverviewTab
             record={record}
@@ -615,6 +639,7 @@ const Agreement: React.FC = () => {
                 record={record}
                 agreementJson={agreementJson}
                 currentState={currentState}
+                finality={finality}
                 stateLabel={stateLabel}
                 previousStateId={previousStateId}
                 previousStateLabel={previousStateLabel}
@@ -654,7 +679,7 @@ const Agreement: React.FC = () => {
                 setActionError={setActionError}
                 setActionErrorReport={setActionErrorReport}
                 openPreviousInputAccordion={shouldOpenPreviousInput}
-                onReturnToOverview={() => { setShowActionSuccessModal(false); setLastSubmittedAction(null); navigateToTab("overview"); }}
+                onSuccessDialogClose={() => { setShowActionSuccessModal(false); setLastSubmittedAction(null); }}
               />
             ) : (
               <div className="flex max-w-[1280px] grow shrink-0 basis-0 flex-col items-center gap-4 self-stretch bg-default-background">

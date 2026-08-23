@@ -362,7 +362,7 @@ test('Agreements API client emits the outbound external API contract used by the
         return jsonResponse(201, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: init.body ? JSON.parse(String(init.body)).chainId : undefined, state: 'Active' }));
       }
       if (String(url).endsWith('/input')) {
-        return jsonResponse(201, successEnvelope({ agreementAddress: 'agr_1', inputId: 'submit', status: 'MINED' }));
+        return jsonResponse(201, successEnvelope({ agreementAddress: 'agr_1', inputId: 'submit', status: 'PENDING' }));
       }
       if (String(url).endsWith('/agr_1')) {
         return jsonResponse(200, successEnvelope({ id: 'agr_1', address: '0x1111111111111111111111111111111111111111', chainId: 59141, state: 'Active' }));
@@ -700,7 +700,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
       agreementAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       inputId: 'accept',
       txHash: `0x${'1'.repeat(64)}`,
-      status: 'MINED',
+      status: 'FINALIZED',
       values: { index },
       createdAt: now,
       updatedAt: new Date(Date.now() + index).toISOString(),
@@ -721,7 +721,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
       agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       inputId: 'legacyAccept',
       txHash: legacyTxHash,
-      status: 'MINED',
+      status: 'FINALIZED',
       values: { before: true },
       createdAt: now,
       updatedAt: now,
@@ -733,7 +733,7 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
         agreementAddress: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         inputId: 'legacyAccept',
         txHash: normalizedLegacyTxHash,
-        status: 'MINED',
+        status: 'FINALIZED',
         values: { after: true },
         createdAt: now,
         updatedAt: now,
@@ -756,6 +756,97 @@ test('Agreement input mirror upserts dedupe concurrently by agreement, chain, an
   } finally {
     await collections?.onModuleDestroy();
     await mongoClient.db(dbName).dropDatabase();
+    await mongoClient.close();
+  }
+});
+
+test('Deploying records a pending deployment when the platform could not broadcast', async (t) => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
+  const mongoClient = new MongoClient(mongoUri, { serverSelectionTimeoutMS: 1000 });
+  try {
+    await mongoClient.connect();
+  } catch {
+    t.skip('MongoDB is not available on MONGO_URI');
+    return;
+  }
+
+  const dbName = `standalone_agreements_pending_deploy_${process.pid}_${Math.floor(Math.random() * 10000)}`;
+  try {
+    const db = mongoClient.db(dbName);
+    const service = createMockExternalAgreementsService(db);
+    // Deploying through a permit is durable: when the platform cannot broadcast
+    // it stores a resumable operation and answers with a pending record — Draft,
+    // an operationLifecycle, a transaction hash, and no address. The agreement
+    // is not deployed, and recording it as such is what leaves the app showing a
+    // live agreement the platform has never persisted.
+    service.notificationCatalog = { getExternalWebhookTemplateByAgreementTemplateId: async () => null };
+    service.config.externalApiBaseUrl = 'https://external-api.example.test';
+    service.config.getSupportedAgreementChains = () => [{ chainId: 59141, network: 'linea-sepolia', factoryAddress: `0x${'2'.repeat(40)}` }];
+    service.config.isSupportedAgreementChain = (chainId) => chainId === 59141;
+    service.config.normalizeAgreementChainId = (chainId) => {
+      const parsed = Number(chainId ?? 59141);
+      if (parsed !== 59141) throw new Error('unsupported');
+      return parsed;
+    };
+    service.externalApiCall = async (operation) => {
+      if (operation === 'validate-deployment') return { variables: {} };
+      return {
+        id: 'external-pending-1',
+        status: 'Draft',
+        operationId: 'operation-pending-1',
+        operationLifecycle: 'transaction_ready',
+        transactionHash: `0x${'9'.repeat(64)}`,
+        chainId: 59141,
+        pendingOperation: {
+          kind: 'deployment',
+          submissionId: 'operation-pending-1',
+          operationLifecycle: 'transaction_ready',
+          txHash: `0x${'9'.repeat(64)}`,
+          createdAt: '2026-08-18T00:00:00.000Z',
+          updatedAt: '2026-08-18T00:00:01.000Z',
+        },
+      };
+    };
+
+    await db.collection('agreements').insertOne({
+      id: 'pending-deploy-local-1',
+      ownerUserId: 'user-1',
+      owner: '0x1111111111111111111111111111111111111111',
+      status: 'Draft',
+      chainId: 59141,
+      json: { metadata: { templateId: 'did:template:mou-v1' }, execution: { initialize: { initialState: 'START' }, states: { START: {} } } },
+      variables: {},
+      participants: [],
+      observers: [],
+    });
+
+    const result = await service.deployWithPermit(
+      'pending-deploy-local-1',
+      { signer: '0x1111111111111111111111111111111111111111', deadline: 1, signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` } },
+      { platformUserId: 'user-1', id: 'user-1', wallets: [{ address: '0x1111111111111111111111111111111111111111' }] },
+    );
+
+    assert.equal(result.status, 'Draft');
+    // The platform's operation summary is mirrored verbatim, not re-derived:
+    // new platform detail must reach this app's records with no code change.
+    assert.deepEqual(result.pendingOperation, {
+      kind: 'deployment',
+      submissionId: 'operation-pending-1',
+      operationLifecycle: 'transaction_ready',
+      txHash: `0x${'9'.repeat(64)}`,
+      createdAt: '2026-08-18T00:00:00.000Z',
+      updatedAt: '2026-08-18T00:00:01.000Z',
+    });
+    // The agreement id must never stand in for a contract address.
+    assert.equal(result.address, undefined);
+    assert.notEqual(result.address, 'pending-deploy-local-1');
+
+    const persisted = await db.collection('agreements').findOne({ id: 'pending-deploy-local-1' }, { projection: { _id: 0 } });
+    assert.equal(persisted.status, 'Draft');
+    assert.equal(persisted.address, undefined);
+    assert.equal(persisted.externalAgreementId, 'external-pending-1');
+  } finally {
+    await mongoClient.db(dbName).dropDatabase().catch(() => {});
     await mongoClient.close();
   }
 });
@@ -1320,7 +1411,7 @@ test('Nest backend persists template access through Mongo-backed admin module', 
     });
     const inputBody = await readJsonResponse(inputResponse);
     assert.equal(inputResponse.status, 201, JSON.stringify(inputBody));
-    assert.equal(inputBody.status, 'MINED');
+    assert.equal(inputBody.status, 'PENDING');
 
     const stateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${draftBody.id}/state`, {
       headers: { authorization: `Bearer ${token}` },
@@ -1555,7 +1646,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
         txHash: `0x${String(inputSubmissionCount).repeat(64)}`,
         payload: '0x',
         values: body?.values || {},
-        status: 'MINED',
+        status: 'PENDING',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -1619,7 +1710,11 @@ test('Reference app external bridge uses the real API client surface and mirrors
       },
       execution: {
         initialState: 'AWAITING_INPUT',
-        inputs: { submitInvoice: {} },
+        inputs: {
+          submitInvoice: {},
+          issuerGatedInput: { issuer: '${variables.clientWalletAddress}' },
+          joinInput: { issuer: '${variables.newPartyWallet}' },
+        },
         states: { AWAITING_INPUT: {}, COMPLETE: {} },
       },
     };
@@ -1734,7 +1829,7 @@ test('Reference app external bridge uses the real API client surface and mirrors
     });
     const submitBody = await readJsonResponse(submitResponse);
     assert.equal(submitResponse.status, 201, JSON.stringify(submitBody));
-    assert.equal(submitBody.status, 'MINED');
+    assert.equal(submitBody.status, 'PENDING');
 
     const inputsResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/inputs?userId=platform-user-bridge`, {
       headers: { authorization: `Bearer ${token}` },
@@ -1777,11 +1872,83 @@ test('Reference app external bridge uses the real API client surface and mirrors
     });
     const stateFailureSubmitBody = await readJsonResponse(stateFailureSubmitResponse);
     assert.equal(stateFailureSubmitResponse.status, 201, `${JSON.stringify(stateFailureSubmitBody)}\n${logs}`);
-    assert.equal(stateFailureSubmitBody.status, 'MINED');
+    assert.equal(stateFailureSubmitBody.status, 'PENDING');
     assert.equal(
       await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'submitInvoiceAfterStateFailure' }),
       1,
     );
+
+    // When the agreement names an issuer for an input, the permit must be
+    // signed by that wallet — not merely by a wallet on the submitting user's
+    // account. The rejection happens before any external call, so nothing is
+    // added to the externalCalls ledger asserted below.
+    const issuerMismatchResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'issuerGatedInput',
+        values: {},
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'5'.repeat(64)}`, s: `0x${'6'.repeat(64)}` },
+      }),
+    });
+    const issuerMismatchBody = await readJsonResponse(issuerMismatchResponse);
+    assert.equal(issuerMismatchResponse.status, 403, JSON.stringify(issuerMismatchBody));
+    assert.match(issuerMismatchBody.message, new RegExp(participant));
+    assert.match(issuerMismatchBody.message, new RegExp(owner));
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'issuerGatedInput' }), 0);
+
+    // Stored variables take precedence over submitted values: the chain
+    // checks the issuer against pre-input state, so a submission that
+    // reassigns its own issuer variable is still judged by who holds the
+    // role now. The rejection must name the stored issuer, not the incoming
+    // value.
+    const reassignedIssuer = '0x3333333333333333333333333333333333333333';
+    const issuerReassignedResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'issuerGatedInput',
+        values: { clientWalletAddress: reassignedIssuer },
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'5'.repeat(64)}`, s: `0x${'6'.repeat(64)}` },
+      }),
+    });
+    const issuerReassignedBody = await readJsonResponse(issuerReassignedResponse);
+    assert.equal(issuerReassignedResponse.status, 403, JSON.stringify(issuerReassignedBody));
+    assert.match(issuerReassignedBody.message, new RegExp(participant));
+    assert.doesNotMatch(issuerReassignedBody.message, new RegExp(reassignedIssuer));
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'issuerGatedInput' }), 0);
+
+    // Submitted values still resolve an issuer variable with NO stored value
+    // (a counterparty joining): the gate uses the incoming value rather than
+    // deferring blindly to the chain.
+    const joinResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/${deployBody.address}/input`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputId: 'joinInput',
+        values: { newPartyWallet: reassignedIssuer },
+        signer: owner,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        signature: { v: 27, r: `0x${'5'.repeat(64)}`, s: `0x${'6'.repeat(64)}` },
+      }),
+    });
+    const joinBody = await readJsonResponse(joinResponse);
+    assert.equal(joinResponse.status, 403, JSON.stringify(joinBody));
+    assert.match(joinBody.message, new RegExp(reassignedIssuer));
+    assert.equal(await mongoClient.db(dbName).collection('agreement_inputs').countDocuments({ inputId: 'joinInput' }), 0);
 
     const failingValidateResponse = await fetch(`http://localhost:${port}/agreements-api/agreements/direct/validate-template`, {
       method: 'POST',
@@ -1887,7 +2054,7 @@ test('Reference app scopes deployed agreement lookup and input mirrors by chain'
       txHash: sharedTxHash,
       payload: '0x',
       values: { chain: 'linea' },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-04T10:00:00.000Z',
       updatedAt: '2026-06-04T10:00:00.000Z',
     }],
@@ -1899,7 +2066,7 @@ test('Reference app scopes deployed agreement lookup and input mirrors by chain'
       txHash: sharedTxHash,
       payload: '0x',
       values: { chain: 'base' },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-04T10:01:00.000Z',
       updatedAt: '2026-06-04T10:01:00.000Z',
     }],
@@ -2135,7 +2302,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
         txHash: `0x${'6'.repeat(64)}`,
         payload: '0x',
         values: { partyBSignature: 'Webhook reconciled party B signature' },
-        status: 'MINED',
+        status: 'FINALIZED',
         createdAt: '2026-06-02T18:01:00.000Z',
         updatedAt: '2026-06-02T18:01:00.000Z',
       },
@@ -2148,7 +2315,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
         txHash: `0x${'8'.repeat(64)}`,
         payload: '0x',
         values: { finalSignature: 'Webhook reconciled final signature' },
-        status: 'MINED',
+        status: 'FINALIZED',
         createdAt: '2026-06-02T18:02:00.000Z',
         updatedAt: '2026-06-02T18:02:00.000Z',
       },
@@ -2162,7 +2329,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'9'.repeat(64)}`,
       payload: '0x',
       values: { raceAccepted: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:03:00.000Z',
       updatedAt: '2026-06-02T18:03:00.000Z',
     }],
@@ -2175,7 +2342,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'a'.repeat(64)}`,
       payload: '0x',
       values: { failRecovered: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:04:00.000Z',
       updatedAt: '2026-06-02T18:04:00.000Z',
     }],
@@ -2188,7 +2355,7 @@ test('Webhook receiver verifies deliveries, retries recoverable events, and reco
       txHash: `0x${'b'.repeat(64)}`,
       payload: '0x',
       values: { deadRecovered: true },
-      status: 'MINED',
+      status: 'FINALIZED',
       createdAt: '2026-06-02T18:05:00.000Z',
       updatedAt: '2026-06-02T18:05:00.000Z',
     }],

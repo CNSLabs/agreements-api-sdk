@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router";
 import { WagmiProvider, createConfig } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http } from "viem";
-import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
+import { DynamicContextProvider, DynamicUserProfile } from "@dynamic-labs/sdk-react-core";
 import { DynamicWagmiConnector } from "@dynamic-labs/wagmi-connector";
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 import { ThemeProvider } from '@/components/theme-provider';
@@ -53,6 +53,11 @@ const DynamicAuthWrapper = ({
             <ConnectionResolver>
               <AuthInitProvider>{children}</AuthInitProvider>
             </ConnectionResolver>
+            {/* Modal for linking and switching wallets; opened anywhere via
+                useDynamicContext().setShowDynamicUserProfile(true). Signing in
+                stays email/social — this is the only surface through which a
+                user brings their own wallet. */}
+            <DynamicUserProfile variant="modal" />
           </DynamicWagmiConnector>
         </QueryClientProvider>
       </WagmiProvider>

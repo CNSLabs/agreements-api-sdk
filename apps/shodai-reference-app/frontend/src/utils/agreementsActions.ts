@@ -1,4 +1,4 @@
-import { resolveIssuerAddresses, resolveStateLabel, toMillis } from "@/utils/agreementsUi";
+import { resolveIssuerAddresses, resolveStateLabel, toMillis } from "./agreementsUi.ts";
 
 export type AvailableActionsAgreement = {
   id?: string;
@@ -13,6 +13,17 @@ export type AvailableActionsAgreement = {
   displayName: string;
 };
 
+/**
+ * How the current user relates to an action's issuer wallet:
+ * - `ready` — the connected wallet can sign it now.
+ * - `switch-wallet` — a wallet linked to this account can sign it; the user
+ *   has to make it active first.
+ * - `other-wallet` — the issuer is a wallet this account has not linked. The
+ *   work still exists and the required address is named, so it stays
+ *   discoverable instead of silently vanishing from the queue.
+ */
+export type ActionAvailability = "ready" | "switch-wallet" | "other-wallet";
+
 export type AvailableActionItem = {
   agreementId: string;
   agreementKey: string;
@@ -25,16 +36,22 @@ export type AvailableActionItem = {
   inputId: string;
   inputLabel: string;
   ctaLabel: string;
+  availability: ActionAvailability;
+  /** Wallets the agreement names as this action's issuer, lowercased. */
+  requiredWallets: string[];
 };
 
 export function computeAvailableActions(params: {
   agreements: AvailableActionsAgreement[] | undefined;
   userAddress: string | undefined;
+  /** Every wallet linked to the signed-in account, not just the active one. */
+  userWallets?: string[];
 }): AvailableActionItem[] {
-  const { agreements, userAddress } = params;
+  const { agreements, userAddress, userWallets } = params;
   if (!agreements || agreements.length === 0) return [];
   if (!userAddress) return [];
   const user = userAddress.toLowerCase();
+  const linked = new Set((userWallets || []).map((wallet) => wallet.toLowerCase()));
 
   const items: AvailableActionItem[] = [];
 
@@ -65,7 +82,16 @@ export function computeAvailableActions(params: {
 
       const issuers = resolveIssuerAddresses(inputDef?.issuer, a?.variables);
       if (issuers.length === 0) continue;
-      if (!issuers.some((issuer) => issuer.toLowerCase() === user)) continue;
+      const requiredWallets = issuers.map((issuer) => issuer.toLowerCase());
+      // Wallet mismatch is a classification, not a filter: an action whose
+      // issuer is a custom EOA must stay in the queue with the required
+      // address named, or wallet-switching users lose sight of their own
+      // pending work.
+      const availability: ActionAvailability = requiredWallets.includes(user)
+        ? "ready"
+        : requiredWallets.some((wallet) => linked.has(wallet))
+          ? "switch-wallet"
+          : "other-wallet";
 
       const agreementName = a?.displayName || agreementJson?.metadata?.name || "Agreement";
       const inputLabel = inputDef?.displayName || inputId;
@@ -81,7 +107,9 @@ export function computeAvailableActions(params: {
         currentStateLabel: resolveStateLabel({ agreementJson, stateId: currentState }),
         inputId,
         inputLabel,
-        ctaLabel: "Review now",
+        ctaLabel: availability === "ready" ? "Review now" : "View",
+        availability,
+        requiredWallets,
       });
     }
   }

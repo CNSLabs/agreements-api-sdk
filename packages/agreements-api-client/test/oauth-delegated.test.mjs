@@ -97,6 +97,166 @@ describe('OauthDelegatedSession', () => {
       (error) => error instanceof OauthTokenRequestError && error.errorCode === 'invalid_grant',
     );
   });
+
+  it('clears memory and surfaces a local-clear failure without a refresh token', async () => {
+    const clearError = new Error('disk unavailable');
+    let clearCalls = 0;
+    let fetchCalls = 0;
+    const session = new OauthDelegatedSession({
+      clientId: 'cns_oa_test',
+      tokenUrl: 'https://auth.example/oauth/token',
+      fetch: async () => {
+        fetchCalls += 1;
+        throw new Error('unexpected fetch');
+      },
+      onTokensCleared: async () => {
+        clearCalls += 1;
+        throw clearError;
+      },
+    });
+    session.restoreTokens({
+      accessToken: 'access-only',
+      expiresAt: Date.now() + 60_000,
+      tokenType: 'Bearer',
+    });
+
+    await assert.rejects(() => session.revoke(), (error) => error === clearError);
+    assert.equal(session.getTokens(), undefined);
+    assert.equal(clearCalls, 1);
+    assert.equal(fetchCalls, 0);
+  });
+
+  it('clears memory and durable state and revokes the refresh token', async () => {
+    const calls = [];
+    let durableTokens = 'persisted';
+    let clearCalls = 0;
+    const session = new OauthDelegatedSession({
+      clientId: 'cns_oa_test',
+      tokenUrl: 'https://auth.example/oauth/token',
+      revokeUrl: 'https://auth.example/oauth/revoke',
+      fetch: async (url, init = {}) => {
+        calls.push({ url: String(url), method: init.method, headers: init.headers, body: init.body });
+        return jsonResponse({});
+      },
+      onTokensCleared: () => {
+        clearCalls += 1;
+        durableTokens = undefined;
+      },
+    });
+    session.restoreTokens({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      expiresAt: Date.now() + 60_000,
+      tokenType: 'Bearer',
+    });
+
+    await session.revoke();
+
+    assert.equal(session.getTokens(), undefined);
+    assert.equal(durableTokens, undefined);
+    assert.equal(clearCalls, 1);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://auth.example/oauth/revoke');
+    assert.equal(calls[0].method, 'POST');
+    assert.equal(calls[0].headers['Content-Type'], 'application/x-www-form-urlencoded');
+    assert.equal(calls[0].headers.Accept, 'application/json');
+    assert.deepEqual(Object.fromEntries(new URLSearchParams(calls[0].body)), {
+      token: 'refresh-1',
+      client_id: 'cns_oa_test',
+    });
+  });
+
+  it('clears local state and reports a missing revocation endpoint', async () => {
+    let durableTokens = 'persisted';
+    let fetchCalls = 0;
+    const session = new OauthDelegatedSession({
+      clientId: 'cns_oa_test',
+      tokenUrl: 'https://auth.example/oauth/token',
+      fetch: async () => {
+        fetchCalls += 1;
+        throw new Error('unexpected fetch');
+      },
+      onTokensCleared: () => {
+        durableTokens = undefined;
+      },
+    });
+    session.restoreTokens({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      expiresAt: Date.now() + 60_000,
+      tokenType: 'Bearer',
+    });
+
+    await assert.rejects(() => session.revoke(), /no revocation endpoint.*supply `revokeUrl`/i);
+    assert.equal(session.getTokens(), undefined);
+    assert.equal(durableTokens, undefined);
+    assert.equal(fetchCalls, 0);
+  });
+
+  it('clears local state and preserves non-success revocation details', async () => {
+    let durableTokens = 'persisted';
+    const session = new OauthDelegatedSession({
+      clientId: 'cns_oa_test',
+      tokenUrl: 'https://auth.example/oauth/token',
+      revokeUrl: 'https://auth.example/oauth/revoke',
+      fetch: async () =>
+        jsonResponse({ error: 'invalid_token', error_description: 'refresh token expired' }, 400),
+      onTokensCleared: () => {
+        durableTokens = undefined;
+      },
+    });
+    session.restoreTokens({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      expiresAt: Date.now() + 60_000,
+      tokenType: 'Bearer',
+    });
+
+    await assert.rejects(
+      () => session.revoke(),
+      (error) =>
+        error instanceof OauthTokenRequestError &&
+        error.message === 'Refresh-token revocation failed: refresh token expired' &&
+        error.status === 400 &&
+        error.errorCode === 'invalid_token' &&
+        error.body?.error_description === 'refresh token expired',
+    );
+    assert.equal(session.getTokens(), undefined);
+    assert.equal(durableTokens, undefined);
+  });
+
+  it('aggregates local-clear and remote-revocation failures', async () => {
+    const clearError = new Error('disk unavailable');
+    let clearCalls = 0;
+    const session = new OauthDelegatedSession({
+      clientId: 'cns_oa_test',
+      tokenUrl: 'https://auth.example/oauth/token',
+      revokeUrl: 'https://auth.example/oauth/revoke',
+      fetch: async () => jsonResponse({ error: 'server_error' }, 503),
+      onTokensCleared: async () => {
+        clearCalls += 1;
+        throw clearError;
+      },
+    });
+    session.restoreTokens({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      expiresAt: Date.now() + 60_000,
+      tokenType: 'Bearer',
+    });
+
+    await assert.rejects(
+      () => session.revoke(),
+      (error) =>
+        error instanceof AggregateError &&
+        error.message.includes('Local token clearing failed') &&
+        error.errors[0] === clearError &&
+        error.errors[1] instanceof OauthTokenRequestError &&
+        error.errors[1].status === 503,
+    );
+    assert.equal(session.getTokens(), undefined);
+    assert.equal(clearCalls, 1);
+  });
 });
 
 function jsonResponse(body, status = 200) {
