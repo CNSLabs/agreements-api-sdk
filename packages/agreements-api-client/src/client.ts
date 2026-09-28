@@ -9,6 +9,8 @@ import type {
   AgreementStateResponse,
   DirectDeployAgreementWithPermitRequest,
   HealthResponse,
+  WalletSubscriptionSetup,
+  WalletSubscriptionStatus,
   ApiClientConfig,
   ApiResponse,
   CreateWebhookRequest,
@@ -66,6 +68,14 @@ export class ApiClient {
 
   async getHealth(): Promise<HealthResponse> {
     return this.request<HealthResponse>('GET', agreementsApiPaths.health());
+  }
+
+  async setupWalletSubscription(body: { planId: string; agentWallet: string }): Promise<WalletSubscriptionSetup> {
+    return this.request<WalletSubscriptionSetup>('POST', agreementsApiPaths.subscriptionSetup(), body, 201);
+  }
+
+  async getWalletSubscriptionStatus(subscriber: string): Promise<WalletSubscriptionStatus> {
+    return this.request<WalletSubscriptionStatus>('GET', agreementsApiPaths.subscriptionStatus(subscriber));
   }
 
   async listAgreements(params?: AgreementListParams): Promise<ListResponse<AgreementSummary>> {
