@@ -90,6 +90,33 @@ export type HealthResponse = {
   timestamp: string;
 };
 
+export type WalletSubscriptionSetup = {
+  record: {
+    id: string;
+    planId: string;
+    subscriber: string;
+    payer: string;
+    merchant: string;
+    adapter: string;
+    agreement: string;
+    manager: string;
+    enforcer: string;
+    status: 'pending' | 'active';
+  };
+  permission: { startTime: number; expiry: number };
+};
+
+export type WalletSubscriptionStatus = {
+  subscription: (Pick<WalletSubscriptionSetup['record'], 'id' | 'subscriber' | 'payer' | 'merchant' | 'adapter' | 'agreement'> & {
+    setupStage: 'requested' | 'payer' | 'adapter' | 'agreement';
+  }) | null;
+  renewalEnabled: boolean | null;
+  accessPaid: boolean | null;
+  paidThrough: string | null;
+  payerBalance?: string | null;
+  latestCollection: { status: string; transactionHash?: string; paidThrough?: string; error?: string } | null;
+};
+
 export type ApiResponse<T> = {
   data: T;
   meta: {
