@@ -11,6 +11,8 @@ export function joinUrl(baseUrl: string, path: string): string {
 export const agreementsApiPaths = {
   openapiJson: () => `${API_BASE_PATH}/openapi.json`,
   health: () => `${API_BASE_PATH}/health`,
+  subscriptionSetup: () => `${API_BASE_PATH}/subscriptions/setup`,
+  subscriptionStatus: (subscriber: string) => `${API_BASE_PATH}/subscriptions/status?subscriber=${encodeURIComponent(subscriber)}`,
   webhooks: () => `${API_BASE_PATH}/webhooks`,
   webhook: (id: string) => `${API_BASE_PATH}/webhooks/${encodeURIComponent(id)}`,
   webhookTest: (id: string) => `${API_BASE_PATH}/webhooks/${encodeURIComponent(id)}/test`,

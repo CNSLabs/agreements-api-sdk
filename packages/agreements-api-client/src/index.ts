@@ -22,6 +22,8 @@ export type {
   DirectDeployAgreementWithPermitRequest,
   ErrorResponse,
   HealthResponse,
+  WalletSubscriptionSetup,
+  WalletSubscriptionStatus,
   ListResponse,
   NotificationRule,
   NotificationTemplate,
