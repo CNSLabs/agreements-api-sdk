@@ -131,6 +131,80 @@ export type PageInfo = {
   totalCount?: number;
 };
 
+export type SubscriptionPlan = {
+  id: string;
+  network: string;
+  asset: string;
+  recipient: string;
+  amount: string;
+  periodSeconds: number;
+  acceptingNewSubscriptions: boolean;
+  createdAt: string;
+};
+
+export type CreateSubscriptionPlanRequest = Omit<SubscriptionPlan, 'id' | 'createdAt'>;
+export type UpdateSubscriptionPlanRequest = Pick<SubscriptionPlan, 'acceptingNewSubscriptions'>;
+export type Subscription = {
+  id: string;
+  planId: string;
+  subscriberWallet: string;
+  currentPeriod: { startsAt: string; endsAt: string } | null;
+  renewalEnabled: boolean | null;
+  canceledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+export type SubscriptionListParams = {
+  subscriberWallet: string;
+  currentPeriodEndsAfter?: string;
+  reusableSetup?: true;
+  limit?: number;
+  cursor?: string;
+};
+export type CreateSubscriptionRequest = { planId: string; subscriberWallet: string };
+export type SubscriptionSetupRecord = {
+  id: string; planId: string; subscriber: string; payer: string; merchant: string;
+  agreement: string; adapter: string; manager: string; enforcer: string;
+};
+export type SubscriptionSetup = {
+  record: SubscriptionSetupRecord;
+  permission: { startTime: number; expiry: number };
+};
+export type SubscriptionSetupDetails = { record: SubscriptionSetupRecord | null };
+export type SubscriptionSetupResult = { status: 200 | 201; data: SubscriptionSetup };
+export type SubscriptionPayment = {
+  id: string;
+  subscriptionId: string;
+  kind: 'initial' | 'renewal';
+  status: 'pending' | 'succeeded' | 'failed';
+  attemptedAt: string;
+  resolvedAt: string | null;
+  amount: string;
+  asset: string;
+  recipient: string;
+  coveredPeriod: { startsAt: string; endsAt: string } | null;
+  transactionHash: string | null;
+  failureReason: string | null;
+};
+export type CreateSubscriptionPaymentRequest = {
+  subscriberWallet: string;
+  resourceUrl: string;
+  payment: {
+    x402Version: number;
+    resource?: { url: string; description?: string; mimeType?: string };
+    accepted: { scheme: string; network: string; asset: string; amount: string; payTo: string; maxTimeoutSeconds?: number; extra?: Record<string, unknown> };
+    payload: Record<string, unknown>;
+    extensions?: Record<string, unknown>;
+  };
+};
+export type SubscriptionPaymentListParams = { limit?: number; cursor?: string };
+export type SubscriptionPaymentResult = { status: 200 | 201; data: SubscriptionPayment };
+export type SubscriptionPlanListParams = {
+  acceptingNewSubscriptions?: boolean;
+  limit?: number;
+  cursor?: string;
+};
+
 export type ListResponse<T> = ApiResponse<T[]> & {
   pageInfo: PageInfo;
 };

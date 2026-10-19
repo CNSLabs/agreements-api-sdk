@@ -23,6 +23,20 @@ import type {
   ValidateDirectAgreementTemplateResponse,
   WebhookSubscription,
   WebhookTestResponse,
+  SubscriptionPlan,
+  CreateSubscriptionPlanRequest,
+  UpdateSubscriptionPlanRequest,
+  SubscriptionPlanListParams,
+  Subscription,
+  SubscriptionListParams,
+  CreateSubscriptionRequest,
+  SubscriptionSetupDetails,
+  SubscriptionSetupResult,
+  SubscriptionSetup,
+  SubscriptionPayment,
+  CreateSubscriptionPaymentRequest,
+  SubscriptionPaymentListParams,
+  SubscriptionPaymentResult,
 } from './types.js';
 import { resolveApiBaseUrl } from './constants.js';
 import { agreementsApiPaths, joinUrl } from './utils.js';
@@ -137,6 +151,53 @@ export class ApiClient {
 
   async deleteWebhook(webhookId: string): Promise<WebhookSubscription> {
     return this.requestData<WebhookSubscription>('DELETE', agreementsApiPaths.webhook(webhookId));
+  }
+
+  async createSubscriptionPlan(body: CreateSubscriptionPlanRequest): Promise<SubscriptionPlan> {
+    return this.requestData<SubscriptionPlan>('POST', agreementsApiPaths.subscriptionPlans(), body, 201);
+  }
+
+  async getSubscriptionPlan(planId: string): Promise<SubscriptionPlan> {
+    return this.requestData<SubscriptionPlan>('GET', agreementsApiPaths.subscriptionPlan(planId));
+  }
+
+  async listSubscriptionPlans(params?: SubscriptionPlanListParams): Promise<ListResponse<SubscriptionPlan>> {
+    const query = params && { ...params, acceptingNewSubscriptions: params.acceptingNewSubscriptions === undefined ? undefined : String(params.acceptingNewSubscriptions) };
+    return this.requestList<SubscriptionPlan>('GET', withQuery(agreementsApiPaths.subscriptionPlans(), query));
+  }
+
+  async updateSubscriptionPlan(planId: string, body: UpdateSubscriptionPlanRequest): Promise<SubscriptionPlan> {
+    return this.requestData<SubscriptionPlan>('PATCH', agreementsApiPaths.subscriptionPlan(planId), body);
+  }
+
+  async listSubscriptions(params: SubscriptionListParams): Promise<ListResponse<Subscription>> {
+    return this.requestList<Subscription>('GET', withQuery(agreementsApiPaths.subscriptions(), {
+      ...params, reusableSetup: params.reusableSetup === undefined ? undefined : String(params.reusableSetup),
+    }));
+  }
+
+  async createOrResumeSubscription(body: CreateSubscriptionRequest): Promise<SubscriptionSetupResult> {
+    return this.requestCreatedOrResumed<SubscriptionSetup>(agreementsApiPaths.subscriptions(), body);
+  }
+
+  async getSubscriptionSetup(subscriptionId: string): Promise<SubscriptionSetupDetails> {
+    return this.requestData<SubscriptionSetupDetails>('GET', agreementsApiPaths.subscriptionSetupDetails(subscriptionId));
+  }
+
+  async createOrRecoverSubscriptionPayment(subscriptionId: string, body: CreateSubscriptionPaymentRequest): Promise<SubscriptionPaymentResult> {
+    return this.requestCreatedOrResumed<SubscriptionPayment>(agreementsApiPaths.subscriptionPayments(subscriptionId), body);
+  }
+
+  async listSubscriptionPayments(subscriptionId: string, params?: SubscriptionPaymentListParams): Promise<ListResponse<SubscriptionPayment>> {
+    return this.requestList<SubscriptionPayment>('GET', withQuery(agreementsApiPaths.subscriptionPayments(subscriptionId), params));
+  }
+
+  private async requestCreatedOrResumed<T>(path: string, body: unknown): Promise<{ status: 200 | 201; data: T }> {
+    const result = await this.exchangeJson('POST', path, body);
+    if (result.status !== 200 && result.status !== 201) {
+      throw new AgreementsApiError(extractAgreementsApiErrorMessage(result.parsedBody, result.bodyText, result.status), result.status, result.bodyText, result.parsedBody);
+    }
+    return { status: result.status, data: (result.parsedBody as ApiResponse<T>).data };
   }
 
   async testWebhook(webhookId: string): Promise<WebhookTestResponse> {
