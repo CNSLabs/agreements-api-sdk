@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@shodai-network/agreements-api-client": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "viem": "^2.43.0",
     "zod": "^3.25.1"
   },
