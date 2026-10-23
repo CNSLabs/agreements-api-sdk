@@ -79,6 +79,30 @@ describe('ApiClient agreement requests', () => {
   });
 });
 
+describe('ApiClient wallet subscription requests', () => {
+  it('uses SIWx proof-bearing setup and subscriber status routes', async () => {
+    const calls = [];
+    let proof;
+    const client = new ApiClient({
+      baseUrl: 'https://external-api.example.test',
+      headers: () => proof ? { 'SIGN-IN-WITH-X': proof } : {},
+      fetch: async (url, init = {}) => {
+        calls.push({ url: String(url), method: init.method, headers: init.headers,
+          body: init.body ? JSON.parse(String(init.body)) : undefined });
+        return jsonResponse(init.method === 'POST' ? 201 : 200, { ok: true });
+      },
+    });
+    proof = 'encoded-proof';
+    await client.setupWalletSubscription({ planId: 'one-plan', agentWallet: '0x1111111111111111111111111111111111111111' });
+    await client.getWalletSubscriptionStatus('0x1111111111111111111111111111111111111111');
+    assert.deepEqual(calls.map(({ method, url }) => [method, url]), [
+      ['POST', 'https://external-api.example.test/v0/subscriptions/setup'],
+      ['GET', 'https://external-api.example.test/v0/subscriptions/status?subscriber=0x1111111111111111111111111111111111111111'],
+    ]);
+    assert.equal(calls[0].headers['SIGN-IN-WITH-X'], 'encoded-proof');
+  });
+});
+
 describe('ApiClient webhook requests', () => {
   it('manages webhook subscriptions through typed helpers', async () => {
     const calls = [];
