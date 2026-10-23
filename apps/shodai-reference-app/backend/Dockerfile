@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22.23.4-alpine AS base
 
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
@@ -21,7 +21,7 @@ COPY apps/shodai-reference-app ./apps/shodai-reference-app
 RUN pnpm --filter @shodai-network/agreements-api-client build
 RUN pnpm --filter shodai-reference-backend build
 
-FROM node:20-alpine AS production
+FROM node:22.23.4-alpine AS production
 
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
