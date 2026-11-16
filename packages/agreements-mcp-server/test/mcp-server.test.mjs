@@ -588,9 +588,7 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
         documentId: 'document-123',
         signer: '0x1111111111111111111111111111111111111111',
         deadline: 1900000000,
-        signatureV: 27,
-        signatureR: `0x${'aa'.repeat(32)}`,
-        signatureS: `0x${'bb'.repeat(32)}`,
+        signature: `0x${'aa'.repeat(32)}${'bb'.repeat(32)}1b`,
       },
     });
 
@@ -608,11 +606,7 @@ test('deploy_agreement forwards a pre-signed permit to the gateway', async () =>
       gatewayRequest.body.docUri,
       `${env.gateway.baseUrl}/v0/agreements/documents/document-123`,
     );
-    assert.deepEqual(gatewayRequest.body.signature, {
-      v: 27,
-      r: `0x${'aa'.repeat(32)}`,
-      s: `0x${'bb'.repeat(32)}`,
-    });
+    assert.equal(gatewayRequest.body.signature, `0x${'aa'.repeat(32)}${'bb'.repeat(32)}1b`);
     await client.close();
   } finally {
     await env.close();
@@ -666,9 +660,7 @@ test('deploy_agreement preflights participant mappings before forwarding a permi
         observers: ['observer@example.com'],
         signer: '0x1111111111111111111111111111111111111111',
         deadline: 1900000000,
-        signatureV: 27,
-        signatureR: `0x${'aa'.repeat(32)}`,
-        signatureS: `0x${'bb'.repeat(32)}`,
+        signature: `0x${'aa'.repeat(32)}${'bb'.repeat(32)}1b`,
       },
     });
 
@@ -714,9 +706,7 @@ test('submit_input forwards a pre-signed permit to the gateway', async () => {
         values: { partyAName: 'Acme' },
         signer: '0x1111111111111111111111111111111111111111',
         deadline: 1900000000,
-        signatureV: 28,
-        signatureR: `0x${'cc'.repeat(32)}`,
-        signatureS: `0x${'dd'.repeat(32)}`,
+        signature: `0x${'cc'.repeat(32)}${'dd'.repeat(32)}1c`,
       },
     });
 
@@ -728,7 +718,7 @@ test('submit_input forwards a pre-signed permit to the gateway', async () => {
       (request) => request.url === '/v0/agreements/agr_1/input',
     );
     assert.equal(gatewayRequest.body.inputId, 'partyAData');
-    assert.equal(gatewayRequest.body.signature.v, 28);
+    assert.equal(gatewayRequest.body.signature, `0x${'cc'.repeat(32)}${'dd'.repeat(32)}1c`);
     await client.close();
   } finally {
     await env.close();

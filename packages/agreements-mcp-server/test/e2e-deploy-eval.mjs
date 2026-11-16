@@ -64,12 +64,9 @@ function reviveTypedData(typedData) {
   };
 }
 
+// V1.1 takes the wallet's signature as it is: one hex string.
 function splitSignature(signatureHex) {
-  return {
-    signatureR: `0x${signatureHex.slice(2, 66)}`,
-    signatureS: `0x${signatureHex.slice(66, 130)}`,
-    signatureV: parseInt(signatureHex.slice(130, 132), 16),
-  };
+  return { signature: signatureHex };
 }
 
 const agreement = JSON.parse(

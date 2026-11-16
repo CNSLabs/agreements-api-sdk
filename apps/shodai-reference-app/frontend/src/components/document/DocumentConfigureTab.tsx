@@ -160,6 +160,7 @@ export function DocumentConfigureTab({
           primaryType: "PermitAgreementWithActions",
           types: {
             PermitAgreementWithActions: [
+              { name: "signer", type: "address" },
               { name: "docUri", type: "string" },
               { name: "docHash", type: "bytes32" },
               { name: "initialState", type: "bytes32" },
@@ -172,6 +173,7 @@ export function DocumentConfigureTab({
             ],
           },
           message: {
+            signer: "0x0000000000000000000000000000000000000000",
             docUri: `ipfs://agreement/${template?.metadata?.id ?? "preview-template"}`,
             docHash: keccak256(stringToHex(previewDocSeed)),
             initialState: keccak256(stringToHex("PREVIEW_INITIAL_STATE")),

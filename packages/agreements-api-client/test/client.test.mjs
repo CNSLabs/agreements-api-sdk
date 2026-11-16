@@ -67,7 +67,7 @@ describe('ApiClient agreement requests', () => {
       chainId: 59141,
       signer: '0x1111111111111111111111111111111111111111',
       deadline: 1,
-      signature: { v: 27, r: `0x${'1'.repeat(64)}`, s: `0x${'2'.repeat(64)}` },
+      signature: `0x${'1'.repeat(64)}${'2'.repeat(64)}1b`,
     });
 
     assert.deepEqual(calls.map((call) => [call.method, call.url]), [

@@ -374,6 +374,11 @@ export function useAgreementInputs({
       );
       const deadline = Math.floor(Date.now() / 1000) + 60 * 60;
       const nonce = await engine.getNonce(address as `0x${string}`);
+      // V1.1 input permits also name the signer and the position they act on.
+      const [expectedState, expectedStateNonce] = await Promise.all([
+        engine.getCurrentState(),
+        engine.getStateNonce(),
+      ]);
       const domain = {
         name: "AgreementEngine",
         version: "1",
@@ -388,15 +393,21 @@ export function useAgreementInputs({
           { name: "verifyingContract", type: "address" },
         ],
         PermitInput: [
+          { name: "signer", type: "address" },
           { name: "inputId", type: "bytes32" },
           { name: "payload", type: "bytes" },
+          { name: "expectedState", type: "bytes32" },
+          { name: "expectedStateNonce", type: "uint256" },
           { name: "nonce", type: "uint256" },
           { name: "deadline", type: "uint256" },
         ],
       } as const;
       const message = {
+        signer: address,
         inputId: inputToBytes32(activeInputId),
         payload: payloadHex,
+        expectedState,
+        expectedStateNonce: Number(expectedStateNonce),
         nonce: Number(nonce),
         deadline,
       } as const;
@@ -424,9 +435,8 @@ export function useAgreementInputs({
           signerAddress,
           deadline,
           signatureShape: {
-            v: signature.v,
-            rPreview: `${signature.r.slice(0, 10)}...${signature.r.slice(-6)}`,
-            sPreview: `${signature.s.slice(0, 10)}...${signature.s.slice(-6)}`,
+            byteLength: (signature.length - 2) / 2,
+            preview: `${signature.slice(0, 10)}...${signature.slice(-6)}`,
           },
         },
       };

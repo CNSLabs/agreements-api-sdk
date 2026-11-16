@@ -352,15 +352,21 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
           primaryType: "PermitInput",
           types: {
             PermitInput: [
+              { name: "signer", type: "address" },
               { name: "inputId", type: "bytes32" },
               { name: "payload", type: "bytes" },
+              { name: "expectedState", type: "bytes32" },
+              { name: "expectedStateNonce", type: "uint256" },
               { name: "nonce", type: "uint256" },
               { name: "deadline", type: "uint256" },
             ],
           },
           message: {
+            signer: address ?? "0x0000000000000000000000000000000000000000",
             inputId: keccak256(stringToHex(previewInputId)),
             payload: `0x${"12".repeat(24)}`,
+            expectedState: keccak256(stringToHex("PREVIEW_CURRENT_STATE")),
+            expectedStateNonce: 0n,
             nonce: 0n,
             deadline: BigInt(previewDeadline),
           },
