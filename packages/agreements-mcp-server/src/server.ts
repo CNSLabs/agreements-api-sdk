@@ -7,7 +7,7 @@ import { registerResources } from './resources.js';
 import { registerPrompts } from './prompts.js';
 
 export const SERVER_NAME = 'agreements-mcp-server';
-export const SERVER_VERSION = '0.1.0';
+export const SERVER_VERSION = '0.6.0';
 
 export type AgreementsMcpServerOptions = {
   /**
