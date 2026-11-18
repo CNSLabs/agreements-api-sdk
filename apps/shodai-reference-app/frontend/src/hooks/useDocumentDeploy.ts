@@ -504,6 +504,7 @@ export function useDocumentDeploy({
             { name: "verifyingContract", type: "address" },
           ],
           PermitAgreementWithActions: [
+            { name: "signer", type: "address" },
             { name: "docUri", type: "string" },
             { name: "docHash", type: "bytes32" },
             { name: "initialState", type: "bytes32" },
@@ -517,6 +518,7 @@ export function useDocumentDeploy({
           ],
         } as const;
         const message = {
+          signer: address,
           docUri: params.docUri,
           docHash: params.docHash,
           initialState: params.initialState,
@@ -561,9 +563,8 @@ export function useDocumentDeploy({
             signerAddress,
             deadline,
             signatureShape: {
-              v: signature.v,
-              rPreview: `${signature.r.slice(0, 10)}...${signature.r.slice(-6)}`,
-              sPreview: `${signature.s.slice(0, 10)}...${signature.s.slice(-6)}`,
+              byteLength: (signature.length - 2) / 2,
+              preview: `${signature.slice(0, 10)}...${signature.slice(-6)}`,
             },
           },
         };

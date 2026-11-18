@@ -352,6 +352,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
           primaryType: "PermitInput",
           types: {
             PermitInput: [
+              { name: "signer", type: "address" },
               { name: "inputId", type: "bytes32" },
               { name: "payload", type: "bytes" },
               { name: "nonce", type: "uint256" },
@@ -359,6 +360,7 @@ export function AgreementActionsTab(props: AgreementActionsTabProps) {
             ],
           },
           message: {
+            signer: address ?? "0x0000000000000000000000000000000000000000",
             inputId: keccak256(stringToHex(previewInputId)),
             payload: `0x${"12".repeat(24)}`,
             nonce: 0n,

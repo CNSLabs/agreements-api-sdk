@@ -388,6 +388,7 @@ export function useAgreementInputs({
           { name: "verifyingContract", type: "address" },
         ],
         PermitInput: [
+          { name: "signer", type: "address" },
           { name: "inputId", type: "bytes32" },
           { name: "payload", type: "bytes" },
           { name: "nonce", type: "uint256" },
@@ -395,6 +396,7 @@ export function useAgreementInputs({
         ],
       } as const;
       const message = {
+        signer: address,
         inputId: inputToBytes32(activeInputId),
         payload: payloadHex,
         nonce: Number(nonce),
@@ -424,9 +426,8 @@ export function useAgreementInputs({
           signerAddress,
           deadline,
           signatureShape: {
-            v: signature.v,
-            rPreview: `${signature.r.slice(0, 10)}...${signature.r.slice(-6)}`,
-            sPreview: `${signature.s.slice(0, 10)}...${signature.s.slice(-6)}`,
+            byteLength: (signature.length - 2) / 2,
+            preview: `${signature.slice(0, 10)}...${signature.slice(-6)}`,
           },
         },
       };
