@@ -5,7 +5,8 @@ import { createAuthenticatedAxiosInstance } from "@/lib/apiClient";
 const AGREEMENTS_API_URL = import.meta.env.VITE_AGREEMENTS_API_BASE_URL || "";
 const AGREEMENTS_API_BASE = `${AGREEMENTS_API_URL}/agreements-api`;
 
-export type PermitSignature = { v: number; r: string; s: string };
+/** A permit signature as the V1.1 contracts take it: opaque bytes in one hex string. */
+export type PermitSignature = `0x${string}`;
 
 export type AgreementStatus = "Draft" | "Deployed";
 

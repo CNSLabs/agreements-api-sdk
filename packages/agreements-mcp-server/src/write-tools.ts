@@ -162,7 +162,7 @@ export function deploymentPermitNextStep(environment?: AgreementsApiEnvironment)
 }
 
 export function inputPermitNextStep(environment?: AgreementsApiEnvironment): string {
-  return `Sign typedData with the signer wallet (eth_signTypedData_v4), then call submit_input promptly with ${environmentNextStepPrefix(environment)}the same agreementId, inputId, values, plus signer, deadline, and the signature exactly as the wallet returned it. The payload names the agreement's current state: if any other input is accepted first, the signature is rejected and the payload must be prepared and signed again.`;
+  return `Sign typedData with the signer wallet (eth_signTypedData_v4), then call submit_input with ${environmentNextStepPrefix(environment)}the same agreementId, inputId, values, plus signer, deadline, and the signature exactly as the wallet returned it. The signature can be used once. It stays valid until the deadline unless the same signer has another input accepted on this agreement first.`;
 }
 
 export function registerWriteTools(
@@ -371,7 +371,7 @@ export function registerWriteTools(
     {
       title: 'Prepare input permit typed data',
       description:
-        'Builds the exact EIP-712 payload that must be signed to authorize submitting an input to a deployed agreement. Sign the returned typedData with a wallet allowed by the input definition, then call submit_input with signer, deadline, and the signature. The payload names the current state of the agreement and is rejected once any other input is accepted, so sign and submit without delay. No transaction is sent and nothing is stored. Reads the agreement record, its on-chain state, and the signer nonce.',
+        'Builds the exact EIP-712 payload that must be signed to authorize submitting an input to a deployed agreement. Sign the returned typedData with a wallet allowed by the input definition, then call submit_input with signer, deadline, and the signature. No transaction is sent and nothing is stored. Reads the agreement record and signer nonce.',
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       inputSchema: {
         ...environmentInputSchema(options),
