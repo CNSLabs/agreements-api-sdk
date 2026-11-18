@@ -64,11 +64,6 @@ function reviveTypedData(typedData) {
   };
 }
 
-// V1.1 takes the wallet's signature as it is: one hex string.
-function splitSignature(signatureHex) {
-  return { signature: signatureHex };
-}
-
 const agreement = JSON.parse(
   readFileSync(new URL('../content/simple-agreement.json', import.meta.url), 'utf8'),
 );
@@ -102,9 +97,8 @@ const preparedDeploy = await call('prepare_deployment_typed_data', {
   initValues,
   participants,
 });
-const deploySignature = splitSignature(
-  await partyA.signTypedData(reviveTypedData(preparedDeploy.typedData)),
-);
+// V1.1 takes the wallet's signature as it is: one hex string.
+const deploySignature = await partyA.signTypedData(reviveTypedData(preparedDeploy.typedData));
 const deployed = await call('deploy_agreement', {
   agreement,
   displayName: 'MCP e2e eval (simple MOU)',
@@ -114,7 +108,7 @@ const deployed = await call('deploy_agreement', {
   observers: preparedDeploy.normalizedObservers,
   signer: partyA.address,
   deadline: preparedDeploy.deadline,
-  ...deploySignature,
+  signature: deploySignature,
 });
 report.agreementId = deployed.id;
 report.agreementAddress = deployed.address;
@@ -137,16 +131,14 @@ const preparedInput = await call('prepare_input_typed_data', {
   values: inputValues,
   signerAddress: partyA.address,
 });
-const inputSignature = splitSignature(
-  await partyA.signTypedData(reviveTypedData(preparedInput.typedData)),
-);
+const inputSignature = await partyA.signTypedData(reviveTypedData(preparedInput.typedData));
 const submitted = await call('submit_input', {
   agreementId: deployed.id,
   inputId: 'partyAData',
   values: inputValues,
   signer: partyA.address,
   deadline: preparedInput.deadline,
-  ...inputSignature,
+  signature: inputSignature,
 });
 report.inputStatus = submitted.status;
 report.txHash = submitted.txHash;
