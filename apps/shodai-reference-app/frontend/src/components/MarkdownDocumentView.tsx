@@ -4,6 +4,8 @@ import remarkStringify from 'remark-stringify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
+import { markdownSanitizeSchema } from '@/utils/markdownSanitize';
 import type { Root } from 'mdast';
 import type { Components } from 'react-markdown';
 import { Controller } from 'react-hook-form';
@@ -243,7 +245,7 @@ const MarkdownDocumentView: React.FC<MarkdownDocumentViewProps> = ({
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={components}
-            rehypePlugins={[rehypeRaw]}
+            rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]]}
           >
             {processedContent}
           </ReactMarkdown>
