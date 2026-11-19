@@ -47,6 +47,8 @@ const PRINT_STYLES = `
   img { max-width: 100%; height: auto; }
 `;
 
+export const PRINT_FRAME_SANDBOX = "allow-same-origin allow-modals";
+
 /**
  * Opens the document in a hidden iframe and triggers print.
  * Uses an iframe instead of a new window so the main page background/styling
@@ -66,6 +68,13 @@ export function printDocument(htmlBody: string, title: string) {
 </html>`;
 
   const iframe = document.createElement("iframe");
+  // The document is built from agreement content and from values other
+  // parties supplied, with raw HTML allowed. Sandboxed without allow-scripts,
+  // nothing in it can run: no script element, no event handler attribute, no
+  // javascript: URL. allow-same-origin lets this page write the document and
+  // allow-modals lets it open the print dialog. Set before the frame is
+  // attached, so the flags apply to the document written below.
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   iframe.style.position = "fixed";
   iframe.style.right = "0";
   iframe.style.bottom = "0";

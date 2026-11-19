@@ -1,9 +1,11 @@
 import { formatOnchainReferenceValue, type OnchainReferenceVariable } from "./onchainReferences";
+import { neutralizeMarkup } from "./neutralizeMarkup";
 
 /**
  * Splices variable values into markdown prose.
  * Replaces ${variables.xxx} and ${variables.xxx.nested} with actual values.
  * Returns markdown string with values filled in (no HTML, no input placeholders).
+ * Values cannot introduce HTML: see neutralizeMarkup.
  */
 export function markdownWithValues(
   markdown: string,
@@ -59,7 +61,7 @@ export function markdownWithValues(
           mode: "document",
         });
 
-        return String(displayValue);
+        return neutralizeMarkup(String(displayValue));
       } catch {
         return _match;
       }
