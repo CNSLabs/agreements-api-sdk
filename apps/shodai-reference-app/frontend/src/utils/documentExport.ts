@@ -3,8 +3,10 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import { markdownWithValues } from "./markdownWithValues";
+import { markdownSanitizeSchema } from "./markdownSanitize";
 
 /**
  * Builds markdown with variable values spliced into the prose.
@@ -21,6 +23,7 @@ export async function markdownWithValuesToHtml(
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeSanitize, markdownSanitizeSchema)
     .use(rehypeStringify)
     .process(filled);
   return String(file);
