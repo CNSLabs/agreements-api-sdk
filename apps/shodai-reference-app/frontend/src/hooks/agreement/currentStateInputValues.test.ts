@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildCurrentStateBlankValues,
+  buildCurrentStateDeterminedValues,
   buildCurrentStatePayload,
   getCurrentStateFieldKeys,
   normalizeInputDataEntries,
@@ -187,4 +188,60 @@ test("buildCurrentStatePayload omits blank optional variable references but stil
       approveWithoutPayment: true,
     },
   );
+});
+
+
+const loopStep = {
+  data: {
+    reviewNote: "${variables.reviewNote}",
+    milestone: "${variables.milestone}",
+    currentMilestone: "${variables.currentMilestone}",
+    quarter: { type: "uint256", validation: { required: true } },
+  },
+  checks: [
+    { field: "milestone", is: "equalTo", to: "${variables.currentMilestone}" },
+    { field: "milestone", is: "lessThan", to: "${variables.milestoneCount}" },
+    { field: "currentMilestone", is: "equalTo", to: "${variables.currentMilestone}", plus: 1 },
+    { field: "quarter", is: "equalTo", to: 4 },
+  ],
+};
+
+test("buildCurrentStateDeterminedValues fills the fields an equalTo check fixes", () => {
+  assert.deepEqual(buildCurrentStateDeterminedValues(loopStep, { currentMilestone: "2", milestoneCount: "5" }), {
+    milestone: "2",
+    currentMilestone: "3",
+    quarter: "4",
+  });
+  // Stored numbers may arrive as numbers or bigints.
+  assert.deepEqual(buildCurrentStateDeterminedValues(loopStep, { currentMilestone: 7n }).currentMilestone, "8");
+  assert.deepEqual(
+    buildCurrentStateDeterminedValues(
+      { data: { left: { type: "uint256" } }, checks: [{ field: "left", is: "equalTo", to: "${variables.left}", minus: "1" }] },
+      { left: 3 },
+    ),
+    { left: "2" },
+  );
+});
+
+test("buildCurrentStateDeterminedValues leaves a field alone when its value cannot be worked out", () => {
+  // Nothing stored yet, a stored value that is not a number, and a result below zero.
+  assert.deepEqual(buildCurrentStateDeterminedValues(loopStep, {}), { quarter: "4" });
+  assert.deepEqual(buildCurrentStateDeterminedValues(loopStep, { currentMilestone: "soon" }), { quarter: "4" });
+  assert.deepEqual(
+    buildCurrentStateDeterminedValues(
+      { data: { left: { type: "uint256" } }, checks: [{ field: "left", is: "equalTo", to: "${variables.left}", minus: 1 }] },
+      { left: "0" },
+    ),
+    {},
+  );
+  // Two checks that disagree, a check on a field the input does not have, and no checks at all.
+  assert.deepEqual(
+    buildCurrentStateDeterminedValues(
+      { data: { n: { type: "uint256" } }, checks: [{ field: "n", is: "equalTo", to: 1 }, { field: "n", is: "equalTo", to: 2 }, { field: "other", is: "equalTo", to: 3 }] },
+      {},
+    ),
+    {},
+  );
+  assert.deepEqual(buildCurrentStateDeterminedValues({ data: { n: { type: "uint256" } } }, {}), {});
+  assert.deepEqual(buildCurrentStateDeterminedValues(null, {}), {});
 });
