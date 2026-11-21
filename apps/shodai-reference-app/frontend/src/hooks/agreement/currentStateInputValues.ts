@@ -95,6 +95,57 @@ export function buildCurrentStateBlankValues(
   );
 }
 
+type InputCheckLike = { field?: unknown; is?: unknown; to?: unknown; plus?: unknown; minus?: unknown };
+
+function wholeNumber(value: unknown): bigint | null {
+  if (typeof value === "bigint") return value >= 0n ? value : null;
+  if (typeof value === "number") return Number.isSafeInteger(value) && value >= 0 ? BigInt(value) : null;
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) return BigInt(value.trim());
+  return null;
+}
+
+/**
+ * Values an input's checks leave no choice about, keyed like the form.
+ *
+ * A check `{ field, is: "equalTo", to, plus | minus }` accepts exactly one
+ * number: the constant in `to`, or the stored variable it names, plus or minus
+ * the amount. In a counted loop every step carries such a field (the round it
+ * belongs to), and nobody should have to type it. A field whose value cannot be
+ * worked out, or that two checks disagree on, is left for the user.
+ */
+export function buildCurrentStateDeterminedValues(
+  inputDef: { data?: Record<string, unknown>; checks?: unknown } | null | undefined,
+  storedValues: Record<string, unknown> = {},
+  variableDefinitions: Record<string, VariableDefinitionLike> = {},
+): Record<string, string> {
+  if (!inputDef || !Array.isArray(inputDef.checks)) return {};
+  const formKeyOf = new Map<string, string>();
+  for (const entry of normalizeInputDataEntries(inputDef.data || {}, variableDefinitions)) {
+    if (entry.kind === "form") formKeyOf.set(entry.payloadKey, entry.formKey);
+  }
+
+  const determined = new Map<string, string | null>();
+  for (const check of inputDef.checks as InputCheckLike[]) {
+    if (!check || typeof check !== "object" || check.is !== "equalTo" || typeof check.field !== "string") continue;
+    const formKey = formKeyOf.get(check.field);
+    if (!formKey) continue;
+
+    const variable = typeof check.to === "string" ? parseVariableReference(check.to) : null;
+    const base = variable ? wholeNumber(storedValues[variable]) : wholeNumber(check.to);
+    const plus = check.plus === undefined ? 0n : wholeNumber(check.plus);
+    const minus = check.minus === undefined ? 0n : wholeNumber(check.minus);
+    const value = base === null || plus === null || minus === null ? null : base + plus - minus;
+    const text = value === null || value < 0n ? null : value.toString();
+
+    const earlier = determined.get(formKey);
+    determined.set(formKey, earlier !== undefined && earlier !== text ? null : text);
+  }
+
+  return Object.fromEntries(
+    [...determined].filter((entry): entry is [string, string] => entry[1] !== null),
+  );
+}
+
 export function buildCurrentStatePayload(
   inputData: Record<string, unknown>,
   formValues: Record<string, unknown>,
