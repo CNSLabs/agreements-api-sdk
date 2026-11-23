@@ -245,3 +245,16 @@ test("buildCurrentStateDeterminedValues leaves a field alone when its value cann
   assert.deepEqual(buildCurrentStateDeterminedValues({ data: { n: { type: "uint256" } } }, {}), {});
   assert.deepEqual(buildCurrentStateDeterminedValues(null, {}), {});
 });
+
+test("buildCurrentStateDeterminedValues offers no value the contract or the SDK would refuse", () => {
+  const max = 2n ** 256n - 1n;
+  const step = (check: Record<string, unknown>) => ({ data: { n: { type: "uint256" } }, checks: [{ field: "n", is: "equalTo", ...check }] });
+  // A sum past the largest uint256: the contract refuses the step, so the field is left blank.
+  assert.deepEqual(buildCurrentStateDeterminedValues(step({ to: "${variables.n}", plus: 1 }), { n: max }), {});
+  // The largest value itself is still offered.
+  assert.deepEqual(buildCurrentStateDeterminedValues(step({ to: "${variables.n}", plus: 1 }), { n: max - 1n }), { n: max.toString() });
+  // Forms the SDK refuses to build: 'plus' with 'minus', and either of them on a constant.
+  assert.deepEqual(buildCurrentStateDeterminedValues(step({ to: "${variables.n}", plus: 2, minus: 1 }), { n: 5 }), {});
+  assert.deepEqual(buildCurrentStateDeterminedValues(step({ to: 5, plus: 1 }), {}), {});
+  assert.deepEqual(buildCurrentStateDeterminedValues(step({ to: 5, minus: 1 }), {}), {});
+});

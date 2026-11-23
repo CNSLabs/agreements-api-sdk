@@ -104,6 +104,8 @@ function wholeNumber(value: unknown): bigint | null {
   return null;
 }
 
+const MAX_UINT256 = 2n ** 256n - 1n;
+
 /**
  * Values an input's checks leave no choice about, keyed like the form.
  *
@@ -134,8 +136,14 @@ export function buildCurrentStateDeterminedValues(
     const base = variable ? wholeNumber(storedValues[variable]) : wholeNumber(check.to);
     const plus = check.plus === undefined ? 0n : wholeNumber(check.plus);
     const minus = check.minus === undefined ? 0n : wholeNumber(check.minus);
-    const value = base === null || plus === null || minus === null ? null : base + plus - minus;
-    const text = value === null || value < 0n ? null : value.toString();
+    // A check the SDK refuses to build is not worked out here either: 'plus'
+    // with 'minus', or either of them on a constant.
+    const unreadable =
+      (check.plus !== undefined && check.minus !== undefined) ||
+      (!variable && (check.plus !== undefined || check.minus !== undefined));
+    const value = unreadable || base === null || plus === null || minus === null ? null : base + plus - minus;
+    // Outside the range of a uint256 the contract refuses the step, so no value is offered.
+    const text = value === null || value < 0n || value > MAX_UINT256 ? null : value.toString();
 
     const earlier = determined.get(formKey);
     determined.set(formKey, earlier !== undefined && earlier !== text ? null : text);
