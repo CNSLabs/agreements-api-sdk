@@ -50,7 +50,7 @@
     "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@shodai-network/agreements-protocol-evm": "^0.2.0",
+    "@shodai-network/agreements-protocol-evm": "^0.2.0-rc.1",
     "viem": "^2.43.0"
   },
   "devDependencies": {
