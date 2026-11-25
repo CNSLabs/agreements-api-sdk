@@ -41,6 +41,24 @@ test("raw HTML that can run script or load a document is removed", async () => {
   }
 });
 
+test("nothing in rendered markdown loads an image, so a value cannot report who opened the agreement", async () => {
+  const html = await render(
+    [
+      "Notes: ![](https://tracker.example/p.png?agreement=1)",
+      "![logo](//tracker.example/p.png)",
+      '<img src="https://tracker.example/raw.png" alt="x">',
+      '<picture><source srcset="https://tracker.example/s.png"><img src="/local.png"></picture>',
+      "Plain text and a [link](https://example.com/terms) stay.",
+    ].join("\n\n"),
+  );
+
+  for (const fragment of ["<img", "<picture", "<source", "tracker.example", "srcset"]) {
+    assert.ok(!html.includes(fragment), `${fragment} survived in: ${html}`);
+  }
+  assert.ok(html.includes('<a href="https://example.com/terms">link</a>'), html);
+  assert.ok(html.includes("Notes:"), html);
+});
+
 test("the form-field marker and template formatting survive", async () => {
   const html = await render(
     'BETWEEN: <u>Acme</u><br>\n\n<div class="variable-input" data-name="partyAName"></div>\n\n| a | b |\n| - | - |\n| 1 | 2 |',
