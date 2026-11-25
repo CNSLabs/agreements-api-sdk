@@ -8,6 +8,7 @@ import { useAgreementEventStream } from "@/hooks/agreement/useAgreementEventStre
 import type { DocumentVariable } from "@/hooks/documentConfigure/types";
 import {
   buildCurrentStateBlankValues,
+  buildCurrentStateDeterminedValues,
   buildCurrentStatePayload,
   getCurrentStateFieldKeys,
   normalizeInputDataEntries,
@@ -173,14 +174,19 @@ export function useAgreementInputs({
     return (agreementJson as any)?.execution?.inputs?.[activeInputId] ?? null;
   }, [activeInputId, agreementJson]);
 
-  const activeInputBlankValues = React.useMemo(
-    () =>
-      buildCurrentStateBlankValues(
-        (activeInputDef?.data || {}) as Record<string, unknown>,
-        ((agreementJson as any)?.variables || {}) as Record<string, DocumentVariable>,
+  // Blank values for the step, with the fields its checks leave no choice about
+  // (the round a looped step belongs to) filled in from the stored values.
+  const activeInputBlankValues = React.useMemo(() => {
+    const variableDefinitions = ((agreementJson as any)?.variables || {}) as Record<string, DocumentVariable>;
+    return {
+      ...buildCurrentStateBlankValues((activeInputDef?.data || {}) as Record<string, unknown>, variableDefinitions),
+      ...buildCurrentStateDeterminedValues(
+        activeInputDef,
+        (record?.variables || {}) as Record<string, unknown>,
+        variableDefinitions,
       ),
-    [activeInputDef, agreementJson],
-  );
+    };
+  }, [activeInputDef, agreementJson, record?.variables]);
 
   const activeIssuerAddrs = React.useMemo(() => {
     if (!activeInputDef) return undefined;
@@ -388,6 +394,7 @@ export function useAgreementInputs({
           { name: "verifyingContract", type: "address" },
         ],
         PermitInput: [
+          { name: "signer", type: "address" },
           { name: "inputId", type: "bytes32" },
           { name: "payload", type: "bytes" },
           { name: "nonce", type: "uint256" },
@@ -395,6 +402,7 @@ export function useAgreementInputs({
         ],
       } as const;
       const message = {
+        signer: address,
         inputId: inputToBytes32(activeInputId),
         payload: payloadHex,
         nonce: Number(nonce),
@@ -424,9 +432,8 @@ export function useAgreementInputs({
           signerAddress,
           deadline,
           signatureShape: {
-            v: signature.v,
-            rPreview: `${signature.r.slice(0, 10)}...${signature.r.slice(-6)}`,
-            sPreview: `${signature.s.slice(0, 10)}...${signature.s.slice(-6)}`,
+            byteLength: (signature.length - 2) / 2,
+            preview: `${signature.slice(0, 10)}...${signature.slice(-6)}`,
           },
         },
       };

@@ -15,7 +15,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@shodai-network/agreements-protocol-evm": "^0.1.4",
+    "@shodai-network/agreements-protocol-evm": "^0.2.0-rc.2",
     "@dynamic-labs/ethereum": "^4.30.4",
     "@dynamic-labs/sdk-react-core": "^4.30.4",
     "@dynamic-labs/types": "^4.29.2",
@@ -43,6 +43,7 @@
     "react-markdown": "^10.1.0",
     "react-router": "^7.18.4",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",

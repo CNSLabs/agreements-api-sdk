@@ -3,7 +3,7 @@
   "name": "network.shodai/agreements",
   "title": "Shodai Agreements",
   "description": "Author, validate, deploy, and operate Shodai on-chain agreements.",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "repository": {
     "url": "https://github.com/CNSLabs/agreements-api-sdk",
     "source": "github",

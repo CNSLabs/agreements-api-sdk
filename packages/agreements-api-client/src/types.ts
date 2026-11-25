@@ -3,11 +3,12 @@
  * Agreement JSON follows `@shodai-network/agreements-protocol-evm` `AgreementJson` at runtime.
  */
 
-export type PermitSignature = {
-  v: number;
-  r: string;
-  s: string;
-};
+/**
+ * An EIP-712 permit signature as the V1.1 contracts and the Agreements API take it:
+ * opaque bytes in one hex string. A wallet signature is 65 bytes; a smart-account
+ * (ERC-1271) signature may be any length.
+ */
+export type PermitSignature = `0x${string}`;
 
 export type DirectParticipantRecord = {
   variableKey: string;
